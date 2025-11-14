@@ -17,7 +17,7 @@ import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 
 const explanationSchema = z.object({
-  query: z.string().min(5, { message: 'Please ask a question with at least 5 characters.' }),
+  topic: z.string().min(5, { message: 'Please ask a question with at least 5 characters.' }),
 });
 
 export function ExplanationView() {
@@ -28,7 +28,7 @@ export function ExplanationView() {
 
   const form = useForm<z.infer<typeof explanationSchema>>({
     resolver: zodResolver(explanationSchema),
-    defaultValues: { query: '' },
+    defaultValues: { topic: '' },
   });
 
   async function onSubmit(values: z.infer<typeof explanationSchema>) {
@@ -46,7 +46,7 @@ export function ExplanationView() {
     setExplanation(null);
 
     const input = {
-      query: values.query,
+      topic: values.topic,
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,
@@ -82,7 +82,7 @@ export function ExplanationView() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="query"
+                name="topic"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ask a question</FormLabel>

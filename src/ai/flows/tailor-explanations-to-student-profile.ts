@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const TailorExplanationInputSchema = z.object({
-  query: z.string().describe('The specific question or concept the student needs help with.'),
+  topic: z.string().describe('The specific question or concept the student needs help with.'),
   studentProfile: z
     .object({
       classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
@@ -49,7 +49,7 @@ const prompt = ai.definePrompt({
   - Board: {{{studentProfile.board}}}
   - Weak Subjects: {{{studentProfile.weakSubjects}}}
 
-  Question: {{{query}}}
+  Question: {{{topic}}}
 
   Explanation: 
   Rough Work Derivations:
