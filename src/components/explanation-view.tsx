@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, PenSquare } from 'lucide-react';
+import { AlertCircle, BookText, Codesandbox, Globe, PenSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const explanationSchema = z.object({
@@ -21,7 +21,7 @@ const explanationSchema = z.object({
 });
 
 export function ExplanationView() {
-  const { studentProfile, explanation, setExplanation, isProfileComplete } = useAppContext();
+  const { studentProfile, explanation, setExplanation, isProfileComplete, addToHistory } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -60,6 +60,7 @@ export function ExplanationView() {
       setError(result.error);
     } else {
       setExplanation(result);
+      addToHistory({ topic: values.topic, explanation: result });
     }
     setIsLoading(false);
   }

@@ -19,9 +19,53 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown } from 'lucide-react';
-import React from 'react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History } from 'lucide-react';
+import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { HistoryItem } from '@/lib/types';
+import { formatDistanceToNow } from 'date-fns';
+
+function HistorySection() {
+  const { history, setExplanation, setView } = useAppContext();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+
+  const handleHistoryClick = (item: HistoryItem) => {
+    setExplanation(item.explanation);
+    setView('explanation');
+  };
+
+  if (history.length === 0) {
+    return null;
+  }
+
+  return (
+    <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+      <SidebarGroup>
+          <CollapsibleTrigger className='w-full'>
+              <SidebarGroupLabel className='flex justify-between items-center cursor-pointer'>
+                  <div className='flex items-center gap-2'>
+                    <History />
+                    History
+                  </div>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isHistoryOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+          </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenu>
+            {history.map(item => (
+              <SidebarMenuItem key={item.id}>
+                <SidebarMenuButton variant="ghost" onClick={() => handleHistoryClick(item)} className="h-auto flex-col items-start">
+                  <span className="font-semibold text-sm truncate w-full">{item.topic}</span>
+                  <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  )
+}
 
 function AppLayout() {
   const { view, setView, studentProfile, setExplanation, setQuiz, isProfileOpen, setIsProfileOpen } = useAppContext();
@@ -62,6 +106,8 @@ function AppLayout() {
             </SidebarMenuItem>
           </SidebarMenu>
           <SidebarSeparator />
+          <HistorySection />
+          <SidebarSeparator />
           <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen}>
             <SidebarGroup>
                 <CollapsibleTrigger className='w-full'>
@@ -93,7 +139,7 @@ function AppLayout() {
                 </Avatar>
                 <div className="flex flex-col overflow-hidden">
                     <span className="font-semibold text-sm truncate">{studentProfile.name || "Student"}</span>
-                    <span className="text-xs text-muted-foreground truncate">{studentProfile.classLevel || "Learner"}</span>
+                    <span className="text-xs text-muted-foreground">{studentProfile.classLevel || "Learner"}</span>
                 </div>
             </div>
         </SidebarFooter>

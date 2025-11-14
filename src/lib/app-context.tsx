@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { StudentProfile, AppView, Explanation, Quiz } from '@/lib/types';
+import type { StudentProfile, AppView, Explanation, Quiz, HistoryItem } from '@/lib/types';
 
 interface AppContextType {
   studentProfile: StudentProfile;
@@ -12,6 +12,8 @@ interface AppContextType {
   setExplanation: (explanation: Explanation | null) => void;
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
+  history: HistoryItem[];
+  addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
   isProfileComplete: boolean;
   isProfileOpen: boolean;
   setIsProfileOpen: (isOpen: boolean) => void;
@@ -29,6 +31,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [view, setView] = useState<AppView>('welcome');
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(true);
 
@@ -42,9 +45,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setIsProfileOpen(false);
         }
       }
+      const storedHistory = localStorage.getItem('explanationHistory');
+      if (storedHistory) {
+        setHistory(JSON.parse(storedHistory));
+      }
     } catch (error) {
-      console.error("Failed to parse student profile from localStorage", error);
+      console.error("Failed to parse from localStorage", error);
       localStorage.removeItem('studentProfile');
+      localStorage.removeItem('explanationHistory');
     }
   }, []);
 
@@ -62,8 +70,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addToHistory = (item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
+    const newHistoryItem: HistoryItem = {
+        ...item,
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+    };
+    setHistory(prevHistory => {
+        const updatedHistory = [newHistoryItem, ...prevHistory];
+        try {
+            localStorage.setItem('explanationHistory', JSON.stringify(updatedHistory));
+        } catch (error) {
+            console.error("Failed to save history to localStorage", error);
+        }
+        return updatedHistory;
+    });
+  };
+
   return (
-    <AppContext.Provider value={{ studentProfile, setStudentProfile, view, setView, explanation, setExplanation, quiz, setQuiz, isProfileComplete, isProfileOpen, setIsProfileOpen }}>
+    <AppContext.Provider value={{ studentProfile, setStudentProfile, view, setView, explanation, setExplanation, quiz, setQuiz, history, addToHistory, isProfileComplete, isProfileOpen, setIsProfileOpen }}>
       {children}
     </AppContext.Provider>
   );

@@ -12,6 +12,13 @@ export interface Explanation {
   fairWork: string;
 }
 
+export interface HistoryItem {
+  id: string;
+  topic: string;
+  explanation: Explanation;
+  timestamp: string;
+}
+
 export interface QuizQuestion {
   question: string;
   options: string[];
