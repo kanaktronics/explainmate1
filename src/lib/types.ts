@@ -12,10 +12,15 @@ export interface Explanation {
   fairWork: string;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string | Explanation;
+}
+
 export interface HistoryItem {
   id: string;
   topic: string;
-  explanation: Explanation;
+  messages: ChatMessage[];
   timestamp: string;
 }
 

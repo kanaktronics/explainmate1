@@ -26,12 +26,11 @@ import { HistoryItem } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 
 function HistorySection() {
-  const { history, setExplanation, setView } = useAppContext();
+  const { history, loadChatFromHistory } = useAppContext();
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 
   const handleHistoryClick = (item: HistoryItem) => {
-    setExplanation(item.explanation);
-    setView('explanation');
+    loadChatFromHistory(item.messages);
   };
 
   if (history.length === 0) {
@@ -68,10 +67,10 @@ function HistorySection() {
 }
 
 function AppLayout() {
-  const { view, setView, studentProfile, setExplanation, setQuiz, isProfileOpen, setIsProfileOpen } = useAppContext();
+  const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen } = useAppContext();
 
   const handleNewExplanation = () => {
-    setExplanation(null);
+    setChat([]);
     setView('explanation');
   };
 
@@ -95,7 +94,7 @@ function AppLayout() {
             <SidebarMenuItem>
               <SidebarMenuButton onClick={handleNewExplanation} isActive={view === 'explanation'}>
                 <BookOpen />
-                New Explanation
+                New Chat
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
