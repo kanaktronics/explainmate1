@@ -46,7 +46,7 @@ export function ExplanationView() {
     setExplanation(null);
 
     const input = {
-      ...values,
+      query: values.query,
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,
@@ -100,6 +100,59 @@ export function ExplanationView() {
           </Form>
         </CardContent>
       </Card>
+      
+      {isLoading && (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardContent className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardContent>
+        </Card>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {explanation && (
+        <Tabs defaultValue="explanation" className="w-full">
+          <TabsList>
+            <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
+            <TabsTrigger value="roughWork"><Codesandbox className="mr-2" />Rough Work</TabsTrigger>
+            <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World Examples</TabsTrigger>
+          </TabsList>
+          <TabsContent value="explanation">
+            <Card>
+              <CardHeader><CardTitle>Explanation</CardTitle></CardHeader>
+              <CardContent>
+                {renderContent(explanation.explanation)}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="roughWork">
+            <Card>
+              <CardHeader><CardTitle>Rough Work</CardTitle></CardHeader>
+              <CardContent>
+                {renderContent(explanation.roughWork)}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="realWorld">
+            <Card>
+              <CardHeader><CardTitle>Real-World Examples</CardTitle></CardHeader>
+              <CardContent>
+                {renderContent(explanation.realWorldExamples)}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
