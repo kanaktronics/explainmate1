@@ -27,7 +27,7 @@ const profileSchema = z.object({
 });
 
 export function StudentProfile() {
-  const { studentProfile, setStudentProfile } = useAppContext();
+  const { studentProfile, setStudentProfile, setIsProfileOpen } = useAppContext();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof profileSchema>>({
@@ -45,6 +45,7 @@ export function StudentProfile() {
       title: 'Profile Saved!',
       description: 'Your information has been updated.',
     });
+    setIsProfileOpen(false);
   }
 
   return (

@@ -19,11 +19,12 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown } from 'lucide-react';
 import React from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 function AppLayout() {
-  const { view, setView, studentProfile, setExplanation, setQuiz } = useAppContext();
+  const { view, setView, studentProfile, setExplanation, setQuiz, isProfileOpen, setIsProfileOpen } = useAppContext();
 
   const handleNewExplanation = () => {
     setExplanation(null);
@@ -61,10 +62,19 @@ function AppLayout() {
             </SidebarMenuItem>
           </SidebarMenu>
           <SidebarSeparator />
-          <SidebarGroup>
-            <SidebarGroupLabel>Student Profile</SidebarGroupLabel>
-            <StudentProfile />
-          </SidebarGroup>
+          <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+            <SidebarGroup>
+                <CollapsibleTrigger className='w-full'>
+                    <SidebarGroupLabel className='flex justify-between items-center cursor-pointer'>
+                        Student Profile
+                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                    </SidebarGroupLabel>
+                </CollapsibleTrigger>
+              <CollapsibleContent>
+                <StudentProfile />
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         </SidebarContent>
         <SidebarFooter>
             <SidebarMenu>
