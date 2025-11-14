@@ -17,6 +17,7 @@ import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, PenSquare, Sen
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
+import { Avatar, AvatarFallback } from './ui/avatar';
 
 const explanationSchema = z.object({
   topic: z.string().min(5, { message: 'Please ask a question with at least 5 characters.' }),
@@ -32,9 +33,9 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
 
   return (
     <div className="flex items-start gap-4">
-        <div className="bg-primary p-2 rounded-lg flex-shrink-0">
-            <BrainCircuit className="text-primary-foreground h-6 w-6" />
-        </div>
+        <Avatar className="bg-primary flex-shrink-0">
+          <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+        </Avatar>
         <Tabs defaultValue="explanation" className="w-full">
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
                 <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
@@ -71,18 +72,24 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   );
 };
 
-const UserMessage = ({ content }: { content: string }) => (
-    <div className="flex items-start gap-4">
-      <div className="bg-muted p-2 rounded-lg flex-shrink-0">
-        <User className="text-muted-foreground h-6 w-6" />
-      </div>
-      <Card className="w-full">
-        <CardContent className="pt-6">
+const UserMessage = ({ content }: { content: string }) => {
+  const { studentProfile } = useAppContext();
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  }
+  return (
+    <div className="flex items-start gap-4 justify-end">
+      <Card className="bg-muted">
+        <CardContent className="p-3">
           <p className="font-semibold">{content}</p>
         </CardContent>
       </Card>
+      <Avatar>
+          <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
+      </Avatar>
     </div>
-);
+  );
+}
 
 
 export function ExplanationView() {
@@ -159,9 +166,9 @@ export function ExplanationView() {
         <div ref={resultsRef}>
             {isLoading && (
               <div className='flex items-start gap-4'>
-                <div className="bg-primary p-2 rounded-lg flex-shrink-0">
-                    <BrainCircuit className="text-primary-foreground h-6 w-6" />
-                </div>
+                <Avatar className="bg-primary flex-shrink-0">
+                  <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+                </Avatar>
                 <Card className='w-full'>
                     <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
                     <CardContent className="space-y-4">
