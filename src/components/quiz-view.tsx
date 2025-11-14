@@ -161,37 +161,54 @@ const QuizCard = ({ q, index, userAnswer, onAnswerChange, showResult }: { q: Qui
     const isAnswered = !!userAnswer;
     const isCorrect = isAnswered && userAnswer.isCorrect;
     const selected = isAnswered && userAnswer.selected;
+    
+    // Each QuizCard is its own form now
+    const form = useForm();
 
     return (
         <Card key={index} className={`${showResult && isAnswered ? (isCorrect ? 'border-green-500' : 'border-red-500') : ''}`}>
-          <CardHeader>
-            <CardTitle>{index + 1}. {q.question}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup onValueChange={(value) => onAnswerChange(index, value)} disabled={showResult} value={selected}>
-              {q.options.map((option, i) => {
-                const isSelected = selected === option;
-                const isCorrectAnswer = q.correctAnswer === option;
-                
-                let indicatorClass = "";
-                if (showResult && isCorrectAnswer) indicatorClass = "text-green-500";
-                if (showResult && isSelected && !isCorrectAnswer) indicatorClass = "text-red-500";
+          <Form {...form}>
+            <form>
+              <CardHeader>
+                <CardTitle>{index + 1}. {q.question}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name={`question_${index}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <RadioGroup onValueChange={(value) => onAnswerChange(index, value)} disabled={showResult} value={selected}>
+                          {q.options.map((option, i) => {
+                            const isSelected = selected === option;
+                            const isCorrectAnswer = q.correctAnswer === option;
+                            
+                            let indicatorClass = "";
+                            if (showResult && isCorrectAnswer) indicatorClass = "text-green-500";
+                            if (showResult && isSelected && !isCorrectAnswer) indicatorClass = "text-red-500";
 
-                return (
-                  <FormItem key={i} className={`flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors ${showResult && isCorrectAnswer ? 'bg-green-500/10' : ''} ${showResult && isSelected && !isCorrectAnswer ? 'bg-red-500/10' : ''}`}>
-                    <FormControl>
-                      <RadioGroupItem value={option} />
-                    </FormControl>
-                    <FormLabel className={`font-normal flex-1 ${indicatorClass}`}>
-                      {option}
-                    </FormLabel>
-                    {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
-                    {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
-                  </FormItem>
-                );
-              })}
-            </RadioGroup>
-          </CardContent>
+                            return (
+                              <FormItem key={i} className={`flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors ${showResult && isCorrectAnswer ? 'bg-green-500/10' : ''} ${showResult && isSelected && !isCorrectAnswer ? 'bg-red-500/10' : ''}`}>
+                                <FormControl>
+                                  <RadioGroupItem value={option} />
+                                </FormControl>
+                                <FormLabel className={`font-normal flex-1 ${indicatorClass}`}>
+                                  {option}
+                                </FormLabel>
+                                {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
+                                {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
+                              </FormItem>
+                            );
+                          })}
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </form>
+          </Form>
           {showResult && (
             <CardFooter>
                 <Alert variant={isCorrect ? 'default' : 'destructive'} className={`${isCorrect ? 'bg-green-500/10 border-green-500/50' : ''}`}>
@@ -220,3 +237,5 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
+
+    
