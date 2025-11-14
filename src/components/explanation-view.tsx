@@ -17,7 +17,6 @@ import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 
 const explanationSchema = z.object({
-  topic: z.string().min(5, { message: 'Please describe your topic in at least 5 characters.' }),
   query: z.string().min(5, { message: 'Please ask a question with at least 5 characters.' }),
 });
 
@@ -29,7 +28,7 @@ export function ExplanationView() {
 
   const form = useForm<z.infer<typeof explanationSchema>>({
     resolver: zodResolver(explanationSchema),
-    defaultValues: { topic: '', query: '' },
+    defaultValues: { query: '' },
   });
 
   async function onSubmit(values: z.infer<typeof explanationSchema>) {
@@ -83,25 +82,12 @@ export function ExplanationView() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="topic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Topic</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="e.g., Photosynthesis, Pythagorean Theorem" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="query"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>What do you want to understand?</FormLabel>
+                    <FormLabel>Ask a question</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Explain the steps of photosynthesis, How does the theorem work?" {...field} />
+                      <Textarea placeholder="e.g., Explain the steps of photosynthesis, or how does the pythagorean theorem work?" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -114,46 +100,6 @@ export function ExplanationView() {
           </Form>
         </CardContent>
       </Card>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {isLoading && <LoadingSkeleton />}
-      
-      {explanation && (
-        <Tabs defaultValue="explanation" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-            <TabsTrigger value="explanation"><BrainCircuit className="mr-2 h-4 w-4"/>Explanation</TabsTrigger>
-            <TabsTrigger value="rough-work"><Codesandbox className="mr-2 h-4 w-4"/>Rough Work</TabsTrigger>
-            <TabsTrigger value="real-world"><Globe className="mr-2 h-4 w-4"/>Real World</TabsTrigger>
-            <TabsTrigger value="fair-work"><BookText className="mr-2 h-4 w-4"/>Fair Work</TabsTrigger>
-          </TabsList>
-          <Card className="mt-4">
-            <CardContent className="p-6">
-                <TabsContent value="explanation">{renderContent(explanation.explanation)}</TabsContent>
-                <TabsContent value="rough-work">{renderContent(explanation.roughWork)}</TabsContent>
-                <TabsContent value="real-world">{renderContent(explanation.realWorldExamples)}</TabsContent>
-                <TabsContent value="fair-work">{renderContent(explanation.fairWork)}</TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
-      )}
     </div>
   );
 }
-
-const LoadingSkeleton = () => (
-    <Card>
-        <CardContent className="p-6 space-y-4">
-            <Skeleton className="h-8 w-1/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-        </CardContent>
-    </Card>
-)
