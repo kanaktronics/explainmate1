@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, PenSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const explanationSchema = z.object({
@@ -122,10 +122,11 @@ export function ExplanationView() {
 
       {explanation && (
         <Tabs defaultValue="explanation" className="w-full">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
             <TabsTrigger value="roughWork"><Codesandbox className="mr-2" />Rough Work</TabsTrigger>
-            <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World Examples</TabsTrigger>
+            <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World</TabsTrigger>
+            <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
           </TabsList>
           <TabsContent value="explanation">
             <Card>
@@ -148,6 +149,14 @@ export function ExplanationView() {
               <CardHeader><CardTitle>Real-World Examples</CardTitle></CardHeader>
               <CardContent>
                 {renderContent(explanation.realWorldExamples)}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="fairWork">
+            <Card>
+              <CardHeader><CardTitle>Fair Work (Notebook-ready)</CardTitle></CardHeader>
+              <CardContent>
+                {renderContent(explanation.fairWork)}
               </CardContent>
             </Card>
           </TabsContent>
