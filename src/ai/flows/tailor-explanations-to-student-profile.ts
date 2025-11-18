@@ -32,8 +32,8 @@ const TailorExplanationOutputSchema = z.object({
 });
 export type TailorExplanationOutput = z.infer<typeof TailorExplanationOutputSchema>;
 
-export async function tailorExplanation(input: TailorExplanationInput, model?: GenerateRequest['model']): Promise<TailorExplanationOutput> {
-  return tailorExplanationFlow(input, model);
+export async function tailorExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput> {
+  return tailorExplanationFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -71,8 +71,8 @@ const tailorExplanationFlow = ai.defineFlow(
     inputSchema: TailorExplanationInputSchema,
     outputSchema: TailorExplanationOutputSchema,
   },
-  async (input, model) => {
-    const {output} = await prompt(input, { model });
+  async (input) => {
+    const {output} = await prompt(input);
     return output!;
   }
 );
