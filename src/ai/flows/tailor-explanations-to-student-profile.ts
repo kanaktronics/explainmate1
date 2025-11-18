@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { GenerateRequest } from 'genkit/generate';
 
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
@@ -31,8 +32,8 @@ const TailorExplanationOutputSchema = z.object({
 });
 export type TailorExplanationOutput = z.infer<typeof TailorExplanationOutputSchema>;
 
-export async function tailorExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput> {
-  return tailorExplanationFlow(input);
+export async function tailorExplanation(input: TailorExplanationInput, model?: GenerateRequest['model']): Promise<TailorExplanationOutput> {
+  return tailorExplanationFlow(input, model);
 }
 
 const prompt = ai.definePrompt({
@@ -70,8 +71,8 @@ const tailorExplanationFlow = ai.defineFlow(
     inputSchema: TailorExplanationInputSchema,
     outputSchema: TailorExplanationOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input, model) => {
+    const {output} = await prompt(input, { model });
     return output!;
   }
 );
