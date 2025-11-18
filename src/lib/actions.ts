@@ -11,34 +11,42 @@ async function sleep(ms: number) {
 }
 
 export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
-  const model = googleAI.model('gemini-2.5-flash');
+  const primaryModel = googleAI.model('gemini-2.5-flash');
+  const fallbackModel = googleAI.model('gemini-2.0-flash');
   const maxRetries = 3;
-  let lastError: any;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await tailorExplanation(input, model);
+      return await tailorExplanation(input, primaryModel);
     } catch (e: any) {
-      lastError = e;
       const errorMessage = e.message || '';
       const isOverloaded = errorMessage.includes('503') || errorMessage.includes('overloaded');
-
+      
       if (isOverloaded) {
         if (attempt < maxRetries) {
-          await sleep(1000 * attempt); // Simple linear backoff
+          await sleep(500 * attempt); // Brief backoff before retry
           continue;
-        } else {
-          console.error(`All ${maxRetries} retry attempts failed.`, lastError);
-          return { error: 'The AI model is currently experiencing very high demand. Please try again in a few minutes.' };
         }
+        // If all retries on primary model fail, break the loop to try the fallback.
+        break;
       }
       
-      console.error(`An unexpected error occurred:`, e);
-      break; 
+      console.error(`An unexpected error occurred with primary model:`, e);
+      return { error: 'An unexpected error occurred while generating the response. Please try again.' };
     }
   }
-  
-  return { error: 'An unexpected error occurred while generating the response. Please try again.' };
+
+  // If the loop finished due to retries being exhausted, try the fallback model.
+  try {
+    return await tailorExplanation(input, fallbackModel);
+  } catch (e: any) {
+    console.error(`Fallback model also failed:`, e);
+    const errorMessage = e.message || '';
+    if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
+      return { error: 'The AI service is currently experiencing very high demand. Please try again in a few minutes.' };
+    }
+    return { error: 'An unexpected error occurred while generating the response. Please try again.' };
+  }
 }
 
 export async function getQuiz(input: GenerateInteractiveQuizzesInput): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
