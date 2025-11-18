@@ -5,8 +5,8 @@ import type { TailorExplanationInput, TailorExplanationOutput } from '@/ai/flows
 import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quizzes';
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
 
-const MAX_RETRIES = 5;
-const INITIAL_DELAY_MS = 1000;
+const MAX_RETRIES = 10;
+const INITIAL_DELAY_MS = 500;
 
 async function callWithRetry<T extends (...args: any[]) => any>(
   fn: T,
@@ -19,16 +19,18 @@ async function callWithRetry<T extends (...args: any[]) => any>(
       return result;
     } catch (e: any) {
       const errorMessage = e.message || '';
-      if (
-        i < MAX_RETRIES - 1 &&
-        (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('unavailable'))
-      ) {
-        console.warn(`Attempt ${i + 1} failed with 503 error. Retrying in ${delayMs}ms...`);
+      const isOverloaded = errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('unavailable');
+
+      if (i < MAX_RETRIES - 1 && isOverloaded) {
+        console.warn(`Attempt ${i + 1} failed with overload error. Retrying in ${delayMs}ms...`);
         await new Promise((r) => setTimeout(r, delayMs));
-        delayMs *= 2; // Exponential backoff
+        delayMs = Math.min(delayMs * 2, 5000); // Exponential backoff with a max delay
       } else {
         console.error(`Error generating response after ${i + 1} attempts:`, e);
-        return { error: `An error occurred while generating the response. The AI model may be temporarily unavailable. Please try again later. (Details: ${errorMessage})` };
+        if (isOverloaded) {
+          return { error: 'The AI model is currently experiencing high demand. Please try again in a moment.' };
+        }
+        return { error: 'An unexpected error occurred while generating the response. Please try again.' };
       }
     }
   }
