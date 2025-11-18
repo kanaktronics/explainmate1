@@ -133,7 +133,7 @@ function AppLayout() {
             <SidebarSeparator/>
             <div className="flex items-center gap-3 px-2">
                 <Avatar>
-                    <AvatarImage src={`https://i.pravatar.cc/150?u=${studentProfile.name}`} />
+                    <AvatarImage src={`https://api.dicebear.com/8.x/thumbs/svg?seed=${studentProfile.name}`} />
                     <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col overflow-hidden">

@@ -17,7 +17,7 @@ import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, PenSquare, Sen
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const explanationSchema = z.object({
   topic: z.string().min(5, { message: 'Please ask a question with at least 5 characters.' }),
@@ -85,6 +85,7 @@ const UserMessage = ({ content }: { content: string }) => {
         </CardContent>
       </Card>
       <Avatar>
+          <AvatarImage src={`https://api.dicebear.com/8.x/thumbs/svg?seed=${studentProfile.name}`} />
           <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
       </Avatar>
     </div>
