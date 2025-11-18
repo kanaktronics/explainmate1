@@ -19,8 +19,7 @@ const StudentProfileSchema = z.object({
 
 const TailorExplanationInputSchema = z.object({
   topic: z.string().describe('The specific question or concept the student needs help with.'),
-  studentProfile: z.union([StudentProfileSchema, z.string()])
-    .describe('The profile of the student, including their class level, board, and weak subjects. Can be a JSON string or an object.'),
+  studentProfile: StudentProfileSchema,
 });
 export type TailorExplanationInput = z.infer<typeof TailorExplanationInputSchema>;
 
@@ -38,7 +37,7 @@ export async function tailorExplanation(input: TailorExplanationInput): Promise<
 
 const prompt = ai.definePrompt({
   name: 'tailorExplanationPrompt',
-  input: {schema: z.object({ topic: z.string(), studentProfile: StudentProfileSchema })},
+  input: {schema: TailorExplanationInputSchema },
   output: {schema: TailorExplanationOutputSchema},
   prompt: `You are an expert AI tutor, skilled at explaining complex topics to students of varying backgrounds.
 
@@ -71,19 +70,7 @@ const tailorExplanationFlow = ai.defineFlow(
     outputSchema: TailorExplanationOutputSchema,
   },
   async input => {
-    let studentProfileObject = input.studentProfile;
-    if (typeof studentProfileObject === 'string') {
-      try {
-        studentProfileObject = JSON.parse(studentProfileObject);
-      } catch (e) {
-        console.error("Failed to parse student profile string:", e);
-        throw new Error("Invalid student profile format.");
-      }
-    }
-    const {output} = await prompt({
-      topic: input.topic,
-      studentProfile: studentProfileObject,
-    });
+    const {output} = await prompt(input);
     return output!;
   }
 );
