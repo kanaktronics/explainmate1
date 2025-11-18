@@ -6,6 +6,8 @@ import { ExplanationView } from '@/components/explanation-view';
 import { QuizView } from '@/components/quiz-view';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
+import { AboutView } from './about-view';
+import { ContactView } from './contact-view';
 
 export function MainPanel() {
   const { view } = useAppContext();
@@ -16,6 +18,10 @@ export function MainPanel() {
         return <ExplanationView />;
       case 'quiz':
         return <QuizView />;
+      case 'about':
+        return <AboutView />;
+      case 'contact':
+        return <ContactView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;

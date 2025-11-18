@@ -78,6 +78,14 @@ function AppLayout() {
     setQuiz(null);
     setView('quiz');
   };
+
+  const handleAbout = () => {
+    setView('about');
+  };
+
+  const handleContact = () => {
+    setView('contact');
+  }
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
@@ -124,10 +132,10 @@ function AppLayout() {
         <SidebarFooter>
             <SidebarMenu>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost"><Info/>About</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={handleAbout} isActive={view === 'about'}><Info/>About</SidebarMenuButton>
                  </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost"><Contact/>Contact</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={handleContact} isActive={view === 'contact'}><Contact/>Contact</SidebarMenuButton>
                  </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator/>

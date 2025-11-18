@@ -35,4 +35,4 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact';
