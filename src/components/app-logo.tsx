@@ -14,8 +14,12 @@ export const AppLogo = () => {
           strokeLinejoin="round"
           className="text-primary-foreground h-6 w-6"
         >
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          <path d="M12 2a10 10 0 1 0 10 10" />
+          <path d="M12 18a10 10 0 0 0-4.94-8.6" />
+          <path d="M17 12a5 5 0 0 0-5-5" />
+          <path d="m12 8-2 4" />
+          <path d="m14 12-2 4" />
+          <path d="m6 12-2 4" />
         </svg>
       </div>
       <h1 className="text-xl font-headline font-semibold text-foreground whitespace-nowrap">
