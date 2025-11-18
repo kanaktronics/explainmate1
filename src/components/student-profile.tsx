@@ -14,10 +14,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { StudentProfile as StudentProfileType } from '@/lib/types';
-import { Save } from 'lucide-react';
+import { Edit, Save } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -27,8 +28,9 @@ const profileSchema = z.object({
 });
 
 export function StudentProfile() {
-  const { studentProfile, setStudentProfile, setIsProfileOpen } = useAppContext();
+  const { studentProfile, setStudentProfile, setIsProfileOpen, isProfileComplete } = useAppContext();
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(!isProfileComplete);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -37,7 +39,8 @@ export function StudentProfile() {
 
   useEffect(() => {
     form.reset(studentProfile);
-  }, [studentProfile, form]);
+    setIsEditing(!isProfileComplete);
+  }, [studentProfile, form, isProfileComplete]);
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     setStudentProfile(values as StudentProfileType);
@@ -45,7 +48,39 @@ export function StudentProfile() {
       title: 'Profile Saved!',
       description: 'Your information has been updated.',
     });
+    setIsEditing(false);
     setIsProfileOpen(false);
+  }
+  
+  if (!isEditing) {
+    return (
+      <div className="space-y-3">
+          <Card>
+            <CardContent className="p-3 text-sm space-y-2">
+                <div>
+                    <p className="font-semibold">Name</p>
+                    <p className="text-muted-foreground">{studentProfile.name}</p>
+                </div>
+                 <div>
+                    <p className="font-semibold">Class</p>
+                    <p className="text-muted-foreground">{studentProfile.classLevel}</p>
+                </div>
+                 <div>
+                    <p className="font-semibold">Board</p>
+                    <p className="text-muted-foreground">{studentProfile.board}</p>
+                </div>
+                 <div>
+                    <p className="font-semibold">Weak Subjects</p>
+                    <p className="text-muted-foreground">{studentProfile.weakSubjects || 'None'}</p>
+                </div>
+            </CardContent>
+          </Card>
+        <Button onClick={() => setIsEditing(true)} className="w-full" variant="outline">
+          <Edit />
+          Edit Profile
+        </Button>
+      </div>
+    );
   }
 
   return (
