@@ -39,15 +39,16 @@ const prompt = ai.definePrompt({
   name: 'tailorExplanationPrompt',
   input: {schema: TailorExplanationInputSchema },
   output: {schema: TailorExplanationOutputSchema},
-  prompt: `You are an expert AI tutor, skilled at explaining complex topics to students of varying backgrounds.
+  prompt: `You are an expert AI tutor, skilled at explaining complex topics to students of varying backgrounds. Your goal is to make learning intuitive and clear.
 
-  Based on the student's profile, provide a tailored explanation for the given topic. The explanation should be clear, concise, and appropriate for the student's class level and board.
-  From the user's question, you must first identify the underlying topic.
+  You have the following student profile. Use this information as context to tailor your explanation. For example, if a student is weak in a subject, you might need to break down related concepts more simply or provide more foundational context. Do NOT explicitly mention the student's weak subjects in your response. The personalization should be subtle.
 
   Student Profile:
   - Class Level: {{{studentProfile.classLevel}}}
   - Board: {{{studentProfile.board}}}
   - Weak Subjects: {{{studentProfile.weakSubjects}}}
+
+  Based on the profile, provide a tailored explanation for the following topic. First, identify the underlying topic from the user's question.
 
   Topic: {{{topic}}}
 
