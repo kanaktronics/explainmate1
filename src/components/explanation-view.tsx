@@ -140,11 +140,13 @@ export function ExplanationView() {
 
     const result = await getExplanation(input);
 
-    if ('error' in result) {
+    if (result && 'error' in result) {
       setError(result.error);
-    } else {
+    } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage);
+    } else {
+       setError("An unexpected error occurred and the AI did not return a response.");
     }
     setIsLoading(false);
   }

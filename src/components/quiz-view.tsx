@@ -60,10 +60,12 @@ export function QuizView() {
     };
 
     const result = await getQuiz(input);
-    if ('error' in result) {
+    if (result && 'error' in result) {
       setError(result.error);
-    } else {
+    } else if (result) {
       setQuiz(result);
+    } else {
+      setError("An unexpected error occurred and the AI did not return a response.");
     }
     setIsLoading(false);
   }
@@ -150,7 +152,7 @@ export function QuizView() {
         {!showResults ? (
              <Button onClick={checkAnswers} disabled={Object.keys(userAnswers).length !== quiz.quiz.length}>Check Answers</Button>
         ) : (
-            <Button onClick={() => setQuiz(null)}>Try Another Quiz</Button>
+            <Button onClick={() => { setQuiz(null); form.reset(); }}>Try Another Quiz</Button>
         )}
       </div>
     </div>
@@ -237,5 +239,3 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
-    
