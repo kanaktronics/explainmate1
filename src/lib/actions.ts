@@ -6,33 +6,42 @@ import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quiz
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
 import { googleAI } from '@genkit-ai/google-genai';
 
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
-  const primaryModel = googleAI.model('gemini-2.5-flash');
-  const fallbackModel = googleAI.model('gemini-pro');
+  const model = googleAI.model('gemini-2.5-flash');
+  const maxRetries = 3;
+  let lastError: any;
 
-  try {
-    // Attempt with the primary model first
-    return await tailorExplanation(input, primaryModel);
-  } catch (e: any) {
-    const errorMessage = e.message || '';
-    const isOverloaded = errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('unavailable');
-    
-    // If it's an overload error, try the fallback model
-    if (isOverloaded) {
-      console.warn(`Primary model failed. Attempting fallback with ${fallbackModel.name}.`);
-      try {
-        return await tailorExplanation(input, fallbackModel);
-      } catch (fallbackError: any) {
-         console.error(`Fallback attempt also failed:`, fallbackError);
-         return { error: 'The AI service is currently experiencing very high demand. Please try again in a few minutes.' };
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await tailorExplanation(input, model);
+    } catch (e: any) {
+      lastError = e;
+      const errorMessage = e.message || '';
+      const isOverloaded = errorMessage.includes('503') || errorMessage.includes('overloaded');
+
+      if (isOverloaded) {
+        if (attempt < maxRetries) {
+          // Wait before retrying
+          await sleep(1000 * attempt); // Simple linear backoff
+          continue; // a
+        } else {
+          // All retries failed
+          console.error(`All ${maxRetries} retry attempts failed.`, lastError);
+          return { error: 'The AI model is currently experiencing very high demand. Please try again in a few minutes.' };
+        }
       }
+      
+      // For non-overload errors, fail immediately
+      console.error(`An unexpected error occurred:`, e);
+      break; 
     }
-    
-    // For non-overload errors, fail immediately
-    console.error(`An unexpected error occurred:`, e);
-    return { error: 'An unexpected error occurred while generating the response. Please try again.' };
   }
+  
+  return { error: 'An unexpected error occurred while generating the response. Please try again.' };
 }
 
 export async function getQuiz(input: GenerateInteractiveQuizzesInput): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
