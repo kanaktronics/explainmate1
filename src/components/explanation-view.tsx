@@ -85,7 +85,7 @@ const UserMessage = ({ content }: { content: string }) => {
         </CardContent>
       </Card>
       <Avatar>
-          <AvatarImage src={`https://api.dicebear.com/8.x/thumbs/svg?seed=${studentProfile.name}`} />
+          <AvatarImage src={`https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${studentProfile.name}`} />
           <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
       </Avatar>
     </div>
