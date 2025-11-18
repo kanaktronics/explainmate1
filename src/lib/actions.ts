@@ -25,17 +25,14 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
 
       if (isOverloaded) {
         if (attempt < maxRetries) {
-          // Wait before retrying
           await sleep(1000 * attempt); // Simple linear backoff
-          continue; // a
+          continue;
         } else {
-          // All retries failed
           console.error(`All ${maxRetries} retry attempts failed.`, lastError);
           return { error: 'The AI model is currently experiencing very high demand. Please try again in a few minutes.' };
         }
       }
       
-      // For non-overload errors, fail immediately
       console.error(`An unexpected error occurred:`, e);
       break; 
     }
