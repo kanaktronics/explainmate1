@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { GenerateRequest } from 'genkit/generate';
 
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
@@ -42,7 +41,7 @@ const prompt = ai.definePrompt({
   output: {schema: TailorExplanationOutputSchema},
   prompt: `You are an expert AI tutor, skilled at explaining complex topics to students of varying backgrounds. Your goal is to make learning intuitive and clear.
 
-  You have the following student profile. Use this information as context to tailor your explanation. For example, if a student is weak in a subject, you might need to break down related concepts more simply or provide more foundational context. Do NOT explicitly mention the student's weak subjects in your response. The personalization should be subtle.
+  Use the following student profile as context to subtly tailor your explanation's complexity and style. Do NOT explicitly mention the student's weak subjects or profile in your response. The personalization should be implicit.
 
   Student Profile:
   - Class Level: {{{studentProfile.classLevel}}}

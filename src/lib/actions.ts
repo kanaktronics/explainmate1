@@ -7,20 +7,30 @@ import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput 
 
 export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
   try {
-    return await tailorExplanation(input);
+    const result = await tailorExplanation(input);
+    if (!result) {
+      throw new Error('AI did not return a response.');
+    }
+    return result;
   } catch (e: any) {
     console.error(`An unexpected error occurred:`, e);
     const errorMessage = e.message || '';
+
     if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
-      return { error: 'The AI model is currently experiencing high demand. Please try again in a moment.' };
+      return { error: 'The AI model is currently experiencing high demand and is overloaded. Please try again in a moment.' };
     }
+    
     return { error: 'An unexpected error occurred while generating the response. Please try again.' };
   }
 }
 
 export async function getQuiz(input: GenerateInteractiveQuizzesInput): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
     try {
-        return await generateInteractiveQuizzes(input);
+        const result = await generateInteractiveQuizzes(input);
+        if (!result) {
+          throw new Error('AI did not return a response.');
+        }
+        return result;
     } catch(e: any) {
         console.error("Error generating quiz:", e);
         const errorMessage = e.message || '';
