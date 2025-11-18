@@ -11,15 +11,16 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const StudentProfileSchema = z.object({
+  classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
+  board: z.string().describe('The educational board the student follows (e.g., CBSE, ICSE, State Board).'),
+  weakSubjects: z.string().describe('Comma-separated list of subjects the student finds challenging.'),
+});
+
 const TailorExplanationInputSchema = z.object({
   topic: z.string().describe('The specific question or concept the student needs help with.'),
-  studentProfile: z
-    .object({
-      classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
-      board: z.string().describe('The educational board the student follows (e.g., CBSE, ICSE, State Board).'),
-      weakSubjects: z.string().describe('Comma-separated list of subjects the student finds challenging.'),
-    })
-    .describe('The profile of the student, including their class level, board, and weak subjects.'),
+  studentProfile: z.union([StudentProfileSchema, z.string()])
+    .describe('The profile of the student, including their class level, board, and weak subjects. Can be a JSON string or an object.'),
 });
 export type TailorExplanationInput = z.infer<typeof TailorExplanationInputSchema>;
 
@@ -37,7 +38,7 @@ export async function tailorExplanation(input: TailorExplanationInput): Promise<
 
 const prompt = ai.definePrompt({
   name: 'tailorExplanationPrompt',
-  input: {schema: TailorExplanationInputSchema},
+  input: {schema: z.object({ topic: z.string(), studentProfile: StudentProfileSchema })},
   output: {schema: TailorExplanationOutputSchema},
   prompt: `You are an expert AI tutor, skilled at explaining complex topics to students of varying backgrounds.
 
@@ -70,7 +71,19 @@ const tailorExplanationFlow = ai.defineFlow(
     outputSchema: TailorExplanationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    let studentProfileObject = input.studentProfile;
+    if (typeof studentProfileObject === 'string') {
+      try {
+        studentProfileObject = JSON.parse(studentProfileObject);
+      } catch (e) {
+        console.error("Failed to parse student profile string:", e);
+        throw new Error("Invalid student profile format.");
+      }
+    }
+    const {output} = await prompt({
+      topic: input.topic,
+      studentProfile: studentProfileObject,
+    });
     return output!;
   }
 );
