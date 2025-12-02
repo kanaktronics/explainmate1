@@ -13,15 +13,9 @@ export async function createOrder(input: z.infer<typeof OrderInputSchema>) {
     try {
         const validatedInput = OrderInputSchema.parse(input);
 
-        // This is a placeholder. In a real app, you would use your actual keys from a secure source.
         if (razorpayConfig.key_id.startsWith('YOUR_')) {
-             console.warn("Using placeholder Razorpay keys. This is for demonstration only.");
-             // Simulate order creation for UI testing without real keys
-             return {
-                orderId: `order_demo_${Date.now()}`,
-                amount: validatedInput.amount,
-                currency: validatedInput.currency,
-             }
+             console.error("Razorpay keys are not configured. Please add them to your environment variables.");
+             return { error: 'Payment gateway is not configured.' };
         }
         
         const instance = new Razorpay({

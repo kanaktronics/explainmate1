@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle, Zap, Image, Infinity, Clock } from 'lucide-react';
+import { CheckCircle, Zap, Image, Infinity, Clock, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { Button } from "./ui/button";
 import { useToast } from '@/hooks/use-toast';
@@ -145,12 +145,6 @@ export function ProMembershipView() {
                             <span><span className="font-semibold">Dedicated "Pro" badge</span> on your profile</span>
                         </li>
                     </ul>
-                    <Alert>
-                        <AlertTitle>Razorpay Integration</AlertTitle>
-                        <AlertDescription>
-                            This is a placeholder for Razorpay integration. Clicking "Buy Pro" will simulate a successful payment for demonstration purposes.
-                        </AlertDescription>
-                    </Alert>
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleBuyPro} disabled={isLoading} className="w-full text-lg py-6 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90 text-primary-foreground">
