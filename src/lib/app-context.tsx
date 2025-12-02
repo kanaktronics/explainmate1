@@ -25,6 +25,8 @@ interface AppContextType {
   isProfileComplete: boolean;
   isProfileOpen: boolean;
   setIsProfileOpen: (isOpen: boolean) => void;
+  isAdOpen: boolean;
+  setIsAdOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -50,10 +52,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [studentProfile, setStudentProfileState] = useState<StudentProfile>(defaultProfile);
   const [view, setView] = useState<AppView>('welcome');
   const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAdOpen, setIsAdOpen] = useState(false);
 
   const getHistoryKey = () => user ? `explanationHistory_${user.uid}` : null;
 
@@ -259,8 +262,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, isUserLoading]);
 
+  // Logic to show ad on first load for free users
+  useEffect(() => {
+    if (studentProfile.email && !studentProfile.isPro) {
+      const adShown = sessionStorage.getItem('adShown');
+      if (!adShown) {
+        const timer = setTimeout(() => {
+          setIsAdOpen(true);
+          sessionStorage.setItem('adShown', 'true');
+        }, 3000); // Show ad after 3 seconds
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [studentProfile.isPro, studentProfile.email]);
+
   return (
-    <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>
+    <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory, isAdOpen, setIsAdOpen }}>
       {children}
     </AppContext.Provider>
   );

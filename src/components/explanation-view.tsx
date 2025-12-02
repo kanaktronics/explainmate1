@@ -107,7 +107,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView } = useAppContext();
+  const { studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, setIsAdOpen } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -133,12 +133,7 @@ export function ExplanationView() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!studentProfile.isPro) {
-        toast({
-            variant: 'destructive',
-            title: 'Pro Feature',
-            description: 'Image upload is available for Pro members only.',
-            action: <Button onClick={() => setView('pro-membership')}>Upgrade</Button>
-        });
+        setIsAdOpen(true);
         return;
     }
     const file = e.target.files?.[0];
@@ -273,7 +268,6 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={() => fileInputRef.current?.click()}
                     title="Upload Image (Pro)"
-                    disabled={!studentProfile.isPro}
                     >
                     <ImageIcon />
                 </Button>
