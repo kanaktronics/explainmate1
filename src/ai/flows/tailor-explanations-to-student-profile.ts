@@ -87,14 +87,14 @@ const prompt = ai.definePrompt({
   - {{role}}: {{{content}}}
   {{/each}}
 
-  Your task is to respond to the last user message. You must generate content for all four sections below. If a section is not applicable (e.g., no calculations for a history question), fill it with "N/A".
+  Your task is to respond to the last user message. You must generate content for all four sections below.
 
-  1.  Explanation: A detailed, step-by-step explanation. Be engaging. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. This should be the main, comprehensive answer.
-  2.  Rough Work: Any derivations, calculations, or scratchpad work. Show the 'behind-the-scenes' thinking. If there are no calculations, put "N/A".
-  3.  Real-World Examples: Relatable examples to illustrate the concept in daily life.
-  4.  Fair Work: A clean, polished, notebook-ready version of the explanation or solution. This should be a concise and neat summary, perfect for notes.
+  1.  Explanation: This is the main answer. It must be detailed, comprehensive, and engaging, written as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable.
+  2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2) and explain what each variable (G, m1, m2, r) means. This section should almost never be 'N/A' for a science or math topic.
+  3.  Real-World Examples: Provide at least 2-3 relatable examples to illustrate the concept in daily life.
+  4.  Fair Work: A clean, polished, notebook-ready version of the solution or explanation. This should be a concise and neat summary, perfect for notes.
 
-  If the question is not an educational question, respond that you cannot answer the request, but still provide N/A for all four fields.
+  CRITICAL: Ensure every section is detailed and high-quality. Do not provide short, superficial answers. The goal is deep understanding, not just a quick definition. If the question is not an educational question, respond that you cannot answer the request, but still provide N/A for all four fields.
 `,
 });
 
