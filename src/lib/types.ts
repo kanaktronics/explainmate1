@@ -8,8 +8,6 @@ export interface StudentProfile {
   isPro: boolean;
   dailyUsage: number;
   lastUsageDate: string;
-  securityQuestion?: string;
-  securityAnswer?: string;
 }
 
 export interface Explanation {

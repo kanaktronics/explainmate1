@@ -13,13 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -29,15 +22,12 @@ import { useFirebase } from '@/firebase';
 import { FirebaseError } from 'firebase/app';
 import { AppLogo } from './app-logo';
 import { setDocumentNonBlocking } from '@/firebase';
-import { doc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useAppContext } from '@/lib/app-context';
-import { securityQuestions } from '@/lib/security-questions';
 
 const signUpSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
-  securityQuestion: z.string().min(1, { message: 'Please select a security question.' }),
-  securityAnswer: z.string().min(3, { message: 'Answer must be at least 3 characters long.' }),
 });
 
 const signInSchema = z.object({
@@ -53,7 +43,7 @@ export function AuthView() {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '', securityQuestion: '', securityAnswer: '' },
+    defaultValues: { email: '', password: '' },
   });
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
@@ -112,8 +102,6 @@ export function AuthView() {
             board: '',
             weakSubjects: [],
             isPro: false,
-            securityQuestion: values.securityQuestion,
-            securityAnswer: values.securityAnswer, // In a real app, this would be hashed
         };
         const profileRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(profileRef, userProfile, { merge: true });
@@ -218,37 +206,6 @@ export function AuthView() {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl><Input type="password" placeholder="Must be at least 8 characters" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signUpForm.control}
-                    name="securityQuestion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Security Question</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a question" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {securityQuestions.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signUpForm.control}
-                    name="securityAnswer"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Security Answer</FormLabel>
-                        <FormControl><Input type="password" placeholder="Your secret answer" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

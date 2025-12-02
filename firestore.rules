@@ -15,8 +15,7 @@
  *
  * ## Key Security Decisions
  * - **No User Listing**: To protect user privacy and prevent data scraping, it is
- *   explicitly forbidden to list all documents in the `/users` collection, with
- *   the sole exception of querying by email for the password reset flow.
+ *   explicitly forbidden to list all documents in the `/users` collection.
  * - **Ownership Integrity**: When a user profile is created, a rule enforces
  *   that the user's UID is stored inside the document's `id` field. This `id`
  *   field is then made immutable on all subsequent updates, creating a permanent
@@ -69,52 +68,26 @@ service cloud.firestore {
      * integrity from the moment of creation.
      */
     function hasValidUserProfileDataOnCreate(userId) {
-      return request.resource.data.id == userId
-          && request.resource.data.securityQuestion != null
-          && request.resource.data.securityAnswer != null;
+      return request.resource.data.id == userId;
     }
 
     /**
-     * On update, ensures critical relational fields like the user 'id' and
-     * security info are not changed, preserving the integrity of the ownership link.
+     * On update, ensures critical relational fields like the user 'id'
+     * are not changed, preserving the integrity of the ownership link.
      */
     function isImmutableUserProfileData() {
-      return request.resource.data.id == resource.data.id
-        && request.resource.data.securityQuestion == resource.data.securityQuestion
-        && request.resource.data.securityAnswer == resource.data.securityAnswer;
+      return request.resource.data.id == resource.data.id;
     }
-    
-    /**
-     * Checks if an unauthenticated query is specifically for the password reset flow.
-     */
-    function isPasswordResetQuery() {
-      // Rule breakdown:
-      // 1. request.auth == null: The user must NOT be authenticated.
-      // 2. request.query.keys().hasOnly(['where']): The query must ONLY contain a 'where' clause. No 'orderBy', 'limit', etc.
-      // 3. request.query.where[0].field == 'email': The first (and only) 'where' clause must be on the 'email' field.
-      // 4. request.query.where[0].operator == '==': The operator must be an exact match.
-      return request.auth == null 
-        && request.query.keys().hasOnly(['where']) 
-        && request.query.where.size() == 1
-        && request.query.where[0][0] == 'email' 
-        && request.query.where[0][1] == '==';
-    }
-
 
     // ------------------------------------------------------------------------
     // Collection Rules: /users
     // ------------------------------------------------------------------------
 
     match /users/{userId} {
-      // DOCUMENT Rules: Apply to specific document operations (get, create, update, delete).
       allow get: if isOwner(userId);
       allow create: if isOwner(userId) && hasValidUserProfileDataOnCreate(userId);
       allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
       allow delete: if isExistingOwner(userId);
-      
-      // COLLECTION Rules: Apply to queries on the collection.
-      // Allow an unauthenticated user to query ONLY by email for the password reset flow.
-      allow list: if isPasswordResetQuery();
     }
   }
 }
