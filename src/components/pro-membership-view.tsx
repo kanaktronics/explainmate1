@@ -30,7 +30,7 @@ export function ProMembershipView() {
         }
 
         try {
-            const response = await createOrder({ amount: 9900, currency: 'INR' }); // Placeholder price
+            const response = await createOrder({ amount: 9900, currency: 'INR' }); // Price in paise
             if (response.error || !response.orderId) {
                 throw new Error(response.error || 'Failed to create order.');
             }
@@ -132,8 +132,11 @@ export function ProMembershipView() {
                 <CardHeader className="items-center text-center">
                     <Badge variant="destructive" className="mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 py-1 px-4 text-sm">Best Value</Badge>
                     <CardTitle className="text-3xl font-headline">Pro Membership</CardTitle>
-                    <p className="text-5xl font-bold text-primary">₹99</p>
-                    <CardDescription>/ year (Limited Time Offer)</CardDescription>
+                    <div className="flex items-end gap-3">
+                      <p className="text-5xl font-bold text-primary">₹99</p>
+                      <p className="text-2xl font-bold text-muted-foreground line-through"><del>₹359</del></p>
+                    </div>
+                    <CardDescription>/ 2 months (Limited Time Offer)</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <ul className="space-y-4 text-lg">
