@@ -10,9 +10,11 @@ import { Badge } from "./ui/badge";
 interface AdPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  description?: string;
 }
 
-export function AdPopup({ isOpen, onClose }: AdPopupProps) {
+export function AdPopup({ isOpen, onClose, title, description }: AdPopupProps) {
   const { setView } = useAppContext();
 
   const handleUpgradeClick = () => {
@@ -25,16 +27,18 @@ export function AdPopup({ isOpen, onClose }: AdPopupProps) {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <Badge variant="destructive" className="mb-4 w-fit mx-auto bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 py-1 px-4 text-sm">Limited Time Offer</Badge>
-          <DialogTitle className="text-center text-3xl font-headline text-primary">Upgrade to ExplainMate Pro</DialogTitle>
+          <DialogTitle className="text-center text-3xl font-headline text-primary">
+            {title || 'Upgrade to ExplainMate Pro'}
+          </DialogTitle>
           <DialogDescription className="text-center text-lg">
-            Unlock unlimited access and powerful features to supercharge your learning.
+            {description || 'Unlock unlimited access and powerful features to supercharge your learning.'}
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
             <div className="text-center mb-6">
                  <p className="text-4xl font-bold text-primary">₹99 <span className="text-xl font-normal text-muted-foreground">/ 2 months</span></p>
-                 <p className="text-xl font-semibold text-muted-foreground line-through">₹359</p>
+                 <p className="text-xl font-semibold text-muted-foreground"><del>₹359</del></p>
             </div>
             <ul className="space-y-3 text-base">
                 <li className="flex items-center gap-3">

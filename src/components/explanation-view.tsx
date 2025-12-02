@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -107,7 +108,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, setIsAdOpen } = useAppContext();
+  const { studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -152,7 +153,7 @@ export function ExplanationView() {
     if (studentProfile.isPro) {
         fileInputRef.current?.click();
     } else {
-        setIsAdOpen(true);
+        showAd({ title: 'Unlock Image Uploads', description: 'Upgrade to Pro to upload images and diagrams for analysis.' });
     }
   }
 
@@ -195,6 +196,15 @@ export function ExplanationView() {
     }
 
     if (!studentProfile.isPro) {
+        if (studentProfile.dailyUsage >= 5) {
+            showAd({
+                title: "Daily Limit Reached",
+                description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
+            });
+            setIsLoading(false);
+            setChat(chat || []); // Revert optimistic update
+            return;
+        }
         incrementUsage();
     }
 
@@ -207,14 +217,23 @@ export function ExplanationView() {
     const result = await getExplanation(input as any);
 
     if (result && 'error' in result) {
-      setError(result.error);
-       // setChat(chat);
+      if (result.error === 'DAILY_LIMIT_REACHED') {
+         showAd({
+            title: "Daily Limit Reached",
+            description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
+        });
+         setChat(chat || []); // Revert optimistic update
+      } else {
+        setError(result.error);
+        // Revert optimistic update on other errors too
+        setChat(chat || []);
+      }
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage, newChatHistory);
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
-       // setChat(chat);
+       setChat(chat || []); // Revert optimistic update
     }
     setIsLoading(false);
   }
@@ -272,6 +291,7 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleImageButtonClick}
                     title="Upload Image (Pro)"
+                    disabled={!studentProfile.isPro}
                     >
                     <ImageIcon />
                 </Button>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -5,6 +6,11 @@ import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/
 import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+
+interface AdContent {
+    title: string;
+    description: string;
+}
 
 interface AppContextType {
   studentProfile: StudentProfile;
@@ -26,7 +32,9 @@ interface AppContextType {
   isProfileOpen: boolean;
   setIsProfileOpen: (isOpen: boolean) => void;
   isAdOpen: boolean;
-  setIsAdOpen: (isOpen: boolean) => void;
+  showAd: (content?: Partial<AdContent>) => void;
+  hideAd: () => void;
+  adContent: Partial<AdContent>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,6 +65,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
+  const [adContent, setAdContent] = useState<Partial<AdContent>>({});
+
+
+  const showAd = (content: Partial<AdContent> = {}) => {
+    setAdContent(content);
+    setIsAdOpen(true);
+  };
+
+  const hideAd = () => {
+    setIsAdOpen(false);
+    setAdContent({});
+  };
+
 
   const getHistoryKey = () => user ? `explanationHistory_${user.uid}` : null;
 
@@ -268,7 +289,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const adShown = sessionStorage.getItem('adShown');
       if (!adShown) {
         const timer = setTimeout(() => {
-          setIsAdOpen(true);
+          showAd();
           sessionStorage.setItem('adShown', 'true');
         }, 3000); // Show ad after 3 seconds
         return () => clearTimeout(timer);
@@ -277,7 +298,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [studentProfile.isPro, studentProfile.email]);
 
   return (
-    <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory, isAdOpen, setIsAdOpen }}>
+    <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory, isAdOpen, showAd, hideAd, adContent }}>
       {children}
     </AppContext.Provider>
   );

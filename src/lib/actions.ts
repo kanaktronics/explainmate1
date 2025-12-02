@@ -1,3 +1,4 @@
+
 'use server';
 
 import { tailorExplanation } from '@/ai/flows/tailor-explanations-to-student-profile';
@@ -47,7 +48,7 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
 
     // Enforce daily limit for free users
     if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_EXPLANATION_LIMIT) {
-        return { error: "You've reached your daily limit of 5 free explanations. Upgrade to ExplainMate Pro for unlimited access." };
+        return { error: "DAILY_LIMIT_REACHED" };
     }
 
     const result = await tailorExplanation({
@@ -90,7 +91,7 @@ export async function getQuiz(input: GenerateInteractiveQuizzesInput & { student
     try {
         const { studentProfile } = input;
         if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_QUIZ_LIMIT) {
-            return { error: "You've reached your daily limit of 1 free quiz. Upgrade to ExplainMate Pro for unlimited quizzes." };
+            return { error: "DAILY_LIMIT_REACHED" };
         }
         
         const result = await generateInteractiveQuizzes(input);

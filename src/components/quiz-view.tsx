@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,7 +28,7 @@ const quizSetupSchema = z.object({
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
 
 export function QuizView() {
-  const { studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage } = useAppContext();
+  const { studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -52,10 +53,9 @@ export function QuizView() {
     }
 
     if (!studentProfile.isPro && studentProfile.dailyUsage >= 1) {
-        toast({
-            variant: 'destructive',
-            title: 'Daily Limit Reached',
-            description: 'You have reached your daily limit of 1 free quiz. Upgrade to Pro for unlimited quizzes.',
+        showAd({
+            title: "Daily Quiz Limit Reached",
+            description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
         });
         return;
     }
@@ -78,7 +78,14 @@ export function QuizView() {
 
     const result = await getQuiz(input);
     if (result && 'error' in result) {
-      setError(result.error);
+      if (result.error === 'DAILY_LIMIT_REACHED') {
+         showAd({
+            title: "Daily Quiz Limit Reached",
+            description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
+        });
+      } else {
+        setError(result.error);
+      }
     } else if (result) {
       setQuiz(result);
     } else {

@@ -134,7 +134,7 @@ function ProSection() {
 }
 
 function AppLayout() {
-  const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen, isAdOpen, setIsAdOpen } = useAppContext();
+  const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen, isAdOpen, hideAd, adContent } = useAppContext();
   const { auth } = useFirebase();
 
   const handleNewExplanation = () => {
@@ -165,7 +165,7 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <AdPopup isOpen={isAdOpen} onClose={() => setIsAdOpen(false)} />
+      <AdPopup isOpen={isAdOpen} onClose={hideAd} title={adContent.title} description={adContent.description} />
       <Sidebar>
         <SidebarHeader>
           <AppLogo />
