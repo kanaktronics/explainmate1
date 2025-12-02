@@ -16,8 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, initiatePasswordUpdate } from '@/firebase';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { useFirebase, initiatePasswordUpdate, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAppContext } from '@/lib/app-context';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
@@ -75,8 +75,11 @@ export function ForgotPasswordView() {
         }
       }
     } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to find user.' });
+        const permissionError = new FirestorePermissionError({
+            path: 'users',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
     }
     setIsLoading(false);
   };
