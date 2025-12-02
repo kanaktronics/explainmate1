@@ -95,8 +95,9 @@ service cloud.firestore {
       // 4. request.query.where[0].operator == '==': The operator must be an exact match.
       return request.auth == null 
         && request.query.keys().hasOnly(['where']) 
-        && request.query.where[0].field == 'email' 
-        && request.query.where[0].operator == '==';
+        && request.query.where.size() == 1
+        && request.query.where[0][0] == 'email' 
+        && request.query.where[0][1] == '==';
     }
 
 
@@ -105,16 +106,14 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
 
     match /users/{userId} {
-      // READS: The owner can read their own profile.
+      // DOCUMENT Rules: Apply to specific document operations (get, create, update, delete).
       allow get: if isOwner(userId);
-      
-      // WRITES: The owner can create, update, and delete their own profile, with data integrity checks.
       allow create: if isOwner(userId) && hasValidUserProfileDataOnCreate(userId);
       allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
       allow delete: if isExistingOwner(userId);
 
-      // LIST: Allow unauthenticated users to query by email ONLY for the password reset flow.
-      // This rule is separate to handle collection-level queries.
+      // COLLECTION Rules: Apply to queries on the collection.
+      // Allow an unauthenticated user to query ONLY by email for the password reset flow.
       allow list: if isPasswordResetQuery();
     }
   }
