@@ -21,9 +21,9 @@ const GenerateInteractiveQuizzesInputSchema = z.object({
   numQuestions: z
     .number()
     .min(1)
-    .max(10)
+    .max(15)
     .default(5)
-    .describe('The number of multiple-choice questions to generate (1-10).'),
+    .describe('The number of multiple-choice questions to generate (1-15).'),
 });
 export type GenerateInteractiveQuizzesInput = z.infer<
   typeof GenerateInteractiveQuizzesInputSchema

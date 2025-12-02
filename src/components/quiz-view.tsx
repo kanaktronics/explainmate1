@@ -17,9 +17,11 @@ import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import type { QuizQuestion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
+import { Slider } from './ui/slider';
 
 const quizSetupSchema = z.object({
   topic: z.string().min(3, { message: 'Topic must be at least 3 characters.' }),
+  numQuestions: z.number().min(1).max(15).default(5),
 });
 
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
@@ -34,8 +36,10 @@ export function QuizView() {
 
   const form = useForm<z.infer<typeof quizSetupSchema>>({
     resolver: zodResolver(quizSetupSchema),
-    defaultValues: { topic: '' },
+    defaultValues: { topic: '', numQuestions: 5 },
   });
+
+  const numQuestionsValue = form.watch('numQuestions');
 
   async function onSubmit(values: z.infer<typeof quizSetupSchema>) {
     if (!isProfileComplete) {
@@ -60,7 +64,7 @@ export function QuizView() {
     const input = {
       topic: values.topic,
       studentProfile: studentProfile,
-      numQuestions: 5,
+      numQuestions: studentProfile.isPro ? values.numQuestions : 5,
     };
 
     const result = await getQuiz(input);
@@ -111,7 +115,7 @@ export function QuizView() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
                 control={form.control}
                 name="topic"
@@ -125,6 +129,26 @@ export function QuizView() {
                   </FormItem>
                 )}
               />
+              {studentProfile.isPro && (
+                <FormField
+                  control={form.control}
+                  name="numQuestions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Questions: {numQuestionsValue}</FormLabel>
+                      <FormControl>
+                        <Slider
+                          min={1}
+                          max={15}
+                          step={1}
+                          value={[field.value]}
+                          onValueChange={(value) => field.onChange(value[0])}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? 'Generating Quiz...' : 'Start Quiz'}
               </Button>
@@ -156,7 +180,7 @@ export function QuizView() {
         {!showResults ? (
              <Button onClick={checkAnswers} disabled={Object.keys(userAnswers).length !== quiz.quiz.length}>Check Answers</Button>
         ) : (
-            <Button onClick={() => { setQuiz(null); form.reset(); }}>Try Another Quiz</Button>
+            <Button onClick={() => { setQuiz(null); form.reset({ topic: '', numQuestions: 5 }); }}>Try Another Quiz</Button>
         )}
       </div>
     </div>
