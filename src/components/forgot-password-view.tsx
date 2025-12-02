@@ -72,7 +72,7 @@ export function ForgotPasswordView() {
             <CardHeader>
                 <CardTitle>Email Sent</CardTitle>
                 <CardDescription>
-                    Please check your inbox for a password reset link. It might take a few minutes to arrive.
+                    Please check your inbox for a password reset link. It might take a few minutes to arrive. Don't forget to check your spam folder!
                 </CardDescription>
             </CardHeader>
             <CardContent>
