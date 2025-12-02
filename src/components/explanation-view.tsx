@@ -180,9 +180,15 @@ export function ExplanationView() {
     setIsLoading(true);
     setError(null);
     
-    const userMessage: ChatMessage = { role: 'user', content: { text: values.prompt, imageUrl: values.image } };
+    const userMessageContent: ChatMessage['content'] = { text: values.prompt };
+    if (values.image) {
+      userMessageContent.imageUrl = values.image;
+    }
+    const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     const newChatHistory = [...(chat || []), userMessage];
+    
     setChat(newChatHistory); // Optimistically update UI
+    
     form.reset();
     setImagePreview(null);
     if(fileInputRef.current) {

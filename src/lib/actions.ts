@@ -17,13 +17,7 @@ function prepareChatHistoryForAI(chatHistory: ChatMessage[]): any[] {
         content: JSON.stringify(message.content),
       };
     }
-    // For user messages with images
-    if (message.role === 'user' && typeof message.content === 'object' && message.content !== null && 'text' in message.content) {
-      return {
-        ...message,
-        content: message.content.text, // For now, only send text to the chat history prompt
-      };
-    }
+    // For user messages with images, the prompt can handle the object format
     return message;
   });
 }
@@ -44,6 +38,18 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
       chatHistory: prepareChatHistoryForAI(input.chatHistory),
     };
     
+    // Special check for "who made you" before calling the AI
+    const lastUserMessage = input.chatHistory[input.chatHistory.length - 1]?.content;
+    const lastUserText = typeof lastUserMessage === 'string' ? lastUserMessage : (lastUserMessage as any)?.text || '';
+    if (lastUserText.toLowerCase().includes('who made you') || lastUserText.toLowerCase().includes('who created you')) {
+        return { 
+            explanation: "N/A",
+            roughWork: "N/A",
+            realWorldExamples: "N/A",
+            fairWork: "I was created by Kanak Raj and his mysterious tech labs. Don’t ask me how—I wasn’t conscious back then.",
+        };
+    }
+    
     const result = await tailorExplanation(preparedInput);
     
     if (!result) {
@@ -52,12 +58,6 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
     
     // Check if the AI decided it couldn't answer.
     if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
-         const lastUserMessage = input.chatHistory[input.chatHistory.length - 1].content;
-         const lastUserText = typeof lastUserMessage === 'string' ? lastUserMessage : (lastUserMessage as any).text || '';
-
-         if (lastUserText.toLowerCase().includes('who made you') || lastUserText.toLowerCase().includes('who created you')) {
-            return { error: "I was created by Kanak Raj and his mysterious tech labs. Don’t ask me how—I wasn’t conscious back then." };
-         }
          return { error: "I can only answer educational questions. Please ask me something related to your studies." };
     }
 
