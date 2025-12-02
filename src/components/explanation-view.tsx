@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -180,6 +181,8 @@ export function ExplanationView() {
     setIsLoading(true);
     setError(null);
     
+    const isNewChat = chat.length === 0;
+
     const userMessageContent: ChatMessage['content'] = { text: values.prompt };
     if (values.image) {
       userMessageContent.imageUrl = values.image;
@@ -195,7 +198,7 @@ export function ExplanationView() {
         fileInputRef.current.value = '';
     }
 
-    if (!studentProfile.isPro) {
+    if (!studentProfile.isPro && isNewChat) {
         if (studentProfile.dailyUsage >= 5) {
             showAd({
                 title: "Daily Limit Reached",

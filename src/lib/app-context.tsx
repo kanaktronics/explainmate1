@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -60,7 +61,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [studentProfile, setStudentProfileState] = useState<StudentProfile>(defaultProfile);
   const [view, setView] = useState<AppView>('welcome');
   const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [quiz, setQuiz] = useState<Quiz | null>([]);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -207,39 +208,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const updatedChat = [...currentChat, message];
       setChat(updatedChat);
 
-      const firstUserMessage = updatedChat.find(m => m.role === 'user');
-      if (!firstUserMessage) return;
-      
-      const topicContent = firstUserMessage.content;
-      let topic = '';
+      // if it's the first assistant message, create a new history item
+      if (updatedChat.length === 2 && updatedChat[0].role === 'user' && updatedChat[1].role === 'assistant') {
+        const firstUserMessage = updatedChat[0];
+        const topicContent = firstUserMessage.content;
+        let topic = '';
 
-      if (typeof topicContent === 'string') {
-        topic = topicContent.substring(0, 50);
-      } else if (typeof topicContent === 'object' && 'text' in topicContent) {
-        topic = topicContent.text.substring(0,50);
-      }
-
-      setHistory(prevHistory => {
-        const existingItemIndex = prevHistory.findIndex(h => h.topic === topic);
-        
-        let newHistory: HistoryItem[];
-
-        if (existingItemIndex > -1) {
-            newHistory = [...prevHistory];
-            newHistory[existingItemIndex] = { ...newHistory[existingItemIndex], messages: updatedChat, timestamp: new Date().toISOString() };
-        } else {
-            const newHistoryItem: HistoryItem = {
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                topic: topic,
-                messages: updatedChat,
-            };
-            newHistory = [newHistoryItem, ...prevHistory];
+        if (typeof topicContent === 'string') {
+          topic = topicContent.substring(0, 50);
+        } else if (typeof topicContent === 'object' && 'text' in topicContent) {
+          topic = topicContent.text.substring(0,50);
         }
         
-        updateAndSaveHistory(newHistory);
-        return sortHistory(newHistory);
-    });
+        addToHistory({ topic, messages: updatedChat });
+      } else {
+        // Find the corresponding history item and update it
+        const firstMessage = updatedChat[0];
+        if (!firstMessage) return;
+
+        setHistory(prevHistory => {
+            const newHistory = prevHistory.map(item => {
+                // A simple way to check if this chat belongs to the history item
+                // This assumes the first message of a chat is unique enough to identify it
+                if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
+                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
+                }
+                return item;
+            });
+            updateAndSaveHistory(newHistory);
+            return sortHistory(newHistory);
+        });
+      }
   };
 
   const addToHistory = (item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
@@ -249,9 +248,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         timestamp: new Date().toISOString(),
     };
     setHistory(prevHistory => {
-        if (prevHistory.some(h => h.topic === newHistoryItem.topic)) {
-            return prevHistory;
-        }
         const updatedHistory = [newHistoryItem, ...prevHistory];
         updateAndSaveHistory(updatedHistory);
         return updatedHistory;
