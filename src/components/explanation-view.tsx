@@ -209,13 +209,13 @@ export function ExplanationView() {
 
     if (result && 'error' in result) {
       setError(result.error);
-       setChat(chat);
+       // setChat(chat);
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage, newChatHistory);
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
-       setChat(chat);
+       // setChat(chat);
     }
     setIsLoading(false);
   }
@@ -233,7 +233,7 @@ export function ExplanationView() {
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.32))]">
        <div className="flex-1 overflow-y-auto p-1 space-y-8">
-        {chat && chat.length === 0 && !isLoading && <WelcomeScreen />}
+        {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
         <div ref={resultsRef}>
             {isLoading && (

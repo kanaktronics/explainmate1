@@ -18,7 +18,7 @@ const StudentProfileSchema = z.object({
 });
 
 const ChatMessageSchema = z.object({
-  role: z.enum(['user', 'assistant']),
+  role: z.enum(['user', 'assistant', 'system', 'tool']),
   content: z.any(),
 });
 
@@ -71,7 +71,7 @@ const prompt = ai.definePrompt({
   
   Conversation History:
   {{#each chatHistory}}
-  - {{role}}: {{{content}}}
+  - {{role}}: {{#each content}}{{#if text}}{{text}}{{/if}}{{#if media}}{{media.url}}{{/if}}{{/each}}
   {{/each}}
 
   Your task is to respond to the last user message. You must generate content for all four sections below.

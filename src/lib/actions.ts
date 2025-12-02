@@ -6,61 +6,59 @@ import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quiz
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
 import { ChatMessage, StudentProfile } from './types';
 
-// Helper function to convert Explanation objects to strings for the AI prompt
-function prepareChatHistoryForAI(chatHistory: ChatMessage[]): any[] {
-  // The AI prompt expects the 'content' of assistant messages to be a string.
-  // The client-side state stores it as an object. This function ensures it's always a string.
+function convertToGenkitHistory(chatHistory: ChatMessage[]) {
   return chatHistory.map(message => {
-    if (message.role === 'assistant' && typeof message.content === 'object' && message.content !== null) {
+    if (message.role === 'assistant') {
       return {
-        ...message,
-        content: JSON.stringify(message.content),
+        role: 'assistant',
+        content: [{ text: JSON.stringify(message.content) }]
       };
     }
-    // For user messages with images, the prompt can handle the object format
-    if (message.role === 'user' && typeof message.content === 'object' && message.content !== null && 'text' in message.content) {
-        return {
-            role: 'user',
-            content: [
-                { text: message.content.text },
-                ...(message.content.imageUrl ? [{ media: { url: message.content.imageUrl } }] : [])
-            ]
-        }
+    if (message.role === 'user' && typeof message.content === 'object' && message.content !== null) {
+      return {
+        role: 'user',
+        content: [
+          { text: message.content.text },
+          ...(message.content.imageUrl ? [{ media: { url: message.content.imageUrl } }] : [])
+        ]
+      };
     }
-
-    return message;
+    return {
+      role: message.role,
+      content: [{ text: message.content as string }]
+    };
   });
 }
+
 
 const FREE_TIER_DAILY_LIMIT = 5;
 
 export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
   try {
-    const { studentProfile } = input;
+    const { studentProfile, chatHistory } = input;
 
     // Enforce daily limit for free users
     if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_DAILY_LIMIT) {
         return { error: "You've reached your daily limit of explanations. Upgrade to ExplainMate Pro for unlimited access." };
     }
 
-    const preparedInput = {
-      ...input,
-      chatHistory: prepareChatHistoryForAI(input.chatHistory),
-    };
-    
-    const result = await tailorExplanation(preparedInput);
+    const result = await tailorExplanation({
+      studentProfile,
+      chatHistory: convertToGenkitHistory(chatHistory),
+    });
     
     if (!result) {
       throw new Error('AI did not return a response.');
     }
     
     // Check if the AI decided it couldn't answer.
-    if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A') {
-        if(result.fairWork !== 'N/A') {
-            // This is likely the "who made you" response, which is valid.
-            return result;
-        }
+    if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
         return { error: "I can only answer educational questions. Please ask me something related to your studies." };
+    }
+    
+    // Handle the special "who created you" case
+    if (result.fairWork.includes("Kanak Raj")) {
+        return { error: result.fairWork };
     }
 
     return result;
