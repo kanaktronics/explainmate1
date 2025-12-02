@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile within the ExplainMate AI Tutor application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name.",
+          "format": "string"
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "gradeLevel": {
+          "type": "string",
+          "description": "The user's grade level."
+        },
+        "board": {
+          "type": "string",
+          "description": "The user's educational board (e.g., CBSE, ICSE)."
+        },
+        "weakSubjects": {
+          "type": "array",
+          "description": "An array of subjects the user finds difficult.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isPro": {
+          "type": "boolean",
+          "description": "Indicates if the user has a pro subscription."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "gradeLevel",
+        "board",
+        "weakSubjects"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. Includes the 'isPro' field to determine if the user has a pro subscription. This is critical for authorization and is directly available in the document for Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  This is also the document ID and is used for path-based ownership."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "Based on the application requirements, specifically the need to determine if a user has a pro version and the desire to store chat history locally, the primary focus of the Firestore structure is to manage user profiles and their pro status. Since chat history is local-only, it does not need to be stored on the database. The key is to securely store the user's `isPro` status. We avoid hierarchical authorization dependencies, so no `get()` calls are needed in security rules. The structure also supports QAPs (Rules are not Filters) by segregating the user profiles into a collection where access is based on user ID. Authorization independence is achieved by ensuring all authorization information (specifically, `isPro`) is directly accessible within the user's profile document."
+  }
+}

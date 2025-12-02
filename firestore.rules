@@ -1,0 +1,110 @@
+/**
+ * # Firestore Security Rules
+ *
+ * ## Core Philosophy
+ * This ruleset enforces a strict user-ownership model. Each authenticated user has
+ * exclusive create, read, update, and delete (CRUD) access to their own profile
+ * document. The primary goal is to securely manage user identity and subscription
+ * status (`isPro`).
+ *
+ * ## Data Structure
+ * The data structure is flat and user-centric. All data is stored in a top-level
+ * `/users` collection. Each user's profile is a single document within this
+ * collection, with the document ID matching the user's authentication UID
+ * (e.g., `/users/{userId}`).
+ *
+ * ## Key Security Decisions
+ * - **No User Listing**: To protect user privacy and prevent data scraping, it is
+ *   explicitly forbidden to list all documents in the `/users` collection.
+ * - **Ownership Integrity**: When a user profile is created, a rule enforces
+ *   that the user's UID is stored inside the document's `id` field. This `id`
+ *   field is then made immutable on all subsequent updates, creating a permanent
+ *   and trustworthy link between the document data and its owner.
+ * - **Default Secure**: Access is denied by default. Permissions are only granted
+ *   explicitly to the document owner.
+ *
+ * ## Denormalization for Authorization
+ * The data model is already optimized for security rules. Authorization-critical
+ * data, such as the `isPro` flag, is stored directly on the `/users/{userId}`
+ * document. This design choice is deliberate and crucial, as it allows for fast,
+ * simple, and cost-effective authorization checks without requiring any slow or
+ * expensive `get()` calls to other documents.
+ *
+ * ## Structural Segregation
+ * This security principle is not applicable here due to the simplicity of the
+ * data model. There is no mix of public and private data within a single
+ * collection that would necessitate separating it into different collections.
+ * The entire `/users` collection is treated as private data partitioned by owner.
+ */
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the document's owner ID
+     * from the path. This is the primary ownership check.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the user is the owner of an existing document. This is crucial
+     * for safe updates and deletes, preventing operations on non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * On create, validates that the internal 'id' field in the document data
+     * matches the document's path ID (`userId`). This enforces relational
+     * integrity from the moment of creation.
+     */
+    function hasValidUserProfileDataOnCreate(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * On update, ensures critical relational fields like the user 'id' are
+     * not changed, preserving the integrity of the ownership link.
+     */
+    function isImmutableUserProfileData() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profiles. Each user can only access their own profile.
+     * @path /users/{userId}
+     * @allow A user (uid: "user123") can create, read, update, or delete their own profile at `/users/user123`.
+     * @deny A user (uid: "user123") cannot read or write to another user's profile at `/users/user456`. Listing all users is also denied.
+     * @principle Enforces a strict user-ownership model. All data under a user's path is private to them.
+     */
+    match /users/{userId} {
+      // READS: Only the owner can read their own profile. Listing the collection is forbidden for privacy.
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      // WRITES: The owner can create, update, and delete their own profile, with data integrity checks.
+      allow create: if isOwner(userId) && hasValidUserProfileDataOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
