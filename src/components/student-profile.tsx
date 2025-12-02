@@ -44,7 +44,7 @@ const profileSchema = z.object({
 export function StudentProfile() {
   const { studentProfile, setStudentProfile, setIsProfileOpen, isProfileComplete } = useAppContext();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(!isProfileComplete);
+  const [isEditing, setIsEditing] = useState(false);
   const { firestore, user } = useFirebase();
   const isSecurityProfileIncomplete = !studentProfile.securityQuestion || !studentProfile.securityAnswer;
 
@@ -69,8 +69,12 @@ export function StudentProfile() {
       securityQuestion: studentProfile.securityQuestion || '',
       securityAnswer: '',
     });
-    setIsEditing(!isProfileComplete || isSecurityProfileIncomplete);
-  }, [studentProfile, form, isProfileComplete, isSecurityProfileIncomplete]);
+    // Don't force editing mode, let the user decide.
+    // The alert will inform them if they need to update.
+    if (!isProfileComplete) {
+        setIsEditing(true);
+    }
+  }, [studentProfile, form, isProfileComplete]);
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     if (!user || !firestore) {
@@ -122,7 +126,7 @@ export function StudentProfile() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Update Required</AlertTitle>
                 <AlertDescription>
-                   Please add a security question to enable password recovery.
+                   Please add a security question to enable password recovery. Click Edit Profile below.
                 </AlertDescription>
             </Alert>
         )}
@@ -157,12 +161,12 @@ export function StudentProfile() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {isSecurityProfileIncomplete && (
-             <Alert variant="destructive" className="text-destructive-foreground bg-destructive">
-                <AlertTriangle className="h-4 w-4 text-destructive-foreground" />
-                <AlertTitle>Account Security Update</AlertTitle>
+        {!isProfileComplete && (
+             <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Complete Your Profile</AlertTitle>
                 <AlertDescription>
-                   To protect your account, please set a security question.
+                   Please fill out your details to get started.
                 </AlertDescription>
              </Alert>
         )}
