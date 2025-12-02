@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -20,7 +21,7 @@ import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
@@ -31,6 +32,7 @@ import { useFirebase } from '@/firebase';
 import { AuthView } from '@/components/auth-view';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ForgotPasswordView } from '@/components/forgot-password-view';
+import { AdPopup } from '@/components/ad-popup';
 
 function HistorySection() {
   const { history, loadChatFromHistory, deleteFromHistory, clearHistory } = useAppContext();
@@ -134,6 +136,20 @@ function ProSection() {
 function AppLayout() {
   const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen } = useAppContext();
   const { auth } = useFirebase();
+  const [showAd, setShowAd] = useState(false);
+
+  useEffect(() => {
+    if (studentProfile.email && !studentProfile.isPro) {
+      const adShown = sessionStorage.getItem('adShown');
+      if (!adShown) {
+        const timer = setTimeout(() => {
+          setShowAd(true);
+          sessionStorage.setItem('adShown', 'true');
+        }, 3000); // Show ad after 3 seconds
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [studentProfile.isPro, studentProfile.email]);
 
   const handleNewExplanation = () => {
     setChat([]);
@@ -163,6 +179,7 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
+      <AdPopup isOpen={showAd} onClose={() => setShowAd(false)} />
       <Sidebar>
         <SidebarHeader>
           <AppLogo />
