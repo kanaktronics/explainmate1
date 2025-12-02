@@ -132,9 +132,9 @@ export function ProMembershipView() {
                 <CardHeader className="items-center text-center">
                     <Badge variant="destructive" className="mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 py-1 px-4 text-sm">Best Value</Badge>
                     <CardTitle className="text-3xl font-headline">Pro Membership</CardTitle>
-                    <div className="flex items-end gap-3">
+                    <div className="flex items-baseline gap-2">
                       <p className="text-5xl font-bold text-primary">₹99</p>
-                      <p className="text-2xl font-bold text-muted-foreground line-through"><del>₹359</del></p>
+                      <p className="text-2xl font-semibold text-muted-foreground line-through">₹359</p>
                     </div>
                     <CardDescription>/ 2 months (Limited Time Offer)</CardDescription>
                 </CardHeader>
