@@ -69,20 +69,22 @@ function HistorySection() {
       />
       <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <SidebarGroup>
-          <CollapsibleTrigger className='w-full'>
-            <div className='flex justify-between items-center cursor-pointer px-2'>
-              <div className='flex items-center gap-2 font-medium text-sm text-sidebar-foreground/70'>
-                <History />
-                History
-              </div>
-              <div className='flex items-center gap-1'>
-                 <Button variant="ghost" size="icon" className='h-6 w-6' onClick={(e) => { e.stopPropagation(); setShowClearConfirm(true);}}>
-                    <X />
-                 </Button>
-                 <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isHistoryOpen ? 'rotate-180' : ''}`} />
-              </div>
+          <div className='flex justify-between items-center w-full px-2'>
+            <CollapsibleTrigger asChild>
+                <button className='flex flex-1 items-center gap-2 cursor-pointer'>
+                  <div className='flex items-center gap-2 font-medium text-sm text-sidebar-foreground/70'>
+                    <History />
+                    History
+                  </div>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isHistoryOpen ? 'rotate-180' : ''}`} />
+                </button>
+            </CollapsibleTrigger>
+            <div className='flex items-center gap-1'>
+                <Button variant="ghost" size="icon" className='h-6 w-6' onClick={() => setShowClearConfirm(true)}>
+                  <X />
+                </Button>
             </div>
-          </CollapsibleTrigger>
+          </div>
           <CollapsibleContent>
             <SidebarMenu>
               {history.map(item => (
