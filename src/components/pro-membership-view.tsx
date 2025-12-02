@@ -149,6 +149,10 @@ export function ProMembershipView() {
                             <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
                             <span>Ask <span className="font-semibold">longer, more complex questions</span></span>
                         </li>
+                         <li className="flex items-center gap-3">
+                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                            <span>Choose the number of <span className="font-semibold">quiz questions (up to 15)</span></span>
+                        </li>
                         <li className="flex items-center gap-3">
                             <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
                             <span><span className="font-semibold">Faster</span> response times</span>
