@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { ChatMessage, Explanation } from '@/lib/types';
 
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
@@ -20,7 +19,7 @@ const StudentProfileSchema = z.object({
 
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
-  content: z.string(),
+  content: z.any(),
 });
 
 
@@ -77,7 +76,7 @@ const prompt = ai.definePrompt({
   1.  Explanation: This is the main answer. It must be very descriptive, detailed, comprehensive, and engaging. Write it as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. Start with a relatable scenario. Use markdown for structure, such as bold headings for different parts of the explanation (e.g., **What is [Topic]?**, **Key Ideas**).
   2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. This section must explain HOW a derivation comes about and what the relationship between variables is. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2), explain what each variable (G, m1, m2, r) means, and describe the relationship between them (e.g., "So, the bigger the masses... but the farther apart they are..."). This section should almost never be 'N/A' for a science or math topic.
   3.  Real-World Examples: Provide at least 2-3 relatable examples to illustrate the concept in daily life.
-  4.  Fair Work: A clean, concise, notebook-ready summary of the concept. It should include the most important definitions, the key formula(s), and a brief, practical example. This is the 'final answer' that a student would copy into their notes for studying. It should be well-structured and easy to read.
+  4.  Fair Work: A clean, concise, notebook-ready summary of the concept. It should include the most important definitions, the key formula(s), and a brief, practical example. This is the 'final answer' that a student would copy into their notes for studying. It should be well-structured, easy to read, and contain enough detail to be a useful study note on its own.
 
   CRITICAL: Ensure every section is detailed and high-quality. Do not provide short, superficial answers. The goal is deep understanding, not just a quick definition. If the question is not an educational question, respond that you cannot answer the request, but still provide N/A for all four fields.
 `,
