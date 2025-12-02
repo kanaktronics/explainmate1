@@ -5,3 +5,10 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+firebase:
+  # Adding a placeholder for authorized domains is crucial for features
+  # like password reset emails to function correctly. In a production
+  # environment, you would replace this with your actual domain in the
+  # Firebase Console.
+  authorized-domains:
+    - "localhost"
