@@ -3,6 +3,9 @@ export interface StudentProfile {
   classLevel: string;
   board: string;
   weakSubjects: string;
+  isPro: boolean;
+  dailyUsage: number;
+  lastUsageDate: string;
 }
 
 export interface Explanation {
@@ -14,7 +17,7 @@ export interface Explanation {
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
-  content: string | Explanation;
+  content: string | Explanation | { text: string; imageUrl?: string };
 }
 
 export interface HistoryItem {
@@ -35,4 +38,4 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact' | 'pro-membership';

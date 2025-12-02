@@ -19,14 +19,14 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { DeleteHistoryDialog } from '@/components/delete-history-dialog';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 function HistorySection() {
   const { history, loadChatFromHistory, deleteFromHistory, clearHistory } = useAppContext();
@@ -69,15 +69,15 @@ function HistorySection() {
       />
       <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <SidebarGroup>
-          <div className='flex justify-between items-center w-full px-2'>
+          <div className='flex justify-between items-center w-full'>
             <CollapsibleTrigger asChild>
-                <button className='flex flex-1 items-center gap-2 cursor-pointer'>
+                <div className='flex flex-1 items-center gap-2 cursor-pointer p-2'>
                   <div className='flex items-center gap-2 font-medium text-sm text-sidebar-foreground/70'>
                     <History />
                     History
                   </div>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isHistoryOpen ? 'rotate-180' : ''}`} />
-                </button>
+                </div>
             </CollapsibleTrigger>
             <div className='flex items-center gap-1'>
                 <Button variant="ghost" size="icon" className='h-6 w-6' onClick={() => setShowClearConfirm(true)}>
@@ -104,6 +104,27 @@ function HistorySection() {
       </Collapsible>
     </>
   )
+}
+
+function ProSection() {
+    const { studentProfile, setView } = useAppContext();
+
+    if (studentProfile.isPro) {
+        return (
+            <div className="px-4 py-2 text-sm font-medium text-center text-primary bg-yellow-400/20 rounded-lg mx-2 border border-yellow-400/50">
+                You are using ExplainMate Pro ✨
+            </div>
+        )
+    }
+
+    return (
+        <div className="p-2">
+            <Button className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90" onClick={() => setView('pro-membership')}>
+                <Sparkles className="mr-2 h-4 w-4"/>
+                Upgrade to Pro
+            </Button>
+        </div>
+    )
 }
 
 function AppLayout() {
@@ -153,6 +174,8 @@ function AppLayout() {
             </SidebarMenuItem>
           </SidebarMenu>
           <SidebarSeparator />
+          <ProSection />
+          <SidebarSeparator />
           <HistorySection />
           <SidebarSeparator />
           <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen}>
@@ -185,7 +208,10 @@ function AppLayout() {
                     <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col overflow-hidden">
-                    <span className="font-semibold text-sm truncate">{studentProfile.name || "Student"}</span>
+                    <div className='flex items-center gap-2'>
+                        <span className="font-semibold text-sm truncate">{studentProfile.name || "Student"}</span>
+                        {studentProfile.isPro && <Badge variant="destructive" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0"><Zap className='w-3 h-3 fill-white'/>Pro</Badge>}
+                    </div>
                     <span className="text-xs text-muted-foreground">{studentProfile.classLevel || "Learner"}</span>
                 </div>
             </div>

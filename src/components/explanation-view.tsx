@@ -13,14 +13,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, PenSquare, Send, User } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, PenSquare, Send, User, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import Image from 'next/image';
+
+const MAX_PROMPT_LENGTH_FREE = 500;
+const MAX_PROMPT_LENGTH_PRO = 2000;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const explanationSchema = z.object({
   prompt: z.string().min(1, { message: 'Please ask a question.' }),
+  image: z.string().optional(),
 });
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
@@ -72,16 +78,23 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   );
 };
 
-const UserMessage = ({ content }: { content: string }) => {
+const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
   const { studentProfile } = useAppContext();
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   }
+
+  const text = typeof content === 'string' ? content : content.text;
+  const imageUrl = typeof content === 'object' && 'imageUrl' in content ? content.imageUrl : undefined;
+
   return (
     <div className="flex items-start gap-4 justify-end">
       <Card className="bg-muted">
         <CardContent className="p-3">
-          <p className="font-semibold">{content}</p>
+          {imageUrl && (
+            <Image src={imageUrl} alt="Uploaded diagram" width={200} height={200} className="rounded-md mb-2" />
+          )}
+          <p className="font-semibold">{text}</p>
         </CardContent>
       </Card>
       <Avatar>
@@ -94,22 +107,55 @@ const UserMessage = ({ content }: { content: string }) => {
 
 
 export function ExplanationView() {
-  const { studentProfile, chat, setChat, addToChat, isProfileComplete } = useAppContext();
+  const { studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const maxPromptLength = studentProfile.isPro ? MAX_PROMPT_LENGTH_PRO : MAX_PROMPT_LENGTH_FREE;
 
   const form = useForm<z.infer<typeof explanationSchema>>({
     resolver: zodResolver(explanationSchema),
-    defaultValues: { prompt: '' },
+    defaultValues: { prompt: '', image: undefined },
   });
+
+  const promptValue = form.watch('prompt');
   
   useEffect(() => {
     if (resultsRef.current) {
         resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [chat, error, isLoading]);
+
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!studentProfile.isPro) {
+        toast({
+            variant: 'destructive',
+            title: 'Pro Feature',
+            description: 'Image upload is available for Pro members only.',
+            action: <Button onClick={() => setView('pro-membership')}>Upgrade</Button>
+        });
+        return;
+    }
+    const file = e.target.files?.[0];
+    if (file) {
+        if (file.size > MAX_FILE_SIZE) {
+            toast({ variant: 'destructive', title: 'File too large', description: 'Please select an image smaller than 5MB.' });
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            form.setValue('image', dataUrl);
+            setImagePreview(dataUrl);
+        };
+        reader.readAsDataURL(file);
+    }
+  }
 
 
   async function onSubmit(values: z.infer<typeof explanationSchema>) {
@@ -121,37 +167,48 @@ export function ExplanationView() {
       });
       return;
     }
+
+    if (values.prompt.length > maxPromptLength) {
+        toast({
+            variant: 'destructive',
+            title: 'Question Too Long',
+            description: `Your question exceeds the ${maxPromptLength} character limit. Pro users have a higher limit.`,
+        });
+        return;
+    }
     
     setIsLoading(true);
     setError(null);
     
-    const userMessage: ChatMessage = { role: 'user', content: values.prompt };
+    const userMessage: ChatMessage = { role: 'user', content: { text: values.prompt, imageUrl: values.image } };
     const newChatHistory = [...(chat || []), userMessage];
     setChat(newChatHistory); // Optimistically update UI
     form.reset();
+    setImagePreview(null);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+
+    if (!studentProfile.isPro) {
+        incrementUsage();
+    }
 
 
     const input = {
       chatHistory: newChatHistory,
-      studentProfile: {
-        classLevel: studentProfile.classLevel,
-        board: studentProfile.board,
-        weakSubjects: studentProfile.weakSubjects,
-      },
+      studentProfile: studentProfile,
     };
 
     const result = await getExplanation(input as any);
 
     if (result && 'error' in result) {
       setError(result.error);
-       // If there was an error, remove the optimistic user message
        setChat(chat);
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
-      addToChat(assistantMessage, newChatHistory); // Use special function to add assistant message
+      addToChat(assistantMessage, newChatHistory);
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
-       // If there was an error, remove the optimistic user message
        setChat(chat);
     }
     setIsLoading(false);
@@ -159,7 +216,7 @@ export function ExplanationView() {
 
   const renderMessage = (message: ChatMessage, index: number) => {
     if (message.role === 'user') {
-      return <UserMessage key={index} content={message.content as string} />;
+      return <UserMessage key={index} content={message.content} />;
     }
     if (message.role === 'assistant') {
       return <AssistantMessage key={index} explanation={message.content as Explanation} />;
@@ -203,29 +260,62 @@ export function ExplanationView() {
         <Card className="max-w-4xl mx-auto">
           <CardContent className="p-2">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
-                <FormField
-                  control={form.control}
-                  name="prompt"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Textarea 
-                            placeholder="Explain the steps of photosynthesis..." 
-                            {...field}
-                            className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    form.handleSubmit(onSubmit)();
-                                }
-                            }}
-                        />
-                      </FormControl>
-                      <FormMessage className="absolute" />
-                    </FormItem>
-                  )}
-                />
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
+                <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Upload Image (Pro)"
+                    disabled={!studentProfile.isPro}
+                    >
+                    <ImageIcon />
+                </Button>
+                <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+
+                <div className="flex-1 relative">
+                    {imagePreview && (
+                        <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border">
+                            <Image src={imagePreview} alt="preview" width={60} height={60} className="rounded-md" />
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    setImagePreview(null);
+                                    form.setValue('image', undefined);
+                                    if(fileInputRef.current) fileInputRef.current.value = '';
+                                }} 
+                                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                                <X className="h-3 w-3"/>
+                            </button>
+                        </div>
+                    )}
+                    <FormField
+                    control={form.control}
+                    name="prompt"
+                    render={({ field }) => (
+                        <FormItem className="flex-1">
+                        <FormControl>
+                            <Textarea 
+                                placeholder="Explain the steps of photosynthesis..." 
+                                {...field}
+                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        form.handleSubmit(onSubmit)();
+                                    }
+                                }}
+                            />
+                        </FormControl>
+                        <FormMessage className="absolute" />
+                        </FormItem>
+                    )}
+                    />
+                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                        {promptValue.length} / {maxPromptLength}
+                    </div>
+                </div>
+
                 <Button type="submit" disabled={isLoading} size="icon">
                   <Send />
                   <span className="sr-only">Send</span>

@@ -25,7 +25,7 @@ const quizSetupSchema = z.object({
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
 
 export function QuizView() {
-  const { studentProfile, quiz, setQuiz, isProfileComplete } = useAppContext();
+  const { studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -53,9 +53,13 @@ export function QuizView() {
     setUserAnswers({});
     setShowResults(false);
 
+    if (!studentProfile.isPro) {
+        incrementUsage();
+    }
+
     const input = {
       topic: values.topic,
-      studentProfile: JSON.stringify(studentProfile),
+      studentProfile: studentProfile,
       numQuestions: 5,
     };
 

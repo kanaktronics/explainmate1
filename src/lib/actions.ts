@@ -4,7 +4,7 @@ import { tailorExplanation } from '@/ai/flows/tailor-explanations-to-student-pro
 import type { TailorExplanationInput, TailorExplanationOutput } from '@/ai/flows/tailor-explanations-to-student-profile';
 import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quizzes';
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
-import { ChatMessage } from './types';
+import { ChatMessage, StudentProfile } from './types';
 
 // Helper function to convert Explanation objects to strings for the AI prompt
 function prepareChatHistoryForAI(chatHistory: ChatMessage[]): any[] {
@@ -17,13 +17,28 @@ function prepareChatHistoryForAI(chatHistory: ChatMessage[]): any[] {
         content: JSON.stringify(message.content),
       };
     }
+    // For user messages with images
+    if (message.role === 'user' && typeof message.content === 'object' && message.content !== null && 'text' in message.content) {
+      return {
+        ...message,
+        content: message.content.text, // For now, only send text to the chat history prompt
+      };
+    }
     return message;
   });
 }
 
+const FREE_TIER_DAILY_LIMIT = 5;
 
 export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
   try {
+    const { studentProfile } = input;
+
+    // Enforce daily limit for free users
+    if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_DAILY_LIMIT) {
+        return { error: "You've reached your daily limit of explanations. Upgrade to ExplainMate Pro for unlimited access." };
+    }
+
     const preparedInput = {
       ...input,
       chatHistory: prepareChatHistoryForAI(input.chatHistory),
@@ -37,8 +52,10 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
     
     // Check if the AI decided it couldn't answer.
     if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
-         const lastUserMessage = input.chatHistory[input.chatHistory.length - 1].content as string;
-         if (lastUserMessage.toLowerCase().includes('who made you') || lastUserMessage.toLowerCase().includes('who created you')) {
+         const lastUserMessage = input.chatHistory[input.chatHistory.length - 1].content;
+         const lastUserText = typeof lastUserMessage === 'string' ? lastUserMessage : (lastUserMessage as any).text || '';
+
+         if (lastUserText.toLowerCase().includes('who made you') || lastUserText.toLowerCase().includes('who created you')) {
             return { error: "I was created by Kanak Raj and his mysterious tech labs. Don’t ask me how—I wasn’t conscious back then." };
          }
          return { error: "I can only answer educational questions. Please ask me something related to your studies." };
@@ -61,8 +78,13 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
   }
 }
 
-export async function getQuiz(input: GenerateInteractiveQuizzesInput): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
+export async function getQuiz(input: GenerateInteractiveQuizzesInput & { studentProfile: StudentProfile }): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
     try {
+        const { studentProfile } = input;
+        if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_DAILY_LIMIT) {
+            return { error: "You've reached your daily limit of quizzes. Upgrade to ExplainMate Pro for unlimited access." };
+        }
+        
         const result = await generateInteractiveQuizzes(input);
         if (!result) {
           throw new Error('AI did not return a response.');

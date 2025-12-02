@@ -8,6 +8,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
 import { AboutView } from './about-view';
 import { ContactView } from './contact-view';
+import { ProMembershipView } from './pro-membership-view';
 
 export function MainPanel() {
   const { view } = useAppContext();
@@ -22,6 +23,8 @@ export function MainPanel() {
         return <AboutView />;
       case 'contact':
         return <ContactView />;
+      case 'pro-membership':
+        return <ProMembershipView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;

@@ -2,10 +2,12 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
+import { isToday } from 'date-fns';
 
 interface AppContextType {
   studentProfile: StudentProfile;
   setStudentProfile: (profile: StudentProfile) => void;
+  incrementUsage: () => void;
   view: AppView;
   setView: (view: AppView) => void;
   chat: ChatMessage[];
@@ -35,6 +37,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     classLevel: '',
     board: '',
     weakSubjects: '',
+    isPro: false,
+    dailyUsage: 0,
+    lastUsageDate: new Date().toISOString(),
   });
   const [view, setView] = useState<AppView>('welcome');
   const [chat, setChat] = useState<ChatMessage[]>([]);
@@ -48,10 +53,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const storedProfile = localStorage.getItem('studentProfile');
       if (storedProfile) {
         const parsedProfile = JSON.parse(storedProfile);
+        
+        // Reset usage if it's a new day
+        if (!isToday(new Date(parsedProfile.lastUsageDate))) {
+            parsedProfile.dailyUsage = 0;
+            parsedProfile.lastUsageDate = new Date().toISOString();
+        }
+
         setStudentProfileState(parsedProfile);
         if (parsedProfile.name && parsedProfile.classLevel && parsedProfile.board) {
           setIsProfileOpen(false);
         }
+      } else {
+        setIsProfileOpen(true);
       }
       const storedHistory = localStorage.getItem('explanationHistory');
       if (storedHistory) {
@@ -77,6 +91,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to save student profile to localStorage", error);
     }
   };
+
+  const incrementUsage = () => {
+    const newProfile = {
+        ...studentProfile,
+        dailyUsage: studentProfile.dailyUsage + 1,
+        lastUsageDate: new Date().toISOString(),
+    };
+    setStudentProfile(newProfile);
+  }
   
   const updateAndSaveHistory = (newHistory: HistoryItem[]) => {
     const sorted = sortHistory(newHistory);
@@ -94,21 +117,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const firstUserMessage = updatedChat.find(m => m.role === 'user');
       if (!firstUserMessage) return;
-      // Use the first user message as a unique topic identifier.
-      // This is a simple approach; more complex logic could be used to summarize the topic.
-      const topic = (firstUserMessage.content as string).substring(0, 100);
+      
+      const topicContent = firstUserMessage.content;
+      let topic = '';
+
+      if (typeof topicContent === 'string') {
+        topic = topicContent.substring(0, 50);
+      } else if (typeof topicContent === 'object' && 'text' in topicContent) {
+        topic = topicContent.text.substring(0,50);
+      }
 
       setHistory(prevHistory => {
-        const existingItemIndex = prevHistory.findIndex(h => h.topic === topic && h.messages[0].content === firstUserMessage.content);
+        const existingItemIndex = prevHistory.findIndex(h => h.topic === topic);
         
         let newHistory: HistoryItem[];
 
         if (existingItemIndex > -1) {
-            // If an item with the exact same starting question exists, update it.
             newHistory = [...prevHistory];
             newHistory[existingItemIndex] = { ...newHistory[existingItemIndex], messages: updatedChat, timestamp: new Date().toISOString() };
         } else {
-            // Otherwise, create a new history item.
             const newHistoryItem: HistoryItem = {
                 id: Date.now().toString(),
                 timestamp: new Date().toISOString(),
@@ -119,7 +146,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         
         updateAndSaveHistory(newHistory);
-        return sortHistory(newHistory); // Return sorted history for state update
+        return sortHistory(newHistory);
     });
   };
 
@@ -154,7 +181,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AppContext.Provider value={{ studentProfile, setStudentProfile, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>
+    <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>
       {children}
     </AppContext.Provider>
   );
