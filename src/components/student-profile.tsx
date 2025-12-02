@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { StudentProfile as StudentProfileType } from '@/lib/types';
 import { Edit, Save } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -31,19 +33,60 @@ export function StudentProfile() {
   const { studentProfile, setStudentProfile, setIsProfileOpen, isProfileComplete } = useAppContext();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(!isProfileComplete);
+  const { firestore, user } = useFirebase();
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: studentProfile,
+    defaultValues: {
+      name: studentProfile.name,
+      classLevel: studentProfile.classLevel,
+      board: studentProfile.board,
+      weakSubjects: studentProfile.weakSubjects,
+    },
   });
 
   useEffect(() => {
-    form.reset(studentProfile);
+    form.reset({
+      name: studentProfile.name,
+      classLevel: studentProfile.classLevel,
+      board: studentProfile.board,
+      weakSubjects: studentProfile.weakSubjects,
+    });
     setIsEditing(!isProfileComplete);
   }, [studentProfile, form, isProfileComplete]);
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
-    setStudentProfile(values as StudentProfileType);
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You must be logged in to save your profile.',
+      });
+      return;
+    }
+    
+    const updatedProfile: StudentProfileType = {
+      ...studentProfile,
+      ...values,
+      email: user.email!,
+      id: user.uid,
+    };
+    
+    setStudentProfile(updatedProfile);
+    
+    const profileRef = doc(firestore, 'users', user.uid);
+    const dataToSave = {
+        id: user.uid,
+        name: values.name,
+        email: user.email,
+        gradeLevel: values.classLevel,
+        board: values.board,
+        weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
+        isPro: studentProfile.isPro || false,
+    };
+
+    setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
+
     toast({
       title: 'Profile Saved!',
       description: 'Your information has been updated.',

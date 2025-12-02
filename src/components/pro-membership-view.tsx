@@ -10,15 +10,25 @@ import { useAppContext } from '@/lib/app-context';
 import { createOrder } from '@/lib/payments/razorpay/actions';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+
 
 export function ProMembershipView() {
     const { toast } = useToast();
     const { studentProfile, setStudentProfile } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'failure'>('idle');
+    const { firestore, user } = useFirebase();
 
     const handleBuyPro = async () => {
         setIsLoading(true);
+        if (!user || !firestore) {
+             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to purchase a Pro membership.' });
+             setIsLoading(false);
+             return;
+        }
+
         try {
             const response = await createOrder({ amount: 9900, currency: 'INR' }); // Placeholder price
             if (response.error || !response.orderId) {
@@ -33,9 +43,12 @@ export function ProMembershipView() {
                 description: 'Annual Membership',
                 order_id: response.orderId,
                 handler: async function (res: any) {
-                    // This is where we would verify the payment on the backend
-                    // For now, we'll simulate a successful payment.
-                    setStudentProfile({ ...studentProfile, isPro: true });
+                    const updatedProfile = { ...studentProfile, isPro: true };
+                    setStudentProfile(updatedProfile);
+                    
+                    const profileRef = doc(firestore, 'users', user.uid);
+                    setDocumentNonBlocking(profileRef, { isPro: true }, { merge: true });
+
                     setPaymentStatus('success');
                     toast({
                         title: 'Payment Successful!',
@@ -44,7 +57,7 @@ export function ProMembershipView() {
                 },
                 prefill: {
                     name: studentProfile.name,
-                    email: 'student@example.com', // Placeholder
+                    email: studentProfile.email,
                     contact: '9999999999' // Placeholder
                 },
                 theme: {

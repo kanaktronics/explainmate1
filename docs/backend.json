@@ -43,6 +43,7 @@
       "required": [
         "id",
         "name",
+        "email",
         "gradeLevel",
         "board",
         "weakSubjects"
@@ -51,8 +52,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {

@@ -3,10 +3,12 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
 import { isToday } from 'date-fns';
+import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 interface AppContextType {
   studentProfile: StudentProfile;
-  setStudentProfile: (profile: StudentProfile) => void;
+  setStudentProfile: (profile: Partial<StudentProfile>) => void;
   incrementUsage: () => void;
   view: AppView;
   setView: (view: AppView) => void;
@@ -31,49 +33,85 @@ const sortHistory = (history: HistoryItem[]) => {
   return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 };
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [studentProfile, setStudentProfileState] = useState<StudentProfile>({
+const defaultProfile: StudentProfile = {
     name: '',
+    email: '',
     classLevel: '',
     board: '',
     weakSubjects: '',
     isPro: false,
     dailyUsage: 0,
     lastUsageDate: new Date().toISOString(),
-  });
+};
+
+
+export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const { user, firestore } = useFirebase();
+  const [studentProfile, setStudentProfileState] = useState<StudentProfile>(defaultProfile);
   const [view, setView] = useState<AppView>('welcome');
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
+
+  // Effect to sync Firestore profile with local state
+  useEffect(() => {
+    if (isProfileLoading) return;
+
+    if (firestoreProfile) {
+        const profileData: StudentProfile = {
+            id: firestoreProfile.id,
+            name: firestoreProfile.name,
+            email: firestoreProfile.email,
+            classLevel: firestoreProfile.gradeLevel,
+            board: firestoreProfile.board,
+            weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
+            isPro: firestoreProfile.isPro || false,
+            // Keep local usage stats unless they need to be synced
+            dailyUsage: studentProfile.dailyUsage,
+            lastUsageDate: studentProfile.lastUsageDate,
+        };
+
+        // Reset usage if it's a new day
+        if (!isToday(new Date(profileData.lastUsageDate))) {
+            profileData.dailyUsage = 0;
+            profileData.lastUsageDate = new Date().toISOString();
+        }
+
+        setStudentProfileState(profileData);
+    } else if (user) {
+        // New user, set up a default profile in local state
+        const newProfile = {
+            ...defaultProfile,
+            id: user.uid,
+            email: user.email!,
+            name: user.displayName || '',
+        };
+        setStudentProfileState(newProfile);
+        setIsProfileOpen(true); // Open profile form for new users
+    } else {
+        // No user, reset to default
+        setStudentProfileState(defaultProfile);
+    }
+  }, [firestoreProfile, user, isProfileLoading]);
+
 
   useEffect(() => {
     try {
-      const storedProfile = localStorage.getItem('studentProfile');
-      if (storedProfile) {
-        const parsedProfile = JSON.parse(storedProfile);
-        
-        // Reset usage if it's a new day
-        if (!isToday(new Date(parsedProfile.lastUsageDate))) {
-            parsedProfile.dailyUsage = 0;
-            parsedProfile.lastUsageDate = new Date().toISOString();
-        }
-
-        setStudentProfileState(parsedProfile);
-        if (parsedProfile.name && parsedProfile.classLevel && parsedProfile.board) {
-          setIsProfileOpen(false);
-        }
-      } else {
-        setIsProfileOpen(true);
-      }
       const storedHistory = localStorage.getItem('explanationHistory');
       if (storedHistory) {
         setHistory(sortHistory(JSON.parse(storedHistory)));
       }
     } catch (error) {
-      console.error("Failed to parse from localStorage", error);
-      localStorage.removeItem('studentProfile');
+      console.error("Failed to parse history from localStorage", error);
       localStorage.removeItem('explanationHistory');
     }
   }, []);
@@ -81,24 +119,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { name, classLevel, board } = studentProfile;
     setIsProfileComplete(!!name && !!classLevel && !!board);
-  }, [studentProfile]);
-  
-  const setStudentProfile = (profile: StudentProfile) => {
-    setStudentProfileState(profile);
-    try {
-      localStorage.setItem('studentProfile', JSON.stringify(profile));
-    } catch (error) {
-      console.error("Failed to save student profile to localStorage", error);
+    if (user && isProfileLoading) {
+        setIsProfileOpen(false);
+    } else if (user && !isProfileComplete) {
+        setIsProfileOpen(true);
+    } else {
+        setIsProfileOpen(false);
     }
+  }, [studentProfile, user, isProfileLoading, isProfileComplete]);
+  
+  const setStudentProfile = (profile: Partial<StudentProfile>) => {
+    setStudentProfileState(prev => ({...prev, ...profile}));
   };
 
   const incrementUsage = () => {
-    const newProfile = {
-        ...studentProfile,
-        dailyUsage: studentProfile.dailyUsage + 1,
-        lastUsageDate: new Date().toISOString(),
-    };
-    setStudentProfile(newProfile);
+    setStudentProfileState(prev => {
+        const newProfile = {
+            ...prev,
+            dailyUsage: prev.dailyUsage + 1,
+            lastUsageDate: new Date().toISOString(),
+        };
+        return newProfile;
+    });
   }
   
   const updateAndSaveHistory = (newHistory: HistoryItem[]) => {
@@ -179,6 +221,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setChat(messages);
     setView('explanation');
   };
+  
+  // When user logs out, clear local state
+  useEffect(() => {
+    if (!user && !isProfileLoading) {
+        setChat([]);
+        setQuiz(null);
+        setHistory([]);
+        localStorage.removeItem('explanationHistory');
+        setView('welcome');
+    }
+  }, [user, isProfileLoading]);
 
   return (
     <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>

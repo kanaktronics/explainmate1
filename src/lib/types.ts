@@ -1,5 +1,7 @@
 export interface StudentProfile {
+  id?: string;
   name: string;
+  email: string;
   classLevel: string;
   board: string;
   weakSubjects: string;

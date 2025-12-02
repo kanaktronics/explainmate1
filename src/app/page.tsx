@@ -19,7 +19,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -27,6 +27,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { DeleteHistoryDialog } from '@/components/delete-history-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useFirebase } from '@/firebase';
+import { AuthView } from '@/components/auth-view';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function HistorySection() {
   const { history, loadChatFromHistory, deleteFromHistory, clearHistory } = useAppContext();
@@ -129,6 +132,7 @@ function ProSection() {
 
 function AppLayout() {
   const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen } = useAppContext();
+  const { auth } = useFirebase();
 
   const handleNewExplanation = () => {
     setChat([]);
@@ -150,6 +154,10 @@ function AppLayout() {
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  }
+  
+  const handleLogout = () => {
+    auth?.signOut();
   }
 
   return (
@@ -200,6 +208,9 @@ function AppLayout() {
                  <SidebarMenuItem>
                     <SidebarMenuButton variant="ghost" onClick={handleContact} isActive={view === 'contact'}><Contact/>Contact</SidebarMenuButton>
                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut/>Logout</SidebarMenuButton>
+                 </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator/>
             <div className="flex items-center gap-3 px-2">
@@ -212,7 +223,7 @@ function AppLayout() {
                         <span className="font-semibold text-sm truncate">{studentProfile.name || "Student"}</span>
                         {studentProfile.isPro && <Badge variant="destructive" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0"><Zap className='w-3 h-3 fill-white'/>Pro</Badge>}
                     </div>
-                    <span className="text-xs text-muted-foreground">{studentProfile.classLevel || "Learner"}</span>
+                    <span className="text-xs text-muted-foreground">{studentProfile.email || "Not signed in"}</span>
                 </div>
             </div>
         </SidebarFooter>
@@ -224,10 +235,32 @@ function AppLayout() {
   );
 }
 
+function AuthWall() {
+    const { user, isUserLoading } = useFirebase();
+
+    if (isUserLoading) {
+        return (
+          <div className="flex h-screen w-screen items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <AppLogo />
+                <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        );
+    }
+    
+    if (!user) {
+        return <AuthView />;
+    }
+
+    return <AppLayout />;
+}
+
+
 export default function Home() {
   return (
     <AppProvider>
-      <AppLayout />
+      <AuthWall />
     </AppProvider>
   );
 }
