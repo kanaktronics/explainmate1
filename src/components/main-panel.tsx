@@ -26,8 +26,6 @@ export function MainPanel() {
         return <ContactView />;
       case 'pro-membership':
         return <ProMembershipView />;
-      case 'forgot-password':
-        return <ForgotPasswordView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;

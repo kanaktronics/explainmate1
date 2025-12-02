@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { useFirebase } from '@/firebase';
 import { AuthView } from '@/components/auth-view';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ForgotPasswordView } from '@/components/forgot-password-view';
 
 function HistorySection() {
   const { history, loadChatFromHistory, deleteFromHistory, clearHistory } = useAppContext();
@@ -237,6 +238,7 @@ function AppLayout() {
 
 function AuthWall() {
     const { user, isUserLoading } = useFirebase();
+    const { view } = useAppContext();
 
     if (isUserLoading) {
         return (
@@ -250,6 +252,16 @@ function AuthWall() {
     }
     
     if (!user) {
+        if (view === 'forgot-password') {
+            return (
+                <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+                    <div className="mb-8">
+                        <AppLogo />
+                    </div>
+                    <ForgotPasswordView />
+                </div>
+            );
+        }
         return <AuthView />;
     }
 
