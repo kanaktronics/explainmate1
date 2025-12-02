@@ -42,6 +42,8 @@ const defaultProfile: StudentProfile = {
     isPro: false,
     dailyUsage: 0,
     lastUsageDate: new Date().toISOString(),
+    securityQuestion: '',
+    securityAnswer: '',
 };
 
 
@@ -77,6 +79,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             board: firestoreProfile.board,
             weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
             isPro: firestoreProfile.isPro || false,
+            securityQuestion: firestoreProfile.securityQuestion,
+            securityAnswer: firestoreProfile.securityAnswer,
             // Keep local usage stats unless they need to be synced
             dailyUsage: studentProfile.dailyUsage,
             lastUsageDate: studentProfile.lastUsageDate,
@@ -102,6 +106,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } else {
         // No user, reset to default
         setStudentProfileState(defaultProfile);
+        setView('welcome'); // Go to welcome/auth view
     }
   }, [firestoreProfile, user, isUserLoading]);
 

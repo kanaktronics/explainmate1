@@ -9,6 +9,7 @@ import { AppLogo } from './app-logo';
 import { AboutView } from './about-view';
 import { ContactView } from './contact-view';
 import { ProMembershipView } from './pro-membership-view';
+import { ForgotPasswordView } from './forgot-password-view';
 
 export function MainPanel() {
   const { view } = useAppContext();
@@ -25,6 +26,8 @@ export function MainPanel() {
         return <ContactView />;
       case 'pro-membership':
         return <ProMembershipView />;
+      case 'forgot-password':
+        return <ForgotPasswordView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;

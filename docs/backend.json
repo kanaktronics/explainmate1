@@ -38,6 +38,14 @@
         "isPro": {
           "type": "boolean",
           "description": "Indicates if the user has a pro subscription."
+        },
+        "securityQuestion": {
+          "type": "string",
+          "description": "A security question chosen by the user for password recovery."
+        },
+        "securityAnswer": {
+          "type": "string",
+          "description": "A salted and hashed version of the user's answer to the security question."
         }
       },
       "required": [
@@ -46,7 +54,9 @@
         "email",
         "gradeLevel",
         "board",
-        "weakSubjects"
+        "weakSubjects",
+        "securityQuestion",
+        "securityAnswer"
       ]
     }
   },

@@ -15,13 +15,14 @@
  *
  * ## Key Security Decisions
  * - **No User Listing**: To protect user privacy and prevent data scraping, it is
- *   explicitly forbidden to list all documents in the `/users` collection.
+ *   explicitly forbidden to list all documents in the `/users` collection, with
+ *   the sole exception of querying by email for the password reset flow.
  * - **Ownership Integrity**: When a user profile is created, a rule enforces
  *   that the user's UID is stored inside the document's `id` field. This `id`
  *   field is then made immutable on all subsequent updates, creating a permanent
  *   and trustworthy link between the document data and its owner.
  * - **Default Secure**: Access is denied by default. Permissions are only granted
- *   explicitly to the document owner.
+ *   explicitly.
  *
  * ## Denormalization for Authorization
  * The data model is already optimized for security rules. Authorization-critical
@@ -29,12 +30,6 @@
  * document. This design choice is deliberate and crucial, as it allows for fast,
  * simple, and cost-effective authorization checks without requiring any slow or
  * expensive `get()` calls to other documents.
- *
- * ## Structural Segregation
- * This security principle is not applicable here due to the simplicity of the
- * data model. There is no mix of public and private data within a single
- * collection that would necessitate separating it into different collections.
- * The entire `/users` collection is treated as private data partitioned by owner.
  */
 rules_version = '2';
 
@@ -74,37 +69,38 @@ service cloud.firestore {
      * integrity from the moment of creation.
      */
     function hasValidUserProfileDataOnCreate(userId) {
-      return request.resource.data.id == userId;
+      return request.resource.data.id == userId
+          && request.resource.data.securityQuestion != null
+          && request.resource.data.securityAnswer != null;
     }
 
     /**
-     * On update, ensures critical relational fields like the user 'id' are
-     * not changed, preserving the integrity of the ownership link.
+     * On update, ensures critical relational fields like the user 'id' and
+     * security info are not changed, preserving the integrity of the ownership link.
      */
     function isImmutableUserProfileData() {
-      return request.resource.data.id == resource.data.id;
+      return request.resource.data.id == resource.data.id
+        && request.resource.data.securityQuestion == resource.data.securityQuestion
+        && request.resource.data.securityAnswer == resource.data.securityAnswer;
     }
 
     // ------------------------------------------------------------------------
     // Collection Rules
     // ------------------------------------------------------------------------
 
-    /**
-     * @description Manages user profiles. Each user can only access their own profile.
-     * @path /users/{userId}
-     * @allow A user (uid: "user123") can create, read, update, or delete their own profile at `/users/user123`.
-     * @deny A user (uid: "user123") cannot read or write to another user's profile at `/users/user456`. Listing all users is also denied.
-     * @principle Enforces a strict user-ownership model. All data under a user's path is private to them.
-     */
     match /users/{userId} {
-      // READS: Only the owner can read their own profile. Listing the collection is forbidden for privacy.
+      // READS: The owner can read their own profile.
       allow get: if isOwner(userId);
-      allow list: if false;
-
+      
       // WRITES: The owner can create, update, and delete their own profile, with data integrity checks.
       allow create: if isOwner(userId) && hasValidUserProfileDataOnCreate(userId);
       allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
       allow delete: if isExistingOwner(userId);
+
+      // LIST: Deny general collection scans, but allow a very specific query by email.
+      // This is necessary for the "forgot password" flow to find a user's security question.
+      // It only allows fetching documents if the `where` clause exactly matches the email field.
+      allow list: if request.query.keys().hasOnly(['where']) && request.query.where.size() == 1 && request.query.where[0].field == 'email';
     }
   }
 }

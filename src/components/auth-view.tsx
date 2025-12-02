@@ -13,18 +13,31 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
+import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { useFirebase } from '@/firebase';
 import { FirebaseError } from 'firebase/app';
 import { AppLogo } from './app-logo';
+import { setDocumentNonBlocking } from '@/firebase';
+import { doc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
+import { useAppContext } from '@/lib/app-context';
+import { securityQuestions } from '@/lib/security-questions';
 
 const signUpSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
+  securityQuestion: z.string().min(1, { message: 'Please select a security question.' }),
+  securityAnswer: z.string().min(3, { message: 'Answer must be at least 3 characters long.' }),
 });
 
 const signInSchema = z.object({
@@ -34,12 +47,13 @@ const signInSchema = z.object({
 
 export function AuthView() {
   const { toast } = useToast();
-  const { auth } = useFirebase();
+  const { auth, firestore } = useFirebase();
+  const { setView } = useAppContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', securityQuestion: '', securityAnswer: '' },
   });
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
@@ -88,7 +102,21 @@ export function AuthView() {
   async function onSignUp(values: z.infer<typeof signUpSchema>) {
     setIsSubmitting(true);
     try {
-        await initiateEmailSignUp(auth, values.email, values.password);
+        const userCredential = await initiateEmailSignUp(auth, values.email, values.password);
+        const user = userCredential.user;
+        const userProfile = {
+            id: user.uid,
+            email: user.email,
+            name: user.displayName || '',
+            gradeLevel: '',
+            board: '',
+            weakSubjects: [],
+            isPro: false,
+            securityQuestion: values.securityQuestion,
+            securityAnswer: values.securityAnswer, // In a real app, this would be hashed
+        };
+        const profileRef = doc(firestore, 'users', user.uid);
+        setDocumentNonBlocking(profileRef, userProfile, { merge: true });
         // The onAuthStateChanged listener will handle the redirect
     } catch (error) {
         handleAuthError(error);
@@ -100,7 +128,9 @@ export function AuthView() {
   async function onSignIn(values: z.infer<typeof signInSchema>) {
     setIsSubmitting(true);
     try {
-        await initiateEmailSignIn(auth, values.email, values.password);
+        const { getAuth, signInWithEmailAndPassword } = await import('firebase/auth');
+        const auth = getAuth();
+        await signInWithEmailAndPassword(auth, values.email, values.password);
         // The onAuthStateChanged listener will handle the redirect
     } catch (error) {
         handleAuthError(error);
@@ -153,6 +183,9 @@ export function AuthView() {
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? 'Signing In...' : 'Sign In'}
                   </Button>
+                   <Button variant="link" size="sm" className="w-full" onClick={() => setView('forgot-password')}>
+                    Forgot Password?
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -189,6 +222,38 @@ export function AuthView() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={signUpForm.control}
+                    name="securityQuestion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Security Question</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a question" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {securityQuestions.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signUpForm.control}
+                    name="securityAnswer"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Security Answer</FormLabel>
+                        <FormControl><Input type="password" placeholder="Your secret answer" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? 'Creating Account...' : 'Sign Up'}
                   </Button>

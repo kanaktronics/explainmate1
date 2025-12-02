@@ -8,6 +8,8 @@ export interface StudentProfile {
   isPro: boolean;
   dailyUsage: number;
   lastUsageDate: string;
+  securityQuestion?: string;
+  securityAnswer?: string;
 }
 
 export interface Explanation {
@@ -40,4 +42,4 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact' | 'pro-membership';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact' | 'pro-membership' | 'forgot-password';

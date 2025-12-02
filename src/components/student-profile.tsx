@@ -83,6 +83,9 @@ export function StudentProfile() {
         board: values.board,
         weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
         isPro: studentProfile.isPro || false,
+        // Security fields should not be overwritten here. They are set at sign-up.
+        securityQuestion: studentProfile.securityQuestion,
+        securityAnswer: studentProfile.securityAnswer,
     };
 
     setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
