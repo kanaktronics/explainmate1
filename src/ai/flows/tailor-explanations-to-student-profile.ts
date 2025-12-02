@@ -46,15 +46,12 @@ export async function tailorExplanation(input: TailorExplanationInput): Promise<
     if (message.role === 'assistant' && typeof message.content !== 'string') {
       // This is a special case for the 'assistant' role. The prompt expects a stringified JSON.
       // But the type from the client is an object. So we stringify it here.
-      // This is a bit of a hack and ideally the types should be consistent.
-      // The z.infer of ChatMessageSchema expects content to be a string.
-      // But client-side ChatMessage can have content as an Explanation object.
       return { ...message, content: JSON.stringify(message.content) };
     }
     return message;
   });
 
-  return tailorExplanationFlow({ ...input, chatHistory: transformedHistory as any });
+  return tailorExplanationFlow({ ...input, chatHistory: transformedHistory as z.infer<typeof ChatMessageSchema>[] });
 }
 
 const prompt = ai.definePrompt({
@@ -89,10 +86,10 @@ const prompt = ai.definePrompt({
 
   Your task is to respond to the last user message. You must generate content for all four sections below.
 
-  1.  Explanation: This is the main answer. It must be detailed, comprehensive, and engaging, written as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable.
-  2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2) and explain what each variable (G, m1, m2, r) means. This section should almost never be 'N/A' for a science or math topic.
+  1.  Explanation: This is the main answer. It must be very descriptive, detailed, comprehensive, and engaging. Write it as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. Start with a relatable scenario.
+  2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. This section should explain HOW a derivation comes about. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2), explain what each variable (G, m1, m2, r) means, and describe the relationship between them (e.g., "So, the bigger the masses... but the farther apart they are..."). This section should almost never be 'N/A' for a science or math topic.
   3.  Real-World Examples: Provide at least 2-3 relatable examples to illustrate the concept in daily life.
-  4.  Fair Work: A clean, polished, notebook-ready version of the solution or explanation. This should be a concise and neat summary, perfect for notes.
+  4.  Fair Work: A clean, polished, notebook-ready version of the explanation. This should be a concise and neat summary of the core concepts, perfect for notes. Do not just list the effects; summarize the explanation.
 
   CRITICAL: Ensure every section is detailed and high-quality. Do not provide short, superficial answers. The goal is deep understanding, not just a quick definition. If the question is not an educational question, respond that you cannot answer the request, but still provide N/A for all four fields.
 `,
