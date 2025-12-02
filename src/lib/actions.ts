@@ -14,15 +14,22 @@ function convertToGenkitHistory(chatHistory: ChatMessage[]) {
         content: [{ text: JSON.stringify(message.content) }]
       };
     }
+
     if (message.role === 'user' && typeof message.content === 'object' && message.content !== null) {
+      const contentParts = [];
+      if ('text' in message.content) {
+        contentParts.push({ text: message.content.text });
+      }
+      if ('imageUrl' in message.content && message.content.imageUrl) {
+        contentParts.push({ media: { url: message.content.imageUrl } });
+      }
       return {
         role: 'user',
-        content: [
-          { text: message.content.text },
-          ...(message.content.imageUrl ? [{ media: { url: message.content.imageUrl } }] : [])
-        ]
+        content: contentParts,
       };
     }
+    
+    // Fallback for simple string content
     return {
       role: message.role,
       content: [{ text: message.content as string }]

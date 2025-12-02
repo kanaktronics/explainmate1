@@ -17,9 +17,22 @@ const StudentProfileSchema = z.object({
   weakSubjects: z.string().describe('Comma-separated list of subjects the student finds challenging.'),
 });
 
+const MediaPartSchema = z.object({
+  media: z.object({
+    url: z.string(),
+    contentType: z.string().optional(),
+  }),
+});
+
+const TextPartSchema = z.object({
+  text: z.string(),
+});
+
+const ChatContentPartSchema = z.union([TextPartSchema, MediaPartSchema]);
+
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system', 'tool']),
-  content: z.any(),
+  content: z.array(ChatContentPartSchema),
 });
 
 
@@ -71,7 +84,7 @@ const prompt = ai.definePrompt({
   
   Conversation History:
   {{#each chatHistory}}
-  - {{role}}: {{#each content}}{{#if text}}{{text}}{{/if}}{{#if media}}{{media.url}}{{/if}}{{/each}}
+  - {{role}}: {{#each content}}{{#if text}}{{text}}{{/if}}{{#if media}}{{media url=media.url}}{{/if}}{{/each}}
   {{/each}}
 
   Your task is to respond to the last user message. You must generate content for all four sections below.
