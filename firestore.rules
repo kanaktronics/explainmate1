@@ -97,10 +97,8 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
       allow delete: if isExistingOwner(userId);
 
-      // LIST: Deny general collection scans, but allow a very specific query by email.
-      // This is necessary for the "forgot password" flow to find a user's security question.
-      // It only allows fetching documents if the `where` clause exactly matches the email field.
-      allow list: if request.query.keys().hasOnly(['where']) && request.query.where.size() == 1 && request.query.where[0].field == 'email';
+      // LIST: Allow unauthenticated users to query by email ONLY for the password reset flow.
+      allow list: if request.auth == null && request.query.keys().hasOnly(['where']) && request.query.where[0].field == 'email' && request.query.where[0].operator == '==';
     }
   }
 }
