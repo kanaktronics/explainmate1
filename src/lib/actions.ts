@@ -71,7 +71,7 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
     }
     
     if (errorMessage.includes('429')) {
-      return { error: 'You have made too many requests in a short period. Please wait a moment before trying again.' };
+      return { error: 'The AI model is temporarily rate-limited. Please wait a few moments before sending another request.' };
     }
 
     return { error: 'An unexpected error occurred while generating the response. Please try again.' };
