@@ -37,8 +37,6 @@ const profileSchema = z.object({
   classLevel: z.string().min(1, { message: 'Class is required.' }),
   board: z.string().min(1, { message: 'Board is required.' }),
   weakSubjects: z.string().optional(),
-  securityQuestion: z.string().min(1, { message: 'Please select a security question.' }),
-  securityAnswer: z.string().min(3, { message: 'Answer must be at least 3 characters long.' }),
 });
 
 export function StudentProfile() {
@@ -55,8 +53,6 @@ export function StudentProfile() {
       classLevel: studentProfile.classLevel,
       board: studentProfile.board,
       weakSubjects: studentProfile.weakSubjects,
-      securityQuestion: studentProfile.securityQuestion || '',
-      securityAnswer: '', // Don't pre-fill security answer
     },
   });
 
@@ -66,15 +62,13 @@ export function StudentProfile() {
       classLevel: studentProfile.classLevel,
       board: studentProfile.board,
       weakSubjects: studentProfile.weakSubjects,
-      securityQuestion: studentProfile.securityQuestion || '',
-      securityAnswer: '',
     });
-    // Don't force editing mode, let the user decide.
-    // The alert will inform them if they need to update.
-    if (!isProfileComplete) {
+    if (user && !isProfileComplete) {
         setIsEditing(true);
+    } else {
+        setIsEditing(false);
     }
-  }, [studentProfile, form, isProfileComplete]);
+  }, [studentProfile, user, isProfileComplete, form]);
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     if (!user || !firestore) {
@@ -96,16 +90,12 @@ export function StudentProfile() {
     setStudentProfile(updatedProfile);
     
     const profileRef = doc(firestore, 'users', user.uid);
+    // Only save the fields from the form, don't overwrite security answer
     const dataToSave = {
-        id: user.uid,
         name: values.name,
-        email: user.email,
         gradeLevel: values.classLevel,
         board: values.board,
         weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        isPro: studentProfile.isPro || false,
-        securityQuestion: values.securityQuestion,
-        securityAnswer: values.securityAnswer,
     };
 
     setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
@@ -124,9 +114,9 @@ export function StudentProfile() {
         {isSecurityProfileIncomplete && (
             <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Update Required</AlertTitle>
+                <AlertTitle>Update Recommended</AlertTitle>
                 <AlertDescription>
-                   Please add a security question to enable password recovery. Click Edit Profile below.
+                   Please set a security question via the Sign Up page to enable password recovery in the future.
                 </AlertDescription>
             </Alert>
         )}
@@ -222,41 +212,6 @@ export function StudentProfile() {
             </FormItem>
           )}
         />
-
-        <div className="pt-4 space-y-4 border-t">
-             <p className="text-sm font-medium">Security Question for Password Recovery</p>
-            <FormField
-                control={form.control}
-                name="securityQuestion"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Question</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a question" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {securityQuestions.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="securityAnswer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Your Secret Answer</FormLabel>
-                    <FormControl><Input type="password" placeholder="Your secret answer" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-            />
-        </div>
 
         <Button type="submit" className="w-full">
           <Save />
