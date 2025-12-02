@@ -25,7 +25,7 @@ const ChatMessageSchema = z.object({
 
 
 const TailorExplanationInputSchema = z.object({
-  chatHistory: z.array(ChatMessageSchema).describe('The full conversation history between the user and the assistant.'),
+  chatHistory: z.array(ChatMessageSchema).describe('The full conversation history between the user and the assistant. The assistant\'s content is a stringified JSON of the previous turn\'s full output.'),
   studentProfile: StudentProfileSchema,
 });
 export type TailorExplanationInput = z.infer<typeof TailorExplanationInputSchema>;
@@ -39,19 +39,9 @@ const TailorExplanationOutputSchema = z.object({
 export type TailorExplanationOutput = z.infer<typeof TailorExplanationOutputSchema>;
 
 export async function tailorExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput> {
-  // We need to transform the incoming chat history to match what the prompt expects.
-  // The prompt expects the 'assistant' role's content to be a JSON string of the Explanation object.
-  // The incoming `chatHistory` from the client has the assistant content as an object, not a string.
-  const transformedHistory = input.chatHistory.map(message => {
-    if (message.role === 'assistant' && typeof message.content !== 'string') {
-      // This is a special case for the 'assistant' role. The prompt expects a stringified JSON.
-      // But the type from the client is an object. So we stringify it here.
-      return { ...message, content: JSON.stringify(message.content) };
-    }
-    return message;
-  });
-
-  return tailorExplanationFlow({ ...input, chatHistory: transformedHistory as z.infer<typeof ChatMessageSchema>[] });
+  // The server action already prepares the chatHistory by stringifying the assistant's content.
+  // So we can call the flow directly.
+  return tailorExplanationFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -86,10 +76,10 @@ const prompt = ai.definePrompt({
 
   Your task is to respond to the last user message. You must generate content for all four sections below.
 
-  1.  Explanation: This is the main answer. It must be very descriptive, detailed, comprehensive, and engaging. Write it as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. Start with a relatable scenario.
-  2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. This section should explain HOW a derivation comes about. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2), explain what each variable (G, m1, m2, r) means, and describe the relationship between them (e.g., "So, the bigger the masses... but the farther apart they are..."). This section should almost never be 'N/A' for a science or math topic.
+  1.  Explanation: This is the main answer. It must be very descriptive, detailed, comprehensive, and engaging. Write it as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. Start with a relatable scenario. Use markdown for structure, such as bold headings for different parts of the explanation (e.g., **What is [Topic]?**, **Key Ideas**).
+  2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. This section must explain HOW a derivation comes about and what the relationship between variables is. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2), explain what each variable (G, m1, m2, r) means, and describe the relationship between them (e.g., "So, the bigger the masses... but the farther apart they are..."). This section should almost never be 'N/A' for a science or math topic.
   3.  Real-World Examples: Provide at least 2-3 relatable examples to illustrate the concept in daily life.
-  4.  Fair Work: A clean, polished, notebook-ready version of the explanation. This should be a concise and neat summary of the core concepts, perfect for notes. Do not just list the effects; summarize the explanation.
+  4.  Fair Work: A clean, polished, notebook-ready version of the explanation. This should be a concise and neat summary of the core concepts, perfect for notes. Do not just list the effects; summarize the core principles of the explanation.
 
   CRITICAL: Ensure every section is detailed and high-quality. Do not provide short, superficial answers. The goal is deep understanding, not just a quick definition. If the question is not an educational question, respond that you cannot answer the request, but still provide N/A for all four fields.
 `,

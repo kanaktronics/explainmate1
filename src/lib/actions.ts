@@ -8,10 +8,12 @@ import { ChatMessage } from './types';
 
 // Helper function to convert Explanation objects to strings for the AI prompt
 function prepareChatHistoryForAI(chatHistory: ChatMessage[]): any[] {
+  // The AI prompt expects the 'content' of assistant messages to be a string.
+  // The client-side state stores it as an object. This function ensures it's always a string.
   return chatHistory.map(message => {
-    if (message.role === 'assistant' && typeof message.content === 'object') {
+    if (message.role === 'assistant' && typeof message.content === 'object' && message.content !== null) {
       return {
-        role: message.role,
+        ...message,
         content: JSON.stringify(message.content),
       };
     }
@@ -26,6 +28,7 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
       ...input,
       chatHistory: prepareChatHistoryForAI(input.chatHistory),
     };
+    
     const result = await tailorExplanation(preparedInput);
     
     if (!result) {
