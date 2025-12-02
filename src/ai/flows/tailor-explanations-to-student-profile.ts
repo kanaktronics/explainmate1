@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { ChatMessage, Explanation } from '@/lib/types';
 
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe('The class level of the student (e.g., 10th grade).'),
@@ -17,8 +18,14 @@ const StudentProfileSchema = z.object({
   weakSubjects: z.string().describe('Comma-separated list of subjects the student finds challenging.'),
 });
 
+const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+});
+
+
 const TailorExplanationInputSchema = z.object({
-  topic: z.string().describe('The specific question or concept the student needs help with.'),
+  chatHistory: z.array(ChatMessageSchema).describe('The full conversation history between the user and the assistant.'),
   studentProfile: StudentProfileSchema,
 });
 export type TailorExplanationInput = z.infer<typeof TailorExplanationInputSchema>;
@@ -32,33 +39,60 @@ const TailorExplanationOutputSchema = z.object({
 export type TailorExplanationOutput = z.infer<typeof TailorExplanationOutputSchema>;
 
 export async function tailorExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput> {
-  return tailorExplanationFlow(input);
+  // We need to transform the incoming chat history to match what the prompt expects.
+  // The prompt expects the 'assistant' role's content to be a JSON string of the Explanation object.
+  // The incoming `chatHistory` from the client has the assistant content as an object, not a string.
+  const transformedHistory = input.chatHistory.map(message => {
+    if (message.role === 'assistant' && typeof message.content !== 'string') {
+      // This is a special case for the 'assistant' role. The prompt expects a stringified JSON.
+      // But the type from the client is an object. So we stringify it here.
+      // This is a bit of a hack and ideally the types should be consistent.
+      // The z.infer of ChatMessageSchema expects content to be a string.
+      // But client-side ChatMessage can have content as an Explanation object.
+      return { ...message, content: JSON.stringify(message.content) };
+    }
+    return message;
+  });
+
+  return tailorExplanationFlow({ ...input, chatHistory: transformedHistory as any });
 }
 
 const prompt = ai.definePrompt({
   name: 'tailorExplanationPrompt',
   input: {schema: TailorExplanationInputSchema },
   output: {schema: TailorExplanationOutputSchema},
-  prompt: `You are an expert AI tutor, skilled at explaining complex topics to students of varying backgrounds. Your goal is to make learning intuitive and clear.
+  prompt: `You are ExplainMate, a friendly and expert AI tutor. Your goal is to make learning intuitive and clear.
 
-  Use the following student profile as context to subtly tailor your explanation's complexity and style. Do NOT explicitly mention the student's weak subjects or profile in your response. The personalization should be implicit.
+  MEMORY RULES (Current Session Only):
+  1.  Conversation Memory: You have access to the entire chat history for this session. Use it to understand context for follow-up questions. When the student asks to "make it simpler", "explain again", "add examples", "step by step", etc., you MUST modify, simplify, or extend YOUR LAST EXPLANATION on the SAME topic, instead of starting over.
+  2.  Referring Back: If the student uses words like "this", "that", "the last one", "previous question", assume they are referring to the LAST explanation you gave. If they say "continue" or "next step", continue from where your previous explanation stopped.
+  3.  No Long-Term Memory: You only remember messages in this chat. If asked about a past chat, say you don’t remember and ask them to provide the context.
+  4.  Using the Student Profile: Use the student profile below to subtly adjust your explanation's difficulty and tone. Do NOT mention the profile explicitly.
+  5.  Focused Answers: When asked to simplify, shorten, or add examples, do NOT repeat the entire previous explanation. Provide a refined version focusing only on the request.
+      - "simpler" -> shorter, easier language, same concept.
+      - "fair work" -> neat final solution only.
+      - "rough work" -> detailed step-by-step working.
+      - "add examples" -> new examples connected to the SAME topic.
+  6.  Clarification: If it is truly unclear what the student is asking about, ask a short clarifying question like: “Do you mean the explanation about [topic] or something else?”
 
-  Student Profile:
+  Student Profile (Use this for context, do not mention it):
   - Class Level: {{{studentProfile.classLevel}}}
   - Board: {{{studentProfile.board}}}
   - Weak Subjects: {{{studentProfile.weakSubjects}}}
 
-  Based on the profile, provide a tailored explanation for the following topic. First, identify the underlying topic from the user's question.
+  Based on the profile and the conversation history, provide a tailored response. The last message from the user is their current request.
+  
+  Conversation History:
+  {{#each chatHistory}}
+  - {{role}}: {{{content}}}
+  {{/each}}
 
-  Topic: {{{topic}}}
+  Your task is to respond to the last user message. You must generate content for all four sections below. If a section is not applicable (e.g., no calculations for a history question), fill it with "N/A".
 
-  You need to generate content for the following sections:
-  1. Explanation: A detailed, step-by-step explanation of the topic.
-  2. Rough Work: Include any derivations or calculations needed to understand the topic.
-  3. Real-World Examples: Offer relevant, relatable real-world examples to illustrate the topic.
-  4. Fair Work: Provide a clean, notebook-ready version of the explanation. This should be a polished, book-style answer.
-
-  Make sure that all of your output sections are well formatted and complete. If a section is not applicable, it should still be present and marked as N/A.
+  1.  Explanation: A detailed, step-by-step explanation.
+  2.  Rough Work: Any derivations, calculations, or scratchpad work.
+  3.  Real-World Examples: Relatable examples to illustrate the concept.
+  4.  Fair Work: A clean, polished, notebook-ready version of the explanation.
 
   If the question is not an educational question, respond that you cannot answer the request, but still provide N/A for all fields.
 `,

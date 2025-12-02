@@ -20,7 +20,7 @@ import { WelcomeScreen } from './welcome-screen';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const explanationSchema = z.object({
-  topic: z.string().min(5, { message: 'Please ask a question with at least 5 characters.' }),
+  prompt: z.string().min(1, { message: 'Please ask a question.' }),
 });
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
@@ -94,7 +94,7 @@ const UserMessage = ({ content }: { content: string }) => {
 
 
 export function ExplanationView() {
-  const { studentProfile, chat, addToChat, isProfileComplete } = useAppContext();
+  const { studentProfile, chat, setChat, addToChat, isProfileComplete } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -102,7 +102,7 @@ export function ExplanationView() {
 
   const form = useForm<z.infer<typeof explanationSchema>>({
     resolver: zodResolver(explanationSchema),
-    defaultValues: { topic: '' },
+    defaultValues: { prompt: '' },
   });
   
   useEffect(() => {
@@ -124,13 +124,15 @@ export function ExplanationView() {
     
     setIsLoading(true);
     setError(null);
+    
+    const userMessage: ChatMessage = { role: 'user', content: values.prompt };
+    const newChatHistory = [...chat, userMessage];
+    setChat(newChatHistory); // Optimistically update UI
     form.reset();
 
-    const userMessage: ChatMessage = { role: 'user', content: values.topic };
-    addToChat(userMessage);
 
     const input = {
-      topic: values.topic,
+      chatHistory: newChatHistory,
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,
@@ -138,15 +140,19 @@ export function ExplanationView() {
       },
     };
 
-    const result = await getExplanation(input);
+    const result = await getExplanation(input as any);
 
     if (result && 'error' in result) {
       setError(result.error);
+       // If there was an error, remove the optimistic user message
+       setChat(chat);
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
-      addToChat(assistantMessage);
+      addToChat(assistantMessage, newChatHistory); // Use special function to add assistant message
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
+       // If there was an error, remove the optimistic user message
+       setChat(chat);
     }
     setIsLoading(false);
   }
@@ -200,7 +206,7 @@ export function ExplanationView() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
                 <FormField
                   control={form.control}
-                  name="topic"
+                  name="prompt"
                   render={({ field }) => (
                     <FormItem className="flex-1">
                       <FormControl>
