@@ -83,6 +83,22 @@ service cloud.firestore {
         && request.resource.data.securityQuestion == resource.data.securityQuestion
         && request.resource.data.securityAnswer == resource.data.securityAnswer;
     }
+    
+    /**
+     * Checks if an unauthenticated query is specifically for the password reset flow.
+     */
+    function isPasswordResetQuery() {
+      // Rule breakdown:
+      // 1. request.auth == null: The user must NOT be authenticated.
+      // 2. request.query.keys().hasOnly(['where']): The query must ONLY contain a 'where' clause. No 'orderBy', 'limit', etc.
+      // 3. request.query.where[0].field == 'email': The first (and only) 'where' clause must be on the 'email' field.
+      // 4. request.query.where[0].operator == '==': The operator must be an exact match.
+      return request.auth == null 
+        && request.query.keys().hasOnly(['where']) 
+        && request.query.where[0].field == 'email' 
+        && request.query.where[0].operator == '==';
+    }
+
 
     // ------------------------------------------------------------------------
     // Collection Rules
@@ -98,7 +114,8 @@ service cloud.firestore {
       allow delete: if isExistingOwner(userId);
 
       // LIST: Allow unauthenticated users to query by email ONLY for the password reset flow.
-      allow list: if request.auth == null && request.query.keys().hasOnly(['where']) && request.query.where[0].field == 'email' && request.query.where[0].operator == '==';
+      // This rule is separate to handle collection-level queries.
+      allow list: if isPasswordResetQuery();
     }
   }
 }
