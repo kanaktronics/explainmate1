@@ -126,7 +126,7 @@ export function ExplanationView() {
     setError(null);
     
     const userMessage: ChatMessage = { role: 'user', content: values.prompt };
-    const newChatHistory = [...chat, userMessage];
+    const newChatHistory = [...(chat || []), userMessage];
     setChat(newChatHistory); // Optimistically update UI
     form.reset();
 
@@ -170,8 +170,8 @@ export function ExplanationView() {
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.32))]">
        <div className="flex-1 overflow-y-auto p-1 space-y-8">
-        {chat.length === 0 && !isLoading && <WelcomeScreen />}
-        {chat.map(renderMessage)}
+        {chat && chat.length === 0 && !isLoading && <WelcomeScreen />}
+        {chat && chat.map(renderMessage)}
         <div ref={resultsRef}>
             {isLoading && (
               <div className='flex items-start gap-4'>
