@@ -46,7 +46,7 @@ const defaultProfile: StudentProfile = {
 
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const { user, firestore } = useFirebase();
+  const { user, firestore, isUserLoading } = useFirebase();
   const [studentProfile, setStudentProfileState] = useState<StudentProfile>(defaultProfile);
   const [view, setView] = useState<AppView>('welcome');
   const [chat, setChat] = useState<ChatMessage[]>([]);
@@ -54,6 +54,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const getHistoryKey = () => user ? `explanationHistory_${user.uid}` : null;
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -64,7 +66,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Effect to sync Firestore profile with local state
   useEffect(() => {
-    if (isProfileLoading) return;
+    if (isUserLoading) return;
 
     if (firestoreProfile) {
         const profileData: StudentProfile = {
@@ -101,20 +103,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         // No user, reset to default
         setStudentProfileState(defaultProfile);
     }
-  }, [firestoreProfile, user, isProfileLoading]);
+  }, [firestoreProfile, user, isUserLoading]);
 
 
   useEffect(() => {
-    try {
-      const storedHistory = localStorage.getItem('explanationHistory');
-      if (storedHistory) {
-        setHistory(sortHistory(JSON.parse(storedHistory)));
+    if (user) {
+      const historyKey = getHistoryKey();
+      if (!historyKey) return;
+      try {
+        const storedHistory = localStorage.getItem(historyKey);
+        if (storedHistory) {
+          setHistory(sortHistory(JSON.parse(storedHistory)));
+        } else {
+          setHistory([]);
+        }
+      } catch (error) {
+        console.error("Failed to parse history from localStorage", error);
+        localStorage.removeItem(historyKey);
+        setHistory([]);
       }
-    } catch (error) {
-      console.error("Failed to parse history from localStorage", error);
-      localStorage.removeItem('explanationHistory');
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const { name, classLevel, board } = studentProfile;
@@ -144,10 +153,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const updateAndSaveHistory = (newHistory: HistoryItem[]) => {
+    const historyKey = getHistoryKey();
+    if (!historyKey) return;
     const sorted = sortHistory(newHistory);
     setHistory(sorted);
     try {
-        localStorage.setItem('explanationHistory', JSON.stringify(sorted));
+        localStorage.setItem(historyKey, JSON.stringify(sorted));
     } catch (error) {
         console.error("Failed to save history to localStorage", error);
     }
@@ -224,14 +235,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   // When user logs out, clear local state
   useEffect(() => {
-    if (!user && !isProfileLoading) {
+    if (!user && !isUserLoading) {
         setChat([]);
         setQuiz(null);
         setHistory([]);
-        localStorage.removeItem('explanationHistory');
+        // No need to remove from local storage, as it's keyed by UID
         setView('welcome');
     }
-  }, [user, isProfileLoading]);
+  }, [user, isUserLoading]);
 
   return (
     <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>
