@@ -51,6 +51,15 @@ export function QuizView() {
       return;
     }
 
+    if (!studentProfile.isPro && studentProfile.dailyUsage >= 1) {
+        toast({
+            variant: 'destructive',
+            title: 'Daily Limit Reached',
+            description: 'You have reached your daily limit of 1 free quiz. Upgrade to Pro for unlimited quizzes.',
+        });
+        return;
+    }
+
     setIsLoading(true);
     setError(null);
     setQuiz(null);
@@ -111,7 +120,7 @@ export function QuizView() {
       <Card className="max-w-lg mx-auto">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Create a New Quiz</CardTitle>
-          <CardDescription>Enter a topic to test your knowledge.</CardDescription>
+          <CardDescription>Enter a topic to test your knowledge. Free users get 1 quiz per day.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

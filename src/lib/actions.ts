@@ -38,15 +38,16 @@ function convertToGenkitHistory(chatHistory: ChatMessage[]) {
 }
 
 
-const FREE_TIER_DAILY_LIMIT = 5;
+const FREE_TIER_EXPLANATION_LIMIT = 5;
+const FREE_TIER_QUIZ_LIMIT = 1;
 
 export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
   try {
     const { studentProfile, chatHistory } = input;
 
     // Enforce daily limit for free users
-    if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_DAILY_LIMIT) {
-        return { error: "You've reached your daily limit of explanations. Upgrade to ExplainMate Pro for unlimited access." };
+    if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_EXPLANATION_LIMIT) {
+        return { error: "You've reached your daily limit of 5 free explanations. Upgrade to ExplainMate Pro for unlimited access." };
     }
 
     const result = await tailorExplanation({
@@ -88,8 +89,8 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
 export async function getQuiz(input: GenerateInteractiveQuizzesInput & { studentProfile: StudentProfile }): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
     try {
         const { studentProfile } = input;
-        if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_DAILY_LIMIT) {
-            return { error: "You've reached your daily limit of quizzes. Upgrade to ExplainMate Pro for unlimited access." };
+        if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_QUIZ_LIMIT) {
+            return { error: "You've reached your daily limit of 1 free quiz. Upgrade to ExplainMate Pro for unlimited quizzes." };
         }
         
         const result = await generateInteractiveQuizzes(input);

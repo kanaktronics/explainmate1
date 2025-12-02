@@ -139,7 +139,7 @@ export function ProMembershipView() {
                     <ul className="space-y-4 text-lg">
                         <li className="flex items-center gap-3">
                             <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span><span className="font-semibold">Unlimited</span> explanations and quizzes</span>
+                            <span><span className="font-semibold">Unlimited</span> explanations & quizzes (vs. 5 explanations & 1 quiz per day)</span>
                         </li>
                         <li className="flex items-center gap-3">
                             <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />

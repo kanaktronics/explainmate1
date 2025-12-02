@@ -302,7 +302,7 @@ export function ExplanationView() {
                         <FormItem className="flex-1">
                         <FormControl>
                             <Textarea 
-                                placeholder="Explain the steps of photosynthesis..." 
+                                placeholder="Explain the steps of photosynthesis... (Free users get 5 explanations per day)" 
                                 {...field}
                                 className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none"
                                 onKeyDown={(e) => {
