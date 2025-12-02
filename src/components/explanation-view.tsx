@@ -178,11 +178,20 @@ export function ExplanationView() {
         return;
     }
     
+    // Enforce daily limit for free users ON EVERY SUBMISSION
+    if (!studentProfile.isPro) {
+        if (studentProfile.dailyUsage >= 5) {
+            showAd({
+                title: "Daily Limit Reached",
+                description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
+            });
+            return; // Stop execution
+        }
+    }
+    
     setIsLoading(true);
     setError(null);
     
-    const isNewChat = chat.length === 0;
-
     const userMessageContent: ChatMessage['content'] = { text: values.prompt };
     if (values.image) {
       userMessageContent.imageUrl = values.image;
@@ -198,19 +207,10 @@ export function ExplanationView() {
         fileInputRef.current.value = '';
     }
 
-    if (!studentProfile.isPro && isNewChat) {
-        if (studentProfile.dailyUsage >= 5) {
-            showAd({
-                title: "Daily Limit Reached",
-                description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
-            });
-            setIsLoading(false);
-            setChat(chat || []); // Revert optimistic update
-            return;
-        }
+    // Increment usage for free user AFTER the check has passed
+    if (!studentProfile.isPro) {
         incrementUsage();
     }
-
 
     const input = {
       chatHistory: newChatHistory,
