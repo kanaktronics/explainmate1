@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
-import { isToday } from 'date-fns';
+import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
@@ -42,8 +42,6 @@ const defaultProfile: StudentProfile = {
     isPro: false,
     dailyUsage: 0,
     lastUsageDate: new Date().toISOString(),
-    securityQuestion: '',
-    securityAnswer: '',
 };
 
 
@@ -71,6 +69,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isUserLoading) return;
 
     if (firestoreProfile) {
+        let isPro = firestoreProfile.isPro || false;
+        
+        // Check for subscription expiration
+        if (isPro && firestoreProfile.proExpiresAt) {
+            if (isPast(new Date(firestoreProfile.proExpiresAt))) {
+                isPro = false;
+                // Downgrade user in Firestore
+                if (userProfileRef) {
+                    setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
+                }
+            }
+        }
+
         const profileData: StudentProfile = {
             id: firestoreProfile.id,
             name: firestoreProfile.name,
@@ -78,9 +89,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             classLevel: firestoreProfile.gradeLevel,
             board: firestoreProfile.board,
             weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
-            isPro: firestoreProfile.isPro || false,
-            securityQuestion: firestoreProfile.securityQuestion,
-            securityAnswer: firestoreProfile.securityAnswer,
+            isPro: isPro,
+            proExpiresAt: firestoreProfile.proExpiresAt,
             // Keep local usage stats unless they need to be synced
             dailyUsage: studentProfile.dailyUsage,
             lastUsageDate: studentProfile.lastUsageDate,
@@ -108,7 +118,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setStudentProfileState(defaultProfile);
         setView('welcome'); // Go to welcome/auth view
     }
-  }, [firestoreProfile, user, isUserLoading]);
+  }, [firestoreProfile, user, isUserLoading, userProfileRef]);
 
 
   useEffect(() => {

@@ -20,15 +20,18 @@
  *   that the user's UID is stored inside the document's `id` field. This `id`
  *   field is then made immutable on all subsequent updates, creating a permanent
  *   and trustworthy link between the document data and its owner.
+ * - **Pro Status Management**: The `isPro` status and `proExpiresAt` can be
+ *   updated, but only by the user on their own profile. Server-side checks are
+ *   expected to verify payments before this is set.
  * - **Default Secure**: Access is denied by default. Permissions are only granted
  *   explicitly.
  *
  * ## Denormalization for Authorization
  * The data model is already optimized for security rules. Authorization-critical
- * data, such as the `isPro` flag, is stored directly on the `/users/{userId}`
- * document. This design choice is deliberate and crucial, as it allows for fast,
- * simple, and cost-effective authorization checks without requiring any slow or
- * expensive `get()` calls to other documents.
+ * data, such as the `isPro` and `proExpiresAt` flags, are stored directly on the
+ * `/users/{userId}` document. This design choice is deliberate and crucial, as it
+ * allows for fast, simple, and cost-effective authorization checks without
+ * requiring any slow or expensive `get()` calls to other documents.
  */
 rules_version = '2';
 
@@ -74,6 +77,7 @@ service cloud.firestore {
     /**
      * On update, ensures critical relational fields like the user 'id'
      * are not changed, preserving the integrity of the ownership link.
+     * Allows changes to other fields like 'isPro' and 'proExpiresAt'.
      */
     function isImmutableUserProfileData() {
       return request.resource.data.id == resource.data.id;

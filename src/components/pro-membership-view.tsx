@@ -12,6 +12,7 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { add } from 'date-fns';
 
 
 export function ProMembershipView() {
@@ -40,14 +41,21 @@ export function ProMembershipView() {
                 amount: response.amount,
                 currency: response.currency,
                 name: 'ExplainMate Pro',
-                description: 'Annual Membership',
+                description: '2-Month Membership',
                 order_id: response.orderId,
                 handler: async function (res: any) {
-                    const updatedProfile = { ...studentProfile, isPro: true };
+                    const now = new Date();
+                    const expirationDate = add(now, { months: 2 });
+                    
+                    const updatedProfile = { 
+                        ...studentProfile, 
+                        isPro: true,
+                        proExpiresAt: expirationDate.toISOString(),
+                    };
                     setStudentProfile(updatedProfile);
                     
                     const profileRef = doc(firestore, 'users', user.uid);
-                    setDocumentNonBlocking(profileRef, { isPro: true }, { merge: true });
+                    setDocumentNonBlocking(profileRef, { isPro: true, proExpiresAt: expirationDate.toISOString() }, { merge: true });
 
                     setPaymentStatus('success');
                     toast({
@@ -134,7 +142,7 @@ export function ProMembershipView() {
                     <CardTitle className="text-3xl font-headline">Pro Membership</CardTitle>
                     <div className="flex items-baseline gap-2">
                       <p className="text-5xl font-bold text-primary">₹99</p>
-                      <p className="text-2xl font-semibold text-muted-foreground line-through">₹359</p>
+                      <p className="text-2xl font-semibold text-muted-foreground"><del>₹359</del></p>
                     </div>
                     <CardDescription>/ 2 months (Limited Time Offer)</CardDescription>
                 </CardHeader>
