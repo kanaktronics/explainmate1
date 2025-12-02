@@ -132,10 +132,6 @@ export function ExplanationView() {
 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!studentProfile.isPro) {
-        setIsAdOpen(true);
-        return;
-    }
     const file = e.target.files?.[0];
     if (file) {
         if (file.size > MAX_FILE_SIZE) {
@@ -149,6 +145,14 @@ export function ExplanationView() {
             setImagePreview(dataUrl);
         };
         reader.readAsDataURL(file);
+    }
+  }
+
+  const handleImageButtonClick = () => {
+    if (studentProfile.isPro) {
+        fileInputRef.current?.click();
+    } else {
+        setIsAdOpen(true);
     }
   }
 
@@ -266,7 +270,7 @@ export function ExplanationView() {
                     type="button" 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={handleImageButtonClick}
                     title="Upload Image (Pro)"
                     >
                     <ImageIcon />
@@ -328,3 +332,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
