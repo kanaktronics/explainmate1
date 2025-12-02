@@ -43,9 +43,18 @@ export function ForgotPasswordView() {
   const { firestore, auth } = useFirebase();
   const { toast } = useToast();
 
-  const emailForm = useForm<z.infer<typeof emailSchema>>({ resolver: zodResolver(emailSchema) });
-  const answerForm = useForm<z.infer<typeof answerSchema>>({ resolver: zodResolver(answerSchema) });
-  const resetForm = useForm<z.infer<typeof resetSchema>>({ resolver: zodResolver(resetSchema) });
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
+  });
+  const answerForm = useForm<z.infer<typeof answerSchema>>({
+    resolver: zodResolver(answerSchema),
+    defaultValues: { answer: '' },
+  });
+  const resetForm = useForm<z.infer<typeof resetSchema>>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { newPassword: '' },
+  });
 
   const handleEmailSubmit = async (values: z.infer<typeof emailSchema>) => {
     setIsLoading(true);
@@ -58,7 +67,7 @@ export function ForgotPasswordView() {
         const doc = querySnapshot.docs[0];
         const data = doc.data();
         if (!data.securityQuestion || !data.securityAnswer) {
-             toast({ variant: 'destructive', title: 'Account Incomplete', description: 'This account does not have a security question set up. Please sign in and update your profile.' });
+             toast({ variant: 'destructive', title: 'Account Incomplete', description: 'This account does not have a security question set up. Please create a new account.' });
              setView('welcome');
         } else {
             setUserDoc({ id: doc.id, ...data });
@@ -107,7 +116,7 @@ export function ForgotPasswordView() {
         
         toast({
             title: 'Security Verified!',
-            description: 'Please log in with your OLD password to set a new one. This part of the flow would require a server in a real app.',
+            description: 'This feature is for demonstration. A real app would require a server to securely reset the password.',
         });
 
         // This is a UX dead-end for a pure client-side app.

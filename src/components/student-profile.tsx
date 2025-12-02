@@ -80,8 +80,7 @@ export function StudentProfile() {
       return;
     }
     
-    const updatedProfile: StudentProfileType = {
-      ...studentProfile,
+    const updatedProfile: Partial<StudentProfileType> = {
       ...values,
       email: user.email!,
       id: user.uid,
@@ -90,7 +89,6 @@ export function StudentProfile() {
     setStudentProfile(updatedProfile);
     
     const profileRef = doc(firestore, 'users', user.uid);
-    // Only save the fields from the form, don't overwrite security answer
     const dataToSave = {
         name: values.name,
         gradeLevel: values.classLevel,
@@ -116,7 +114,7 @@ export function StudentProfile() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Update Recommended</AlertTitle>
                 <AlertDescription>
-                   Please set a security question via the Sign Up page to enable password recovery in the future.
+                   Your account is not recoverable. Please create a new account and set a security question to enable password recovery.
                 </AlertDescription>
             </Alert>
         )}
@@ -124,15 +122,15 @@ export function StudentProfile() {
             <CardContent className="p-3 text-sm space-y-2">
                 <div>
                     <p className="font-semibold">Name</p>
-                    <p className="text-muted-foreground">{studentProfile.name}</p>
+                    <p className="text-muted-foreground">{studentProfile.name || 'Not set'}</p>
                 </div>
                  <div>
                     <p className="font-semibold">Class</p>
-                    <p className="text-muted-foreground">{studentProfile.classLevel}</p>
+                    <p className="text-muted-foreground">{studentProfile.classLevel || 'Not set'}</p>
                 </div>
                  <div>
                     <p className="font-semibold">Board</p>
-                    <p className="text-muted-foreground">{studentProfile.board}</p>
+                    <p className="text-muted-foreground">{studentProfile.board || 'Not set'}</p>
                 </div>
                  <div>
                     <p className="font-semibold">Weak Subjects</p>
