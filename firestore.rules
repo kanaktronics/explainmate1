@@ -102,7 +102,7 @@ service cloud.firestore {
 
 
     // ------------------------------------------------------------------------
-    // Collection Rules
+    // Collection Rules: /users
     // ------------------------------------------------------------------------
 
     match /users/{userId} {
@@ -111,7 +111,7 @@ service cloud.firestore {
       allow create: if isOwner(userId) && hasValidUserProfileDataOnCreate(userId);
       allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
       allow delete: if isExistingOwner(userId);
-
+      
       // COLLECTION Rules: Apply to queries on the collection.
       // Allow an unauthenticated user to query ONLY by email for the password reset flow.
       allow list: if isPasswordResetQuery();
