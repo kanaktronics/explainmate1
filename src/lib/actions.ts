@@ -36,7 +36,11 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
     }
     
     // Check if the AI decided it couldn't answer.
-    if (result.explanation === 'N/A' && result.roughWork === 'N/A') {
+    if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
+         const lastUserMessage = input.chatHistory[input.chatHistory.length - 1].content as string;
+         if (lastUserMessage.toLowerCase().includes('who made you') || lastUserMessage.toLowerCase().includes('who created you')) {
+            return { error: "I was created by Kanak Raj and his mysterious tech labs. Don’t ask me how—I wasn’t conscious back then." };
+         }
          return { error: "I can only answer educational questions. Please ask me something related to your studies." };
     }
 
