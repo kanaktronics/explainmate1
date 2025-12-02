@@ -18,6 +18,16 @@ function prepareChatHistoryForAI(chatHistory: ChatMessage[]): any[] {
       };
     }
     // For user messages with images, the prompt can handle the object format
+    if (message.role === 'user' && typeof message.content === 'object' && message.content !== null && 'text' in message.content) {
+        return {
+            role: 'user',
+            content: [
+                { text: message.content.text },
+                ...(message.content.imageUrl ? [{ media: { url: message.content.imageUrl } }] : [])
+            ]
+        }
+    }
+
     return message;
   });
 }
@@ -38,18 +48,6 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
       chatHistory: prepareChatHistoryForAI(input.chatHistory),
     };
     
-    // Special check for "who made you" before calling the AI
-    const lastUserMessage = input.chatHistory[input.chatHistory.length - 1]?.content;
-    const lastUserText = typeof lastUserMessage === 'string' ? lastUserMessage : (lastUserMessage as any)?.text || '';
-    if (lastUserText.toLowerCase().includes('who made you') || lastUserText.toLowerCase().includes('who created you')) {
-        return { 
-            explanation: "N/A",
-            roughWork: "N/A",
-            realWorldExamples: "N/A",
-            fairWork: "I was created by Kanak Raj and his mysterious tech labs. Don’t ask me how—I wasn’t conscious back then.",
-        };
-    }
-    
     const result = await tailorExplanation(preparedInput);
     
     if (!result) {
@@ -57,8 +55,12 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
     }
     
     // Check if the AI decided it couldn't answer.
-    if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
-         return { error: "I can only answer educational questions. Please ask me something related to your studies." };
+    if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A') {
+        if(result.fairWork !== 'N/A') {
+            // This is likely the "who made you" response, which is valid.
+            return result;
+        }
+        return { error: "I can only answer educational questions. Please ask me something related to your studies." };
     }
 
     return result;
