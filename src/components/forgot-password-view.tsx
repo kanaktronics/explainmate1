@@ -16,10 +16,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useFirebase, initiatePasswordUpdate } from '@/firebase';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { useAppContext } from '@/lib/app-context';
-import { getAuth, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 type Step = 'email' | 'question' | 'reset';
 
@@ -40,7 +40,7 @@ export function ForgotPasswordView() {
   const [isLoading, setIsLoading] = useState(false);
   const [userDoc, setUserDoc] = useState<any>(null);
   const { setView } = useAppContext();
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { toast } = useToast();
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({ resolver: zodResolver(emailSchema) });
@@ -56,8 +56,14 @@ export function ForgotPasswordView() {
         toast({ variant: 'destructive', title: 'Error', description: 'No user found with this email.' });
       } else {
         const doc = querySnapshot.docs[0];
-        setUserDoc({ id: doc.id, ...doc.data() });
-        setStep('question');
+        const data = doc.data();
+        if (!data.securityQuestion || !data.securityAnswer) {
+             toast({ variant: 'destructive', title: 'Account Incomplete', description: 'This account does not have a security question set up. Please sign in and update your profile.' });
+             setView('welcome');
+        } else {
+            setUserDoc({ id: doc.id, ...data });
+            setStep('question');
+        }
       }
     } catch (error) {
       console.error(error);
@@ -79,27 +85,38 @@ export function ForgotPasswordView() {
   const handleResetSubmit = async (values: z.infer<typeof resetSchema>) => {
     setIsLoading(true);
     try {
-      // To update a password, the user must be recently signed in.
-      // This is a tricky flow without a backend. We'll re-authenticate them with their old credentials (which we don't have)
-      // or use a different method. For this client-side example, the most straightforward (but less secure) way
-      // is to ask for their current password. Since that's what they forgot, this flow is difficult on the client.
-      // The most common approach is to send a password reset link via email, which we are avoiding.
-      // The second best is a custom auth flow with a backend.
-      
-      // As a client-side-only workaround, we'll show a success message and guide the user.
-      // NOTE: Firebase Auth SDK does not allow password updates without recent sign-in for security reasons.
-      // This part of the UI is illustrative of the flow. A real implementation would require a backend function
-      // to generate a custom token or handle the reset.
-      
-      toast({
-        title: 'Password "Reset"!',
-        description: 'In a real app, your password would now be reset. For now, please contact support or re-create your account.',
-      });
-      
-      setView('welcome');
+        // This is a workaround for client-side password reset.
+        // It requires re-authentication, which we can't do since the user forgot their password.
+        // The ideal solution is a backend function that generates a reset link.
+        // As a client-side only alternative, we can update a flag in Firestore and
+        // prompt the user to change password on next login.
 
+        // For this demo, we'll re-authenticate with a temporary password (highly insecure, for demo only)
+        // or simply show a success message.
+        
+        // This part won't work in a real scenario without a backend or email verification.
+        // Firebase Auth SDK prevents password change without recent login.
+        
+        // Let's use a trick: we can't directly set the password. But since we are already "authenticated"
+        // by the security question, we can let them log in temporarily to update the password.
+        // This is a conceptual flow. A proper implementation would use Firebase Admin SDK on a server.
+        
+        // Since we cannot update the password directly on the client without recent auth,
+        // we'll guide the user. The most secure client-side only approach is to
+        // make them log in again.
+        
+        toast({
+            title: 'Security Verified!',
+            description: 'Please log in with your OLD password to set a new one. This part of the flow would require a server in a real app.',
+        });
+
+        // This is a UX dead-end for a pure client-side app.
+        // Best we can do is send them back to login.
+        setView('welcome');
+        
     } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Error', description: error.message });
+        console.error("Password reset error:", error);
+        toast({ variant: 'destructive', title: 'Error', description: "Could not reset password. " + error.message });
     }
     setIsLoading(false);
   };
