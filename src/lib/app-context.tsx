@@ -79,8 +79,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setAdContent({});
   };
 
-
   const getHistoryKey = () => user ? `explanationHistory_${user.uid}` : null;
+  const getUsageKey = () => user ? `usage_${user.uid}` : null;
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -96,16 +96,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (firestoreProfile) {
         let isPro = firestoreProfile.isPro || false;
         
-        // Check for subscription expiration
         if (isPro && firestoreProfile.proExpiresAt) {
             if (isPast(new Date(firestoreProfile.proExpiresAt))) {
                 isPro = false;
-                // Downgrade user in Firestore
                 if (userProfileRef) {
                     setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
                 }
             }
         }
+        
+        let usage = { dailyUsage: 0, lastUsageDate: new Date().toISOString() };
+        const usageKey = getUsageKey();
+        if (usageKey) {
+            try {
+                const storedUsage = localStorage.getItem(usageKey);
+                if (storedUsage) {
+                    const parsedUsage = JSON.parse(storedUsage);
+                    if (!isToday(new Date(parsedUsage.lastUsageDate))) {
+                        usage.dailyUsage = 0;
+                        localStorage.setItem(usageKey, JSON.stringify(usage));
+                    } else {
+                        usage = parsedUsage;
+                    }
+                } else {
+                    localStorage.setItem(usageKey, JSON.stringify(usage));
+                }
+            } catch (e) {
+                 console.error("Failed to read usage from localStorage", e);
+            }
+        }
+
 
         const profileData: StudentProfile = {
             id: firestoreProfile.id,
@@ -116,20 +136,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
             isPro: isPro,
             proExpiresAt: firestoreProfile.proExpiresAt,
-            // Keep local usage stats unless they need to be synced
-            dailyUsage: studentProfile.dailyUsage,
-            lastUsageDate: studentProfile.lastUsageDate,
+            dailyUsage: usage.dailyUsage,
+            lastUsageDate: usage.lastUsageDate,
         };
-
-        // Reset usage if it's a new day
-        if (!isToday(new Date(profileData.lastUsageDate))) {
-            profileData.dailyUsage = 0;
-            profileData.lastUsageDate = new Date().toISOString();
-        }
 
         setStudentProfileState(profileData);
     } else if (user) {
-        // New user, set up a default profile in local state
         const newProfile = {
             ...defaultProfile,
             id: user.uid,
@@ -137,11 +149,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             name: user.displayName || '',
         };
         setStudentProfileState(newProfile);
-        setIsProfileOpen(true); // Open profile form for new users
+        setIsProfileOpen(true); 
     } else {
-        // No user, reset to default
         setStudentProfileState(defaultProfile);
-        setView('welcome'); // Go to welcome/auth view
+        setView('welcome'); 
     }
   }, [firestoreProfile, user, isUserLoading, userProfileRef]);
 
@@ -183,12 +194,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const incrementUsage = () => {
     setStudentProfileState(prev => {
-        const newProfile = {
-            ...prev,
+        const newUsage = {
             dailyUsage: prev.dailyUsage + 1,
             lastUsageDate: new Date().toISOString(),
         };
-        return newProfile;
+
+        const usageKey = getUsageKey();
+        if (usageKey) {
+            localStorage.setItem(usageKey, JSON.stringify(newUsage));
+        }
+
+        return { ...prev, ...newUsage };
     });
   }
   
@@ -208,7 +224,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const updatedChat = [...currentChat, message];
       setChat(updatedChat);
 
-      // if it's the first assistant message, create a new history item
       if (updatedChat.length === 2 && updatedChat[0].role === 'user' && updatedChat[1].role === 'assistant') {
         const firstUserMessage = updatedChat[0];
         const topicContent = firstUserMessage.content;
@@ -222,14 +237,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         addToHistory({ topic, messages: updatedChat });
       } else {
-        // Find the corresponding history item and update it
         const firstMessage = updatedChat[0];
         if (!firstMessage) return;
 
         setHistory(prevHistory => {
             const newHistory = prevHistory.map(item => {
-                // A simple way to check if this chat belongs to the history item
-                // This assumes the first message of a chat is unique enough to identify it
                 if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
                     return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
                 }
@@ -268,18 +280,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setView('explanation');
   };
   
-  // When user logs out, clear local state
   useEffect(() => {
     if (!user && !isUserLoading) {
         setChat([]);
         setQuiz(null);
         setHistory([]);
-        // No need to remove from local storage, as it's keyed by UID
         setView('welcome');
+        // Usage data is keyed by UID so no need to clear it on logout
     }
   }, [user, isUserLoading]);
 
-  // Logic to show ad on first load for free users
   useEffect(() => {
     if (studentProfile.email && !studentProfile.isPro) {
       const adShown = sessionStorage.getItem('adShown');
@@ -287,7 +297,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const timer = setTimeout(() => {
           showAd();
           sessionStorage.setItem('adShown', 'true');
-        }, 3000); // Show ad after 3 seconds
+        }, 3000); 
         return () => clearTimeout(timer);
       }
     }
