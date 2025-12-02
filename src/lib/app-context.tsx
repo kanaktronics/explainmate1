@@ -16,12 +16,18 @@ interface AppContextType {
   history: HistoryItem[];
   addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
   loadChatFromHistory: (messages: ChatMessage[]) => void;
+  deleteFromHistory: (id: string) => void;
+  clearHistory: () => void;
   isProfileComplete: boolean;
   isProfileOpen: boolean;
   setIsProfileOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const sortHistory = (history: HistoryItem[]) => {
+  return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [studentProfile, setStudentProfileState] = useState<StudentProfile>({
@@ -49,7 +55,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       const storedHistory = localStorage.getItem('explanationHistory');
       if (storedHistory) {
-        setHistory(JSON.parse(storedHistory));
+        setHistory(sortHistory(JSON.parse(storedHistory)));
       }
     } catch (error) {
       console.error("Failed to parse from localStorage", error);
@@ -72,24 +78,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
+  const updateAndSaveHistory = (newHistory: HistoryItem[]) => {
+    const sorted = sortHistory(newHistory);
+    setHistory(sorted);
+    try {
+        localStorage.setItem('explanationHistory', JSON.stringify(sorted));
+    } catch (error) {
+        console.error("Failed to save history to localStorage", error);
+    }
+  };
+
   const addToChat = (message: ChatMessage, currentChat: ChatMessage[]) => {
       const updatedChat = [...currentChat, message];
       setChat(updatedChat);
 
       const firstUserMessage = updatedChat.find(m => m.role === 'user');
       if (!firstUserMessage) return;
-      const topic = firstUserMessage.content as string;
+      // Use the first user message as a unique topic identifier.
+      // This is a simple approach; more complex logic could be used to summarize the topic.
+      const topic = (firstUserMessage.content as string).substring(0, 100);
 
       setHistory(prevHistory => {
-        const historyIndex = prevHistory.findIndex(h => h.topic === topic);
+        const existingItemIndex = prevHistory.findIndex(h => h.topic === topic && h.messages[0].content === firstUserMessage.content);
+        
         let newHistory: HistoryItem[];
 
-        if (historyIndex !== -1) {
-            // Update existing history item
+        if (existingItemIndex > -1) {
+            // If an item with the exact same starting question exists, update it.
             newHistory = [...prevHistory];
-            newHistory[historyIndex] = { ...newHistory[historyIndex], messages: updatedChat, timestamp: new Date().toISOString() };
+            newHistory[existingItemIndex] = { ...newHistory[existingItemIndex], messages: updatedChat, timestamp: new Date().toISOString() };
         } else {
-            // Add new history item if it's a new conversation
+            // Otherwise, create a new history item.
             const newHistoryItem: HistoryItem = {
                 id: Date.now().toString(),
                 timestamp: new Date().toISOString(),
@@ -98,14 +117,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             };
             newHistory = [newHistoryItem, ...prevHistory];
         }
-
-        try {
-            localStorage.setItem('explanationHistory', JSON.stringify(newHistory));
-        } catch (error) {
-            console.error("Failed to save history to localStorage", error);
-        }
-
-        return newHistory;
+        
+        updateAndSaveHistory(newHistory);
+        return sortHistory(newHistory); // Return sorted history for state update
     });
   };
 
@@ -116,18 +130,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         timestamp: new Date().toISOString(),
     };
     setHistory(prevHistory => {
-        // Avoid adding duplicates
         if (prevHistory.some(h => h.topic === newHistoryItem.topic)) {
             return prevHistory;
         }
         const updatedHistory = [newHistoryItem, ...prevHistory];
-        try {
-            localStorage.setItem('explanationHistory', JSON.stringify(updatedHistory));
-        } catch (error) {
-            console.error("Failed to save history to localStorage", error);
-        }
+        updateAndSaveHistory(updatedHistory);
         return updatedHistory;
     });
+  };
+  
+  const deleteFromHistory = (id: string) => {
+    const newHistory = history.filter(item => item.id !== id);
+    updateAndSaveHistory(newHistory);
+  };
+  
+  const clearHistory = () => {
+    updateAndSaveHistory([]);
   };
 
   const loadChatFromHistory = (messages: ChatMessage[]) => {
@@ -136,7 +154,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AppContext.Provider value={{ studentProfile, setStudentProfile, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>
+    <AppContext.Provider value={{ studentProfile, setStudentProfile, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory }}>
       {children}
     </AppContext.Provider>
   );
