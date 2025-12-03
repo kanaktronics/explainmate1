@@ -33,6 +33,7 @@ import { AuthView } from '@/components/auth-view';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ForgotPasswordView } from '@/components/forgot-password-view';
 import { AdPopup } from '@/components/ad-popup';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function HistorySection() {
   const { history, loadChatFromHistory, deleteFromHistory, clearHistory } = useAppContext();
@@ -136,6 +137,7 @@ function ProSection() {
 function AppLayout() {
   const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen, isAdOpen, hideAd, adContent } = useAppContext();
   const { auth } = useFirebase();
+  const isMobile = useIsMobile();
 
   const handleNewExplanation = () => {
     setChat([]);
@@ -170,6 +172,7 @@ function AppLayout() {
         <SidebarHeader>
           <AppLogo />
         </SidebarHeader>
+        {isMobile && <ProSection />}
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -186,7 +189,7 @@ function AppLayout() {
             </SidebarMenuItem>
           </SidebarMenu>
           <SidebarSeparator />
-          <ProSection />
+          {!isMobile && <ProSection />}
           <SidebarSeparator />
           <HistorySection />
           <SidebarSeparator />
@@ -279,3 +282,5 @@ export default function Home() {
     </AppProvider>
   );
 }
+
+    
