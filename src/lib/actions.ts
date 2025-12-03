@@ -91,9 +91,10 @@ export async function getQuiz(input: {
     topic: string;
     numQuestions: number;
     studentProfile: StudentProfile;
+    difficulty: 'Easy' | 'Medium' | 'Hard';
 }): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
     try {
-        const { studentProfile, topic, numQuestions } = input;
+        const { studentProfile, topic, numQuestions, difficulty } = input;
 
         if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_QUIZ_LIMIT) {
             return { error: "DAILY_LIMIT_REACHED" };
@@ -106,7 +107,8 @@ export async function getQuiz(input: {
                 classLevel: studentProfile.classLevel,
                 board: studentProfile.board,
                 weakSubjects: studentProfile.weakSubjects,
-            }
+            },
+            difficulty: studentProfile.isPro ? difficulty : undefined,
         });
 
         if (!result) {

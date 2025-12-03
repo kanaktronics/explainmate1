@@ -23,6 +23,7 @@ import { Slider } from './ui/slider';
 const quizSetupSchema = z.object({
   topic: z.string().min(3, { message: 'Topic must be at least 3 characters.' }),
   numQuestions: z.number().min(1).max(15).default(5),
+  difficulty: z.enum(['Easy', 'Medium', 'Hard']).default('Medium'),
 });
 
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
@@ -37,7 +38,7 @@ export function QuizView() {
 
   const form = useForm<z.infer<typeof quizSetupSchema>>({
     resolver: zodResolver(quizSetupSchema),
-    defaultValues: { topic: '', numQuestions: 5 },
+    defaultValues: { topic: '', numQuestions: 5, difficulty: 'Medium' },
   });
 
   const numQuestionsValue = form.watch('numQuestions');
@@ -74,9 +75,10 @@ export function QuizView() {
       topic: values.topic,
       studentProfile: studentProfile,
       numQuestions: studentProfile.isPro ? values.numQuestions : 5,
+      difficulty: studentProfile.isPro ? values.difficulty : 'Medium',
     };
 
-    const result = await getQuiz(input);
+    const result = await getQuiz(input as any);
     if (result && 'error' in result) {
       if (result.error === 'DAILY_LIMIT_REACHED') {
          showAd({
@@ -146,6 +148,7 @@ export function QuizView() {
                 )}
               />
               {studentProfile.isPro && (
+                <>
                 <FormField
                   control={form.control}
                   name="numQuestions"
@@ -164,6 +167,37 @@ export function QuizView() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                    control={form.control}
+                    name="difficulty"
+                    render={({ field }) => (
+                    <FormItem className="space-y-3">
+                        <FormLabel>Difficulty</FormLabel>
+                        <FormControl>
+                        <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                        >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="Easy" /></FormControl>
+                                <FormLabel className="font-normal">Easy</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="Medium" /></FormControl>
+                                <FormLabel className="font-normal">Medium</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="Hard" /></FormControl>
+                                <FormLabel className="font-normal">Hard</FormLabel>
+                            </FormItem>
+                        </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </>
               )}
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? 'Generating Quiz...' : 'Start Quiz'}
@@ -196,7 +230,7 @@ export function QuizView() {
         {!showResults ? (
              <Button onClick={checkAnswers} disabled={Object.keys(userAnswers).length !== quiz.quiz.length}>Check Answers</Button>
         ) : (
-            <Button onClick={() => { setQuiz(null); form.reset({ topic: '', numQuestions: 5 }); }}>Try Another Quiz</Button>
+            <Button onClick={() => { setQuiz(null); form.reset({ topic: '', numQuestions: 5, difficulty: 'Medium' }); }}>Try Another Quiz</Button>
         )}
       </div>
     </div>

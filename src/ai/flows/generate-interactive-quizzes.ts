@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Interactive quiz generation flow for students.
@@ -29,6 +30,7 @@ const GenerateInteractiveQuizzesInputSchema = z.object({
     .max(15)
     .default(5)
     .describe('The number of multiple-choice questions to generate (1-15).'),
+  difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional().describe('The difficulty level of the quiz.'),
 });
 export type GenerateInteractiveQuizzesInput = z.infer<
   typeof GenerateInteractiveQuizzesInputSchema
@@ -67,11 +69,16 @@ const quizPrompt = ai.definePrompt({
   output: {schema: GenerateInteractiveQuizzesOutputSchema},
   prompt: `You are an expert quiz generator for middle and high school students.
 Generate a multiple-choice quiz on the topic of {{topic}}, with {{numQuestions}} questions.
+
 {{#if studentProfile}}
 The quiz should be tailored to the student's profile:
 - Class: {{studentProfile.classLevel}}
 - Board: {{studentProfile.board}}
 - Weak Subjects: {{studentProfile.weakSubjects}}
+{{/if}}
+
+{{#if difficulty}}
+The difficulty of the quiz should be {{difficulty}}.
 {{/if}}
 
 Each question should have 4 options, and clearly indicate the correct answer.

@@ -166,6 +166,10 @@ export function ProMembershipView() {
                         </li>
                         <li className="flex items-center gap-3">
                             <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                            <span>Select quiz <span className="font-semibold">difficulty (Easy, Medium, Hard)</span></span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
                             <span><span className="font-semibold">Faster</span> response times</span>
                         </li>
                         <li className="flex items-center gap-3">
