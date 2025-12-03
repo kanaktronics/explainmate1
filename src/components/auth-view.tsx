@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -141,7 +142,7 @@ export function AuthView() {
           <Card>
             <CardHeader>
               <CardTitle>Welcome Back!</CardTitle>
-              <CardDescription>Sign in to access your Pro features.</CardDescription>
+              <CardDescription>Sign in to continue your learning journey.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...signInForm}>
