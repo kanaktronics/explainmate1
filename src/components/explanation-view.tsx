@@ -252,7 +252,7 @@ export function ExplanationView() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.32))]">
+    <div className="flex flex-col h-[calc(100svh_-_8rem)] md:h-full">
        <div className="flex-1 overflow-y-auto p-1 space-y-8">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
@@ -325,7 +325,7 @@ export function ExplanationView() {
                             <Textarea 
                                 placeholder="Explain the steps of photosynthesis... (Free users get 5 explanations per day)" 
                                 {...field}
-                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-sm md:text-base"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
@@ -355,5 +355,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    

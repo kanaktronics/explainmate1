@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAppContext } from '@/lib/app-context';
@@ -18,10 +19,10 @@ export function WelcomeScreen() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center">
-      <h1 className="text-4xl md:text-5xl font-headline text-primary">
+      <h1 className="text-3xl md:text-5xl font-headline text-primary">
         {name ? `Welcome back, ${name}!` : "Welcome to ExplainMate!"}
       </h1>
-      <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
+      <p className="mt-4 max-w-2xl text-base md:text-lg text-muted-foreground">
         Your personal AI tutor, ready to help you understand any topic. What would you like to do today?
       </p>
       

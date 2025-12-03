@@ -195,8 +195,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
       if(user && !isProfileComplete) {
           setIsProfileOpen(true);
-      } else {
-          setIsProfileOpen(false);
       }
   }, [user, isProfileComplete]);
   
@@ -258,15 +256,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addToHistory = (item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
+  const addToHistory = useCallback((item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
     const newHistoryItem: HistoryItem = {
         ...item,
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
     };
-    const updatedHistory = [newHistoryItem, ...history];
-    updateAndSaveHistory(updatedHistory);
-  };
+    updateAndSaveHistory([newHistoryItem, ...history]);
+  }, [history, updateAndSaveHistory]);
   
   const addToChat = (message: ChatMessage, currentChat: ChatMessage[]) => {
       const updatedChat = [...currentChat, message];
@@ -313,8 +310,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   useEffect(() => {
-    if (studentProfile.email && !studentProfile.isPro) {
-      const adShownKey = `adShown_${user?.uid}`;
+    if (user && !studentProfile.isPro) {
+      const adShownKey = `adShown_${user.uid}`;
       const adShown = sessionStorage.getItem(adShownKey);
       if (!adShown) {
         const timer = setTimeout(() => {
@@ -324,7 +321,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return () => clearTimeout(timer);
       }
     }
-  }, [studentProfile.isPro, studentProfile.email, user?.uid]);
+  }, [user, studentProfile.isPro]);
 
   const value = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
