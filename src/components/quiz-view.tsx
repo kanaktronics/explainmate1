@@ -225,7 +225,7 @@ const QuizCard = ({ q, index, userAnswer, onAnswerChange, showResult }: { q: Qui
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <RadioGroup onValueChange={(value) => onAnswerChange(index, value)} disabled={showResult} value={selected}>
+                        <RadioGroup onValueChange={(value) => onAnswerChange(index, value)} disabled={showResult} value={selected || ''}>
                           {q.options.map((option, i) => {
                             const isSelected = selected === option;
                             const isCorrectAnswer = q.correctAnswer === option;

@@ -87,14 +87,28 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
   }
 }
 
-export async function getQuiz(input: GenerateInteractiveQuizzesInput & { studentProfile: StudentProfile }): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
+export async function getQuiz(input: {
+    topic: string;
+    numQuestions: number;
+    studentProfile: StudentProfile;
+}): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
     try {
-        const { studentProfile } = input;
+        const { studentProfile, topic, numQuestions } = input;
+
         if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_QUIZ_LIMIT) {
             return { error: "DAILY_LIMIT_REACHED" };
         }
         
-        const result = await generateInteractiveQuizzes(input);
+        const result = await generateInteractiveQuizzes({
+            topic,
+            numQuestions,
+            studentProfile: {
+                classLevel: studentProfile.classLevel,
+                board: studentProfile.board,
+                weakSubjects: studentProfile.weakSubjects,
+            }
+        });
+
         if (!result) {
           throw new Error('AI did not return a response.');
         }

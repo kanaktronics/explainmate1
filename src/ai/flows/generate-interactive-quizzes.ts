@@ -10,14 +10,19 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const StudentProfileSchema = z.object({
+  classLevel: z.string().describe("The student's class level."),
+  board: z.string().describe("The student's educational board."),
+  weakSubjects: z
+    .string()
+    .describe('A comma-separated list of subjects the student finds weak.'),
+});
+
 const GenerateInteractiveQuizzesInputSchema = z.object({
   topic: z.string().describe('The topic for which to generate the quiz.'),
-  studentProfile: z
-    .string()
-    .optional()
-    .describe(
-      'The student profile including class, board, and weak subjects to tailor the quiz difficulty and content.'
-    ),
+  studentProfile: StudentProfileSchema.optional().describe(
+    'The student profile to tailor the quiz difficulty and content.'
+  ),
   numQuestions: z
     .number()
     .min(1)
@@ -30,17 +35,21 @@ export type GenerateInteractiveQuizzesInput = z.infer<
 >;
 
 const GenerateInteractiveQuizzesOutputSchema = z.object({
-  quiz: z.array(
-    z.object({
-      question: z.string().describe('The quiz question.'),
-      options: z.array(z.string()).describe('The multiple-choice options.'),
-      correctAnswer: z.string().describe('The correct answer to the question.'),
-      explanation: z
-        .string()
-        .optional()
-        .describe('Explanation of why the answer is correct.'),
-    })
-  ).describe('A list of multiple-choice questions with options and answers.'),
+  quiz: z
+    .array(
+      z.object({
+        question: z.string().describe('The quiz question.'),
+        options: z.array(z.string()).describe('The multiple-choice options.'),
+        correctAnswer: z
+          .string()
+          .describe('The correct answer to the question.'),
+        explanation: z
+          .string()
+          .optional()
+          .describe('Explanation of why the answer is correct.'),
+      })
+    )
+    .describe('A list of multiple-choice questions with options and answers.'),
 });
 export type GenerateInteractiveQuizzesOutput = z.infer<
   typeof GenerateInteractiveQuizzesOutputSchema
@@ -58,7 +67,12 @@ const quizPrompt = ai.definePrompt({
   output: {schema: GenerateInteractiveQuizzesOutputSchema},
   prompt: `You are an expert quiz generator for middle and high school students.
 Generate a multiple-choice quiz on the topic of {{topic}}, with {{numQuestions}} questions.
-The quiz should be tailored to the student's profile if provided: {{studentProfile}}.
+{{#if studentProfile}}
+The quiz should be tailored to the student's profile:
+- Class: {{studentProfile.classLevel}}
+- Board: {{studentProfile.board}}
+- Weak Subjects: {{studentProfile.weakSubjects}}
+{{/if}}
 
 Each question should have 4 options, and clearly indicate the correct answer.
 Also generate a short explanation of why each answer is correct.
