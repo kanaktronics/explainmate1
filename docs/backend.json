@@ -43,6 +43,15 @@
             "type": "string",
             "format": "date-time",
             "description": "The ISO 8601 timestamp when the user's Pro subscription expires."
+        },
+        "dailyUsage": {
+          "type": "number",
+          "description": "The number of times a free user has used a feature on the current day."
+        },
+        "lastUsageDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO 8601 timestamp of the last usage."
         }
       },
       "required": [

@@ -77,10 +77,13 @@ service cloud.firestore {
     /**
      * On update, ensures critical relational fields like the user 'id'
      * are not changed, preserving the integrity of the ownership link.
-     * Allows changes to other fields like 'isPro' and 'proExpiresAt'.
+     * Allows changes to other fields like 'isPro', 'proExpiresAt', 'dailyUsage', and 'lastUsageDate'.
      */
     function isImmutableUserProfileData() {
-      return request.resource.data.id == resource.data.id;
+      // Allow changes to all fields except the id.
+      let mutableFields = ['name', 'gradeLevel', 'board', 'weakSubjects', 'isPro', 'proExpiresAt', 'dailyUsage', 'lastUsageDate'];
+      return request.resource.data.id == resource.data.id
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(mutableFields);
     }
 
     // ------------------------------------------------------------------------

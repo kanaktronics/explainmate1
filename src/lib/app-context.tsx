@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
 import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -16,6 +16,7 @@ interface AdContent {
 interface AppContextType {
   studentProfile: StudentProfile;
   setStudentProfile: (profile: Partial<StudentProfile>) => void;
+  saveProfileToFirestore: (profile: Partial<StudentProfile>) => void;
   incrementUsage: () => void;
   view: AppView;
   setView: (view: AppView) => void;
@@ -25,7 +26,6 @@ interface AppContextType {
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
-  addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
   loadChatFromHistory: (messages: ChatMessage[]) => void;
   deleteFromHistory: (id: string) => void;
   clearHistory: () => void;
@@ -68,6 +68,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
 
+  const getHistoryKey = useCallback(() => user ? `explanationHistory_${user.uid}` : null, [user]);
+  const getProfileDraftKey = useCallback(() => user ? `profileDraft_${user.uid}` : null, [user]);
 
   const showAd = (content: Partial<AdContent> = {}) => {
     setAdContent(content);
@@ -79,9 +81,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setAdContent({});
   };
 
-  const getHistoryKey = () => user ? `explanationHistory_${user.uid}` : null;
-  const getUsageKey = () => user ? `usage_${user.uid}` : null;
-
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
@@ -89,10 +88,54 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
 
-  // Effect to sync Firestore profile with local state
+  // Effect to load data from localStorage on user change
   useEffect(() => {
     if (isUserLoading) return;
+    
+    if (user) {
+      // Load History from Local Storage
+      const historyKey = getHistoryKey();
+      if (historyKey) {
+        try {
+          const storedHistory = localStorage.getItem(historyKey);
+          if (storedHistory) {
+            setHistory(sortHistory(JSON.parse(storedHistory)));
+          } else {
+            setHistory([]);
+          }
+        } catch (error) {
+          console.error("Failed to parse history from localStorage", error);
+          localStorage.removeItem(historyKey);
+          setHistory([]);
+        }
+      }
 
+      // Load Profile Draft from Local Storage
+      const profileDraftKey = getProfileDraftKey();
+      if (profileDraftKey) {
+        try {
+          const storedDraft = localStorage.getItem(profileDraftKey);
+          if (storedDraft) {
+            const draftProfile = JSON.parse(storedDraft);
+            setStudentProfileState(prev => ({...prev, ...draftProfile}));
+          }
+        } catch (error) {
+          console.error("Failed to parse profile draft from localStorage", error);
+        }
+      }
+    } else {
+      // Clear all local data on logout
+      setChat([]);
+      setQuiz(null);
+      setHistory([]);
+      setStudentProfileState(defaultProfile);
+      setView('welcome');
+    }
+  }, [user, isUserLoading, getHistoryKey, getProfileDraftKey]);
+
+
+  // Effect to sync Firestore profile with local state
+  useEffect(() => {
     if (firestoreProfile) {
         let isPro = firestoreProfile.isPro || false;
         
@@ -105,29 +148,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        let usage = { dailyUsage: 0, lastUsageDate: new Date().toISOString() };
-        const usageKey = getUsageKey();
-        if (usageKey) {
-            try {
-                const storedUsage = localStorage.getItem(usageKey);
-                if (storedUsage) {
-                    const parsedUsage = JSON.parse(storedUsage);
-                    if (!isToday(new Date(parsedUsage.lastUsageDate))) {
-                        usage.dailyUsage = 0;
-                        localStorage.setItem(usageKey, JSON.stringify(usage));
-                    } else {
-                        usage = parsedUsage;
-                    }
-                } else {
-                    localStorage.setItem(usageKey, JSON.stringify(usage));
-                }
-            } catch (e) {
-                 console.error("Failed to read usage from localStorage", e);
-            }
-        }
-
-
-        const profileData: StudentProfile = {
+        const serverProfile: StudentProfile = {
             id: firestoreProfile.id,
             name: firestoreProfile.name,
             email: firestoreProfile.email,
@@ -136,76 +157,93 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
             isPro: isPro,
             proExpiresAt: firestoreProfile.proExpiresAt,
-            dailyUsage: usage.dailyUsage,
-            lastUsageDate: usage.lastUsageDate,
+            dailyUsage: firestoreProfile.dailyUsage || 0,
+            lastUsageDate: firestoreProfile.lastUsageDate || new Date().toISOString(),
         };
 
-        setStudentProfileState(profileData);
-    } else if (user) {
+        setStudentProfileState(prev => ({ ...prev, ...serverProfile }));
+
+        // Daily usage reset logic
+        if (!isToday(new Date(serverProfile.lastUsageDate))) {
+            const updatedUsage = {
+                dailyUsage: 0,
+                lastUsageDate: new Date().toISOString()
+            };
+            setStudentProfileState(prev => ({ ...prev, ...updatedUsage}));
+            if (userProfileRef) {
+                setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
+            }
+        }
+    } else if (user && !isProfileLoading) {
         const newProfile = {
-            ...defaultProfile,
+            ...studentProfile, // Keep draft if exists
             id: user.uid,
             email: user.email!,
-            name: user.displayName || '',
+            name: user.displayName || studentProfile.name || '',
         };
         setStudentProfileState(newProfile);
         setIsProfileOpen(true); 
-    } else {
-        setStudentProfileState(defaultProfile);
-        setView('welcome'); 
     }
-  }, [firestoreProfile, user, isUserLoading, userProfileRef]);
+  }, [firestoreProfile, user, isProfileLoading, userProfileRef]);
 
-
-  useEffect(() => {
-    if (user) {
-      const historyKey = getHistoryKey();
-      if (!historyKey) return;
-      try {
-        const storedHistory = localStorage.getItem(historyKey);
-        if (storedHistory) {
-          setHistory(sortHistory(JSON.parse(storedHistory)));
-        } else {
-          setHistory([]);
-        }
-      } catch (error) {
-        console.error("Failed to parse history from localStorage", error);
-        localStorage.removeItem(historyKey);
-        setHistory([]);
-      }
-    }
-  }, [user]);
 
   useEffect(() => {
     const { name, classLevel, board } = studentProfile;
     setIsProfileComplete(!!name && !!classLevel && !!board);
-    if (user && isProfileLoading) {
-        setIsProfileOpen(false);
-    } else if (user && !isProfileComplete) {
-        setIsProfileOpen(true);
-    } else {
-        setIsProfileOpen(false);
-    }
-  }, [studentProfile, user, isProfileLoading, isProfileComplete]);
+  }, [studentProfile]);
+
+  useEffect(() => {
+      if(user && !isProfileComplete) {
+          setIsProfileOpen(true);
+      } else {
+          setIsProfileOpen(false);
+      }
+  }, [user, isProfileComplete]);
   
   const setStudentProfile = (profile: Partial<StudentProfile>) => {
+    const profileDraftKey = getProfileDraftKey();
+    if (profileDraftKey) {
+        try {
+            const currentDraft = JSON.parse(localStorage.getItem(profileDraftKey) || '{}');
+            const newDraft = {...currentDraft, ...profile};
+            localStorage.setItem(profileDraftKey, JSON.stringify(newDraft));
+        } catch (e) {
+            console.error("Failed to save profile draft to localStorage", e);
+        }
+    }
     setStudentProfileState(prev => ({...prev, ...profile}));
   };
 
+  const saveProfileToFirestore = (values: Partial<StudentProfile>) => {
+    if (!user || !firestore) return;
+    const profileRef = doc(firestore, 'users', user.uid);
+    const dataToSave = {
+        name: values.name,
+        gradeLevel: values.classLevel,
+        board: values.board,
+        weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
+    };
+    setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
+
+    // Clear the draft from local storage after successful save
+    const profileDraftKey = getProfileDraftKey();
+    if (profileDraftKey) {
+        localStorage.removeItem(profileDraftKey);
+    }
+  }
+
+
   const incrementUsage = () => {
-    setStudentProfileState(prev => {
-        const newUsage = {
-            dailyUsage: prev.dailyUsage + 1,
-            lastUsageDate: new Date().toISOString(),
-        };
-
-        const usageKey = getUsageKey();
-        if (usageKey) {
-            localStorage.setItem(usageKey, JSON.stringify(newUsage));
-        }
-
-        return { ...prev, ...newUsage };
-    });
+    if (!userProfileRef) return;
+    
+    const newUsage = studentProfile.dailyUsage + 1;
+    
+    setStudentProfileState(prev => ({
+        ...prev,
+        dailyUsage: newUsage
+    }));
+    
+    setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage }, { merge: true });
   }
   
   const updateAndSaveHistory = (newHistory: HistoryItem[]) => {
@@ -220,6 +258,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addToHistory = (item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
+    const newHistoryItem: HistoryItem = {
+        ...item,
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+    };
+    const updatedHistory = [newHistoryItem, ...history];
+    updateAndSaveHistory(updatedHistory);
+  };
+  
   const addToChat = (message: ChatMessage, currentChat: ChatMessage[]) => {
       const updatedChat = [...currentChat, message];
       setChat(updatedChat);
@@ -240,30 +288,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const firstMessage = updatedChat[0];
         if (!firstMessage) return;
 
-        setHistory(prevHistory => {
-            const newHistory = prevHistory.map(item => {
-                if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
-                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
-                }
-                return item;
-            });
-            updateAndSaveHistory(newHistory);
-            return sortHistory(newHistory);
+        const updatedHistory = history.map(item => {
+            if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
+                return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
+            }
+            return item;
         });
-      }
-  };
-
-  const addToHistory = (item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
-    const newHistoryItem: HistoryItem = {
-        ...item,
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-    };
-    setHistory(prevHistory => {
-        const updatedHistory = [newHistoryItem, ...prevHistory];
         updateAndSaveHistory(updatedHistory);
-        return updatedHistory;
-    });
+      }
   };
   
   const deleteFromHistory = (id: string) => {
@@ -281,30 +313,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   useEffect(() => {
-    if (!user && !isUserLoading) {
-        setChat([]);
-        setQuiz(null);
-        setHistory([]);
-        setView('welcome');
-        // Usage data is keyed by UID so no need to clear it on logout
-    }
-  }, [user, isUserLoading]);
-
-  useEffect(() => {
     if (studentProfile.email && !studentProfile.isPro) {
-      const adShown = sessionStorage.getItem('adShown');
+      const adShownKey = `adShown_${user?.uid}`;
+      const adShown = sessionStorage.getItem(adShownKey);
       if (!adShown) {
         const timer = setTimeout(() => {
           showAd();
-          sessionStorage.setItem('adShown', 'true');
+          sessionStorage.setItem(adShownKey, 'true');
         }, 3000); 
         return () => clearTimeout(timer);
       }
     }
-  }, [studentProfile.isPro, studentProfile.email]);
+  }, [studentProfile.isPro, studentProfile.email, user?.uid]);
+
+  const value = { 
+    studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
+    quiz, setQuiz, history, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
+    isProfileOpen, setIsProfileOpen, isAdOpen, showAd, hideAd, adContent 
+  };
 
   return (
-    <AppContext.Provider value={{ studentProfile, setStudentProfile, incrementUsage, view, setView, chat, setChat, addToChat, quiz, setQuiz, history, addToHistory, deleteFromHistory, clearHistory, isProfileComplete, isProfileOpen, setIsProfileOpen, loadChatFromHistory, isAdOpen, showAd, hideAd, adContent }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

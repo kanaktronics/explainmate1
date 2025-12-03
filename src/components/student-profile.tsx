@@ -16,11 +16,9 @@ import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { StudentProfile as StudentProfileType } from '@/lib/types';
 import { Edit, Save, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const profileSchema = z.object({
@@ -31,14 +29,14 @@ const profileSchema = z.object({
 });
 
 export function StudentProfile() {
-  const { studentProfile, setStudentProfile, setIsProfileOpen, isProfileComplete } = useAppContext();
+  const { studentProfile, setStudentProfile, saveProfileToFirestore, setIsProfileOpen, isProfileComplete } = useAppContext();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const { firestore, user } = useFirebase();
+  const { user } = useFirebase();
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
+    values: {
       name: studentProfile.name,
       classLevel: studentProfile.classLevel,
       board: studentProfile.board,
@@ -47,21 +45,20 @@ export function StudentProfile() {
   });
 
   useEffect(() => {
-    form.reset({
-      name: studentProfile.name,
-      classLevel: studentProfile.classLevel,
-      board: studentProfile.board,
-      weakSubjects: studentProfile.weakSubjects,
-    });
     if (user && !isProfileComplete) {
         setIsEditing(true);
     } else {
         setIsEditing(false);
     }
-  }, [studentProfile, user, isProfileComplete, form]);
+  }, [user, isProfileComplete]);
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setStudentProfile({ [name]: value });
+  }
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
-    if (!user || !firestore) {
+    if (!user) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -70,23 +67,8 @@ export function StudentProfile() {
       return;
     }
     
-    const updatedProfile: Partial<StudentProfileType> = {
-      ...values,
-      email: user.email!,
-      id: user.uid,
-    };
-    
-    setStudentProfile(updatedProfile);
-    
-    const profileRef = doc(firestore, 'users', user.uid);
-    const dataToSave = {
-        name: values.name,
-        gradeLevel: values.classLevel,
-        board: values.board,
-        weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
-    };
-
-    setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
+    saveProfileToFirestore(values);
+    setStudentProfile(values); // also update the immediate state
 
     toast({
       title: 'Profile Saved!',
@@ -147,7 +129,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Your Name" {...field} />
+                  <Input placeholder="Your Name" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -160,7 +142,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Class</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., 10th Grade" {...field} />
+                  <Input placeholder="e.g., 10th Grade" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -173,7 +155,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Board</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., CBSE, ICSE" {...field} />
+                  <Input placeholder="e.g., CBSE, ICSE" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -186,7 +168,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Weak Subjects</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Physics, Algebra" {...field} />
+                  <Input placeholder="e.g., Physics, Algebra" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
