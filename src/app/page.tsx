@@ -166,6 +166,7 @@ function AppLayout() {
   }
   
   const getInitials = (name: string) => {
+    if (!name || typeof name !== 'string') return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   }
   
