@@ -16,6 +16,7 @@ import { Sparkles } from 'lucide-react';
 import { PrivacyPolicyView } from './privacy-policy-view';
 import { TermsConditionsView } from './terms-conditions-view';
 import { RefundPolicyView } from './refund-policy-view';
+import { ServiceDeliveryPolicyView } from './service-delivery-policy-view';
 
 export function MainPanel() {
   const { view, setView, studentProfile } = useAppContext();
@@ -39,6 +40,8 @@ export function MainPanel() {
         return <TermsConditionsView />;
       case 'refund-policy':
         return <RefundPolicyView />;
+      case 'service-delivery-policy':
+        return <ServiceDeliveryPolicyView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;

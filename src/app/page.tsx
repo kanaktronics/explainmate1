@@ -20,7 +20,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -168,6 +168,10 @@ function AppLayout() {
   const handleRefund = () => {
     setView('refund-policy');
   }
+
+  const handleServiceDelivery = () => {
+    setView('service-delivery-policy');
+  }
   
   const getInitials = (name: string) => {
     if (!name || typeof name !== 'string') return 'U';
@@ -236,6 +240,9 @@ function AppLayout() {
                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton variant="ghost" onClick={handleRefund} isActive={view === 'refund-policy'}><Receipt/>Refund & Cancellation</SidebarMenuButton>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton variant="ghost" onClick={handleServiceDelivery} isActive={view === 'service-delivery-policy'}><Truck/>Service Delivery</SidebarMenuButton>
                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut/>Logout</SidebarMenuButton>
