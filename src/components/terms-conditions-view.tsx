@@ -1,14 +1,17 @@
-import { FileText } from "lucide-react";
 
-export function TermsConditionsView() {
-  return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <header className="text-center space-y-4">
+export function TermsConditionsView({ inModal = false }: { inModal?: boolean }) {
+  const Header = () => (
+    <header className="text-center space-y-4">
         <h1 className="text-5xl font-headline text-primary">Terms & Conditions</h1>
         <p className="text-lg text-muted-foreground">
           Last updated: [4/12/25]
         </p>
       </header>
+  );
+  
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      {!inModal && <Header />}
       
       <div className="prose dark:prose-invert max-w-none text-lg space-y-6">
         <p>
