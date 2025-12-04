@@ -193,6 +193,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setIsProfileComplete(isComplete);
       if (!isComplete) {
         setIsProfileOpen(true);
+      } else {
+        // Ensure profile is closed if it is complete
+        setIsProfileOpen(false);
       }
     }
   }, [firestoreProfile, user, isUserLoading, isProfileLoading, getProfileDraftKey, userProfileRef]);
@@ -225,6 +228,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
     };
     setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
+
+    const finalProfile = { ...studentProfile, ...values };
+    setStudentProfileState(finalProfile);
+    const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+    setIsProfileComplete(isComplete);
 
     // Clear the draft from local storage after successful save
     const profileDraftKey = getProfileDraftKey();

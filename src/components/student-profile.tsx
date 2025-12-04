@@ -45,10 +45,9 @@ export function StudentProfile() {
   });
 
   useEffect(() => {
+    // Automatically enter edit mode if the profile is incomplete.
     if (user && !isProfileComplete) {
         setIsEditing(true);
-    } else {
-        setIsEditing(false);
     }
   }, [user, isProfileComplete]);
 
@@ -67,15 +66,15 @@ export function StudentProfile() {
       return;
     }
     
+    // The context already has the latest values, so we just trigger the save.
     saveProfileToFirestore(values);
-    setStudentProfile(values); // also update the immediate state
 
     toast({
       title: 'Profile Saved!',
       description: 'Your information has been updated.',
     });
     setIsEditing(false);
-    setIsProfileOpen(false);
+    setIsProfileOpen(false); // Close the profile section after saving.
   }
   
   if (!isEditing) {
