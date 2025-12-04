@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -7,6 +6,7 @@ import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/
 import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
 interface AdContent {
     title: string;
@@ -30,12 +30,12 @@ interface AppContextType {
   deleteFromHistory: (id: string) => void;
   clearHistory: () => void;
   isProfileComplete: boolean;
-  isProfileOpen: boolean;
-  setIsProfileOpen: (isOpen: boolean) => void;
   isAdOpen: boolean;
   showAd: (content?: Partial<AdContent>) => void;
   hideAd: () => void;
   adContent: Partial<AdContent>;
+  user: User | null;
+  isUserLoading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -64,12 +64,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
 
   const getHistoryKey = useCallback(() => user ? `explanationHistory_${user.uid}` : null, [user]);
-  const getProfileDraftKey = useCallback(() => user ? `profileDraft_${user.uid}` : null, [user]);
 
   const showAd = (content: Partial<AdContent> = {}) => {
     setAdContent(content);
@@ -109,22 +107,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setHistory([]);
         }
       }
+      if (view === 'auth' || view === 'forgot-password') {
+          setView('welcome');
+      }
     } else {
       // Clear all data on logout
       setChat([]);
       setQuiz(null);
       setHistory([]);
       setStudentProfileState(defaultProfile);
-      setView('welcome');
     }
-  }, [user, isUserLoading, getHistoryKey]);
+  }, [user, isUserLoading, getHistoryKey, view]);
 
 
   // Effect to sync Firestore profile with local state
   useEffect(() => {
-    if (isUserLoading || isProfileLoading) return;
+    if (isUserLoading || isProfileLoading || !user) return;
 
-    if (user && firestoreProfile) { // Only run if we have a user and their profile from Firestore
+    if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.isPro || false;
         // Check for expired pro status
         if (isPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
@@ -154,28 +154,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
           }
         }
-
-        // Load draft from localStorage
-        const profileDraftKey = getProfileDraftKey();
-        let draftProfile: Partial<StudentProfile> = {};
-        if (profileDraftKey) {
-            try {
-                const storedDraft = localStorage.getItem(profileDraftKey);
-                if (storedDraft) {
-                    draftProfile = JSON.parse(storedDraft);
-                }
-            } catch (error) {
-                console.error("Failed to parse profile draft from localStorage", error);
-            }
-        }
         
-        // Combine: start with defaults, layer on the server data, then layer on draft data
-        // This ensures server data is the source of truth, and draft only fills gaps or provides newer unsaved changes
         const finalProfile: StudentProfile = {
             ...defaultProfile,
             ...serverProfile,
-            ...draftProfile,
-            email: user.email!, // Ensure email and id are always from the auth user object
+            email: user.email!, 
             id: user.uid,
         };
 
@@ -184,12 +167,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
         setIsProfileComplete(isComplete);
         
-        if (!isComplete) {
-            setIsProfileOpen(true);
-        }
-    } else if (user && !firestoreProfile && !isProfileLoading) {
+    } else if (!firestoreProfile && !isProfileLoading) {
       // This is a new user who doesn't have a firestore doc yet.
-      // Prime the state from the auth object and open the profile editor.
+      // Prime the state from the auth object.
       const newProfile = {
         ...defaultProfile,
         id: user.uid,
@@ -198,26 +178,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       };
       setStudentProfileState(newProfile);
       setIsProfileComplete(false);
-      setIsProfileOpen(true);
     }
-  }, [firestoreProfile, user, isUserLoading, isProfileLoading, getProfileDraftKey, userProfileRef]);
+  }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef]);
 
   
   const setStudentProfile = (profile: Partial<StudentProfile>) => {
     const updatedProfile = {...studentProfile, ...profile};
     setStudentProfileState(updatedProfile);
-
-    // Save the changes to localStorage as a draft
-    const profileDraftKey = getProfileDraftKey();
-    if (profileDraftKey) {
-        try {
-            const currentDraft = JSON.parse(localStorage.getItem(profileDraftKey) || '{}');
-            const newDraft = {...currentDraft, ...profile};
-            localStorage.setItem(profileDraftKey, JSON.stringify(newDraft));
-        } catch (e) {
-            console.error("Failed to save profile draft to localStorage", e);
-        }
-    }
   };
 
   const saveProfileToFirestore = (values: Partial<StudentProfile>) => {
@@ -235,12 +202,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setStudentProfileState(finalProfile);
     const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
     setIsProfileComplete(isComplete);
-
-    // Clear the draft from local storage after successful save
-    const profileDraftKey = getProfileDraftKey();
-    if (profileDraftKey) {
-        localStorage.removeItem(profileDraftKey);
-    }
   }
 
 
@@ -354,7 +315,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const value = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
     quiz, setQuiz, history, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
-    isProfileOpen, setIsProfileOpen, isAdOpen, showAd, hideAd, adContent 
+    isAdOpen, showAd, hideAd, adContent, user, isUserLoading
   };
 
   return (
@@ -371,5 +332,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    

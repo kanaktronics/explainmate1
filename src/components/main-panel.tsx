@@ -12,14 +12,16 @@ import { ContactView } from './contact-view';
 import { ProMembershipView } from './pro-membership-view';
 import { Button } from './ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, LogIn } from 'lucide-react';
 import { PrivacyPolicyView } from './privacy-policy-view';
 import { TermsConditionsView } from './terms-conditions-view';
 import { RefundPolicyView } from './refund-policy-view';
 import { ServiceDeliveryPolicyView } from './service-delivery-policy-view';
+import { AuthView } from './auth-view';
+import { ForgotPasswordView } from './forgot-password-view';
 
 export function MainPanel() {
-  const { view, setView, studentProfile } = useAppContext();
+  const { view, setView, studentProfile, user } = useAppContext();
   const isMobile = useIsMobile();
 
   const renderView = () => {
@@ -42,6 +44,10 @@ export function MainPanel() {
         return <RefundPolicyView />;
       case 'service-delivery-policy':
         return <ServiceDeliveryPolicyView />;
+      case 'auth':
+        return <AuthView />;
+      case 'forgot-password':
+        return <ForgotPasswordView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;
@@ -62,12 +68,20 @@ export function MainPanel() {
             Your Personal AI Tutor
          </h2>
 
-         {isMobile && !studentProfile.isPro && (
-            <Button size="sm" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90" onClick={() => setView('pro-membership')}>
-                <Sparkles className="mr-2 h-4 w-4"/>
-                Upgrade
-            </Button>
-         )}
+         <div className="flex items-center gap-2">
+            {isMobile && user && !studentProfile.isPro && (
+                <Button size="sm" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90" onClick={() => setView('pro-membership')}>
+                    <Sparkles className="mr-2 h-4 w-4"/>
+                    Upgrade
+                </Button>
+            )}
+            {isMobile && !user && (
+                <Button size="sm" variant="outline" onClick={() => setView('auth')}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                </Button>
+            )}
+         </div>
       </header>
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto p-4 sm:p-6 md:p-8 h-full">

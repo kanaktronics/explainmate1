@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +19,6 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Save, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
-import { useFirebase } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const profileSchema = z.object({
@@ -29,10 +29,9 @@ const profileSchema = z.object({
 });
 
 export function StudentProfile() {
-  const { studentProfile, setStudentProfile, saveProfileToFirestore, setIsProfileOpen, isProfileComplete } = useAppContext();
+  const { studentProfile, setStudentProfile, saveProfileToFirestore, isProfileComplete, user } = useAppContext();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const { user } = useFirebase();
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -43,11 +42,22 @@ export function StudentProfile() {
       weakSubjects: studentProfile.weakSubjects,
     },
   });
+  
+  useEffect(() => {
+    form.reset({
+        name: studentProfile.name,
+        classLevel: studentProfile.classLevel,
+        board: studentProfile.board,
+        weakSubjects: studentProfile.weakSubjects
+    });
+  }, [studentProfile, form]);
+
 
   useEffect(() => {
-    // Automatically enter edit mode if the profile is incomplete.
     if (user && !isProfileComplete) {
         setIsEditing(true);
+    } else {
+        setIsEditing(false);
     }
   }, [user, isProfileComplete]);
 
@@ -66,7 +76,6 @@ export function StudentProfile() {
       return;
     }
     
-    // The context already has the latest values, so we just trigger the save.
     saveProfileToFirestore(values);
 
     toast({
@@ -74,7 +83,6 @@ export function StudentProfile() {
       description: 'Your information has been updated.',
     });
     setIsEditing(false);
-    setIsProfileOpen(false); // Close the profile section after saving.
   }
   
   if (!isEditing) {
@@ -117,7 +125,7 @@ export function StudentProfile() {
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Complete Your Profile</AlertTitle>
                   <AlertDescription>
-                    Please fill out your details to get started.
+                    Please fill out your details to get personalized results.
                   </AlertDescription>
               </Alert>
           )}

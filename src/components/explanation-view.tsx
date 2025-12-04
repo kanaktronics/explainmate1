@@ -82,8 +82,9 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
 
 const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
   const { studentProfile } = useAppContext();
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'S';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'S';
   }
 
   const text = typeof content === 'string' ? content : content.text;
@@ -109,7 +110,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
+  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -151,6 +152,11 @@ export function ExplanationView() {
   }
 
   const handleImageButtonClick = () => {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to upload images.' });
+        return;
+    }
     if (studentProfile.isPro) {
         fileInputRef.current?.click();
     } else {
@@ -160,6 +166,12 @@ export function ExplanationView() {
 
 
   async function onSubmit(values: z.infer<typeof explanationSchema>) {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to get explanations.' });
+        return;
+    }
+    
     if (!isProfileComplete) {
       toast({
         variant: 'destructive',
@@ -294,7 +306,6 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleImageButtonClick}
                     title="Upload Image (Pro)"
-                    disabled={!studentProfile.isPro}
                     >
                     <ImageIcon />
                 </Button>
@@ -323,7 +334,7 @@ export function ExplanationView() {
                         <FormItem className="flex-1">
                         <FormControl>
                             <Textarea 
-                                placeholder="Explain the steps of photosynthesis... (Free users get 5 explanations per day)" 
+                                placeholder="Explain the steps of photosynthesis..." 
                                 {...field}
                                 className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-sm md:text-base"
                                 onKeyDown={(e) => {

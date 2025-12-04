@@ -20,7 +20,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -30,13 +30,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useFirebase } from '@/firebase';
 import { AuthView } from '@/components/auth-view';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ForgotPasswordView } from '@/components/forgot-password-view';
 import { AdPopup } from '@/components/ad-popup';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 
 function HistorySection() {
-  const { history, loadChatFromHistory, deleteFromHistory, clearHistory } = useAppContext();
+  const { history, loadChatFromHistory, deleteFromHistory, clearHistory, user } = useAppContext();
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [itemToDelete, setItemToDelete] = useState<HistoryItem | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -62,7 +61,7 @@ function HistorySection() {
     setShowClearConfirm(false);
   }
 
-  if (history.length === 0) {
+  if (history.length === 0 || !user) {
     return null;
   }
 
@@ -114,7 +113,9 @@ function HistorySection() {
 }
 
 function ProSection() {
-    const { studentProfile, setView } = useAppContext();
+    const { studentProfile, setView, user } = useAppContext();
+
+    if (!user) return null;
 
     if (studentProfile.isPro) {
         return (
@@ -134,54 +135,95 @@ function ProSection() {
     )
 }
 
+function UserProfileSection() {
+    const { studentProfile, setView, user } = useAppContext();
+    const { auth } = useFirebase();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+    const getInitials = (name?: string | null) => {
+        if (!name || typeof name !== 'string') return 'U';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+    }
+    
+    const handleLogout = () => {
+        auth?.signOut();
+        setView('welcome');
+    }
+
+    if (!user) {
+        return (
+            <div className='p-2'>
+                <Button variant="outline" className="w-full" onClick={() => setView('auth')}>
+                    <LogIn />
+                    Sign Up / Login
+                </Button>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+                <SidebarGroup>
+                    <CollapsibleTrigger className='w-full'>
+                        <SidebarGroupLabel className='flex justify-between items-center cursor-pointer'>
+                            Student Profile
+                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                        </SidebarGroupLabel>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <StudentProfile />
+                    </CollapsibleContent>
+                </SidebarGroup>
+            </Collapsible>
+             <SidebarSeparator/>
+            <div className="flex items-center gap-3 px-2">
+                <Avatar>
+                    <AvatarImage src={`https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${studentProfile.name}`} />
+                    <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col overflow-hidden">
+                    <div className='flex items-center gap-2'>
+                        <span className="font-semibold text-sm truncate">{studentProfile.name || "Student"}</span>
+                        {studentProfile.isPro && <Badge variant="destructive" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0"><Zap className='w-3 h-3 fill-white'/>Pro</Badge>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{studentProfile.email || "Not signed in"}</span>
+                </div>
+            </div>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut/>Logout</SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </>
+    )
+}
+
 function AppLayout() {
-  const { view, setView, studentProfile, setChat, setQuiz, isProfileOpen, setIsProfileOpen, isAdOpen, hideAd, adContent } = useAppContext();
-  const { auth } = useFirebase();
+  const { view, setView, setChat, setQuiz, isAdOpen, hideAd, adContent, user } = useAppContext();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   const handleNewExplanation = () => {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to start a new chat.' });
+        return;
+    }
     setChat([]);
     setView('explanation');
   };
 
   const handleNewQuiz = () => {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to start a new quiz.' });
+        return;
+    }
     setQuiz(null);
     setView('quiz');
   };
-
-  const handleAbout = () => {
-    setView('about');
-  };
-
-  const handleContact = () => {
-    setView('contact');
-  }
-
-  const handlePrivacy = () => {
-    setView('privacy-policy');
-  }
-
-  const handleTerms = () => {
-    setView('terms-conditions');
-  }
-
-  const handleRefund = () => {
-    setView('refund-policy');
-  }
-
-  const handleServiceDelivery = () => {
-    setView('service-delivery-policy');
-  }
   
-  const getInitials = (name: string) => {
-    if (!name || typeof name !== 'string') return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-  }
-  
-  const handleLogout = () => {
-    auth?.signOut();
-  }
-
   return (
     <SidebarProvider>
       <AdPopup isOpen={isAdOpen} onClose={hideAd} title={adContent.title} description={adContent.description} />
@@ -209,59 +251,33 @@ function AppLayout() {
           {!isMobile && <ProSection />}
           <SidebarSeparator />
           <HistorySection />
-          <SidebarSeparator />
-          <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-            <SidebarGroup>
-                <CollapsibleTrigger className='w-full'>
-                    <SidebarGroupLabel className='flex justify-between items-center cursor-pointer'>
-                        Student Profile
-                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
-                    </SidebarGroupLabel>
-                </CollapsibleTrigger>
-              <CollapsibleContent>
-                <StudentProfile />
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
         </SidebarContent>
         <SidebarFooter>
             <SidebarMenu>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleAbout} isActive={view === 'about'}><Info/>About</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('about')} isActive={view === 'about'}><Info/>About</SidebarMenuButton>
                  </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleContact} isActive={view === 'contact'}><Contact/>Contact</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('contact')} isActive={view === 'contact'}><Contact/>Contact</SidebarMenuButton>
                  </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handlePrivacy} isActive={view === 'privacy-policy'}><Shield/>Privacy Policy</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('pro-membership')} isActive={view === 'pro-membership'}><Sparkles/>Pricing</SidebarMenuButton>
                  </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleTerms} isActive={view === 'terms-conditions'}><FileText/>Terms & Conditions</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('privacy-policy')} isActive={view === 'privacy-policy'}><Shield/>Privacy Policy</SidebarMenuButton>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('terms-conditions')} isActive={view === 'terms-conditions'}><FileText/>Terms & Conditions</SidebarMenuButton>
                  </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleRefund} isActive={view === 'refund-policy'}><Receipt/>Refund & Cancellation</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('refund-policy')} isActive={view === 'refund-policy'}><Receipt/>Refund & Cancellation</SidebarMenuButton>
                  </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleServiceDelivery} isActive={view === 'service-delivery-policy'}><Truck/>Service Delivery</SidebarMenuButton>
-                 </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut/>Logout</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={() => setView('service-delivery-policy')} isActive={view === 'service-delivery-policy'}><Truck/>Service Delivery</SidebarMenuButton>
                  </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator/>
-            <div className="flex items-center gap-3 px-2">
-                <Avatar>
-                    <AvatarImage src={`https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${studentProfile.name}`} />
-                    <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col overflow-hidden">
-                    <div className='flex items-center gap-2'>
-                        <span className="font-semibold text-sm truncate">{studentProfile.name || "Student"}</span>
-                        {studentProfile.isPro && <Badge variant="destructive" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0"><Zap className='w-3 h-3 fill-white'/>Pro</Badge>}
-                    </div>
-                    <span className="text-xs text-muted-foreground">{studentProfile.email || "Not signed in"}</span>
-                </div>
-            </div>
+            <UserProfileSection />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
@@ -271,43 +287,10 @@ function AppLayout() {
   );
 }
 
-function AuthWall() {
-    const { user, isUserLoading } = useFirebase();
-    const { view } = useAppContext();
-
-    if (isUserLoading) {
-        return (
-          <div className="flex h-screen w-screen items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-                <AppLogo />
-                <Skeleton className="h-4 w-48" />
-            </div>
-          </div>
-        );
-    }
-    
-    if (!user) {
-        if (view === 'forgot-password') {
-            return (
-                <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-                    <div className="mb-8">
-                        <AppLogo />
-                    </div>
-                    <ForgotPasswordView />
-                </div>
-            );
-        }
-        return <AuthView />;
-    }
-
-    return <AppLayout />;
-}
-
-
 export default function Home() {
   return (
     <AppProvider>
-      <AuthWall />
+      <AppLayout />
     </AppProvider>
   );
 }

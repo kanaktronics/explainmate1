@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState } from 'react';
@@ -120,7 +119,7 @@ export function AuthView() {
         };
         const profileRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(profileRef, userProfile, { merge: true });
-        // The onAuthStateChanged listener will handle the redirect
+        setView('welcome');
     } catch (error) {
         handleAuthError(error);
     } finally {
@@ -137,7 +136,7 @@ export function AuthView() {
         const user = userCredential.user;
         const profileRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(profileRef, { lastSignInAt: new Date().toISOString() }, { merge: true });
-        // The onAuthStateChanged listener will handle the redirect
+        setView('welcome');
     } catch (error) {
         handleAuthError(error);
     } finally {
@@ -158,7 +157,7 @@ export function AuthView() {
                  </div>
             </ScrollArea>
         </DialogContent>
-        <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="flex min-h-full flex-col items-center justify-center bg-background p-4">
             <div className='mb-8'>
                 <AppLogo />
             </div>

@@ -1,3 +1,4 @@
+
 export interface StudentProfile {
   id?: string;
   name: string;
@@ -41,4 +42,4 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact' | 'pro-membership' | 'forgot-password' | 'privacy-policy' | 'terms-conditions' | 'refund-policy' | 'service-delivery-policy';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'about' | 'contact' | 'pro-membership' | 'forgot-password' | 'privacy-policy' | 'terms-conditions' | 'refund-policy' | 'service-delivery-policy' | 'auth';
