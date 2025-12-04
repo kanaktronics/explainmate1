@@ -13,6 +13,7 @@ import { ProMembershipView } from './pro-membership-view';
 import { Button } from './ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sparkles } from 'lucide-react';
+import { PrivacyPolicyView } from './privacy-policy-view';
 
 export function MainPanel() {
   const { view, setView, studentProfile } = useAppContext();
@@ -30,6 +31,8 @@ export function MainPanel() {
         return <ContactView />;
       case 'pro-membership':
         return <ProMembershipView />;
+      case 'privacy-policy':
+        return <PrivacyPolicyView />;
       case 'welcome':
       default:
         return <WelcomeScreen />;

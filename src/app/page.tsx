@@ -20,7 +20,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -156,6 +156,10 @@ function AppLayout() {
   const handleContact = () => {
     setView('contact');
   }
+
+  const handlePrivacy = () => {
+    setView('privacy-policy');
+  }
   
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
@@ -214,6 +218,9 @@ function AppLayout() {
                  </SidebarMenuItem>
                  <SidebarMenuItem>
                     <SidebarMenuButton variant="ghost" onClick={handleContact} isActive={view === 'contact'}><Contact/>Contact</SidebarMenuButton>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton variant="ghost" onClick={handlePrivacy} isActive={view === 'privacy-policy'}><Shield/>Privacy Policy</SidebarMenuButton>
                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut/>Logout</SidebarMenuButton>
