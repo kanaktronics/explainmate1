@@ -88,7 +88,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
 
-  // Effect to load data from localStorage on user change
+  // Effect to load local data (history) on user change
   useEffect(() => {
     if (isUserLoading) return;
     
@@ -109,96 +109,100 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setHistory([]);
         }
       }
-
-      // Load Profile Draft from Local Storage
-      const profileDraftKey = getProfileDraftKey();
-      if (profileDraftKey) {
-        try {
-          const storedDraft = localStorage.getItem(profileDraftKey);
-          if (storedDraft) {
-            const draftProfile = JSON.parse(storedDraft);
-            setStudentProfileState(prev => ({...prev, ...draftProfile}));
-          }
-        } catch (error) {
-          console.error("Failed to parse profile draft from localStorage", error);
-        }
-      }
     } else {
-      // Clear all local data on logout
+      // Clear all data on logout
       setChat([]);
       setQuiz(null);
       setHistory([]);
       setStudentProfileState(defaultProfile);
       setView('welcome');
     }
-  }, [user, isUserLoading, getHistoryKey, getProfileDraftKey]);
+  }, [user, isUserLoading, getHistoryKey]);
 
 
   // Effect to sync Firestore profile with local state
   useEffect(() => {
-    if (firestoreProfile) {
-        let isPro = firestoreProfile.isPro || false;
-        
-        if (isPro && firestoreProfile.proExpiresAt) {
-            if (isPast(new Date(firestoreProfile.proExpiresAt))) {
-                isPro = false;
-                if (userProfileRef) {
-                    setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
-                }
-            }
-        }
-        
-        const serverProfile: StudentProfile = {
-            id: firestoreProfile.id,
-            name: firestoreProfile.name,
-            email: firestoreProfile.email,
-            classLevel: firestoreProfile.gradeLevel,
-            board: firestoreProfile.board,
-            weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
-            isPro: isPro,
-            proExpiresAt: firestoreProfile.proExpiresAt,
-            dailyUsage: firestoreProfile.dailyUsage || 0,
-            lastUsageDate: firestoreProfile.lastUsageDate || new Date().toISOString(),
-        };
+    if (isUserLoading || isProfileLoading) return;
 
-        setStudentProfileState(prev => ({ ...prev, ...serverProfile }));
+    if (user) {
+      let serverProfile: Partial<StudentProfile> = {};
+      let isNewUser = !firestoreProfile;
+
+      if (firestoreProfile) {
+        let isPro = firestoreProfile.isPro || false;
+        if (isPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
+          isPro = false;
+          if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
+          }
+        }
+
+        serverProfile = {
+          id: firestoreProfile.id,
+          name: firestoreProfile.name,
+          email: firestoreProfile.email,
+          classLevel: firestoreProfile.gradeLevel,
+          board: firestoreProfile.board,
+          weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
+          isPro: isPro,
+          proExpiresAt: firestoreProfile.proExpiresAt,
+          dailyUsage: firestoreProfile.dailyUsage || 0,
+          lastUsageDate: firestoreProfile.lastUsageDate || new Date().toISOString(),
+        };
 
         // Daily usage reset logic
-        if (!isToday(new Date(serverProfile.lastUsageDate))) {
-            const updatedUsage = {
-                dailyUsage: 0,
-                lastUsageDate: new Date().toISOString()
-            };
-            setStudentProfileState(prev => ({ ...prev, ...updatedUsage}));
-            if (userProfileRef) {
-                setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
-            }
+        if (!isToday(new Date(serverProfile.lastUsageDate!))) {
+          const updatedUsage = { dailyUsage: 0, lastUsageDate: new Date().toISOString() };
+          serverProfile = { ...serverProfile, ...updatedUsage };
+          if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
+          }
         }
-    } else if (user && !isProfileLoading) {
-        const newProfile = {
-            ...studentProfile, // Keep draft if exists
-            id: user.uid,
-            email: user.email!,
-            name: user.displayName || studentProfile.name || '',
-        };
-        setStudentProfileState(newProfile);
-        setIsProfileOpen(true); 
-    }
-  }, [firestoreProfile, user, isProfileLoading, userProfileRef]);
-
-
-  useEffect(() => {
-    const { name, classLevel, board } = studentProfile;
-    setIsProfileComplete(!!name && !!classLevel && !!board);
-  }, [studentProfile]);
-
-  useEffect(() => {
-      if(user && !isProfileComplete) {
-          setIsProfileOpen(true);
+      } else {
+        // Defaults for a new user
+        serverProfile = { id: user.uid, email: user.email!, name: user.displayName || '' };
       }
-  }, [user, isProfileComplete]);
+
+      // Load draft from localStorage
+      const profileDraftKey = getProfileDraftKey();
+      let draftProfile: Partial<StudentProfile> = {};
+      if (profileDraftKey) {
+        try {
+          const storedDraft = localStorage.getItem(profileDraftKey);
+          if (storedDraft) {
+            draftProfile = JSON.parse(storedDraft);
+          }
+        } catch (error) {
+          console.error("Failed to parse profile draft from localStorage", error);
+        }
+      }
+      
+      // Merge server data and draft, with server data taking precedence for defined fields
+      const finalProfile: StudentProfile = {
+        ...defaultProfile,
+        ...draftProfile,
+        ...serverProfile,
+        email: user.email!,
+        id: user.uid,
+      };
+
+      setStudentProfileState(finalProfile);
+
+      // Check if profile is complete after merging
+      const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+      setIsProfileComplete(isComplete);
+      if (!isComplete) {
+        setIsProfileOpen(true);
+      }
+    }
+  }, [firestoreProfile, user, isUserLoading, isProfileLoading, getProfileDraftKey, userProfileRef]);
+
   
   const setStudentProfile = (profile: Partial<StudentProfile>) => {
+    const updatedProfile = {...studentProfile, ...profile};
+    setStudentProfileState(updatedProfile);
+
+    // Save the changes to localStorage as a draft
     const profileDraftKey = getProfileDraftKey();
     if (profileDraftKey) {
         try {
@@ -209,7 +213,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             console.error("Failed to save profile draft to localStorage", e);
         }
     }
-    setStudentProfileState(prev => ({...prev, ...profile}));
   };
 
   const saveProfileToFirestore = (values: Partial<StudentProfile>) => {
@@ -232,19 +235,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const incrementUsage = () => {
-    if (!userProfileRef) return;
+    if (!userProfileRef || studentProfile.isPro) return;
     
     const newUsage = studentProfile.dailyUsage + 1;
     
     setStudentProfileState(prev => ({
         ...prev,
-        dailyUsage: newUsage
+        dailyUsage: newUsage,
+        lastUsageDate: new Date().toISOString(),
     }));
     
-    setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage }, { merge: true });
+    setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: new Date().toISOString() }, { merge: true });
   }
   
-  const updateAndSaveHistory = (newHistory: HistoryItem[]) => {
+  const updateAndSaveHistory = useCallback((newHistory: HistoryItem[]) => {
     const historyKey = getHistoryKey();
     if (!historyKey) return;
     const sorted = sortHistory(newHistory);
@@ -254,7 +258,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
         console.error("Failed to save history to localStorage", error);
     }
-  };
+  }, [getHistoryKey]);
 
   const addToHistory = useCallback((item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
     const newHistoryItem: HistoryItem = {
@@ -262,8 +266,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
     };
-    updateAndSaveHistory([newHistoryItem, ...history]);
-  }, [history, updateAndSaveHistory]);
+    // Use a function for state update to get the latest history state
+    setHistory(prevHistory => {
+        const updatedHistory = [newHistoryItem, ...prevHistory];
+        updateAndSaveHistory(updatedHistory);
+        return updatedHistory;
+    });
+  }, [updateAndSaveHistory]);
   
   const addToChat = (message: ChatMessage, currentChat: ChatMessage[]) => {
       const updatedChat = [...currentChat, message];
@@ -282,16 +291,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         addToHistory({ topic, messages: updatedChat });
       } else {
-        const firstMessage = updatedChat[0];
-        if (!firstMessage) return;
+         setHistory(prevHistory => {
+            const firstMessage = updatedChat[0];
+            if (!firstMessage) return prevHistory;
 
-        const updatedHistory = history.map(item => {
-            if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
-                return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
+            let historyUpdated = false;
+            const updatedHistory = prevHistory.map(item => {
+                if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
+                    historyUpdated = true;
+                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
+                }
+                return item;
+            });
+            
+            if(historyUpdated) {
+                updateAndSaveHistory(updatedHistory);
+                return updatedHistory;
             }
-            return item;
+            return prevHistory;
         });
-        updateAndSaveHistory(updatedHistory);
       }
   };
   
@@ -317,7 +335,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const timer = setTimeout(() => {
           showAd();
           sessionStorage.setItem(adShownKey, 'true');
-        }, 3000); 
+        }, 30000); // Increased delay to 30s
         return () => clearTimeout(timer);
       }
     }
