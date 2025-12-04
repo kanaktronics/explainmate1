@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -25,10 +26,14 @@ import { AppLogo } from './app-logo';
 import { setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useAppContext } from '@/lib/app-context';
+import { Checkbox } from './ui/checkbox';
 
 const signUpSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
+  terms: z.literal(true, {
+    errorMap: () => ({ message: 'You must accept the terms and conditions to continue.' }),
+  }),
 });
 
 const signInSchema = z.object({
@@ -44,7 +49,7 @@ export function AuthView() {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', terms: false },
   });
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
@@ -95,6 +100,7 @@ export function AuthView() {
     try {
         const userCredential = await initiateEmailSignUp(auth, values.email, values.password);
         const user = userCredential.user;
+        const now = new Date().toISOString();
         const userProfile = {
             id: user.uid,
             email: user.email,
@@ -103,6 +109,9 @@ export function AuthView() {
             board: '',
             weakSubjects: [],
             isPro: false,
+            termsAcceptedAt: now,
+            termsVersion: "1.0",
+            lastSignInAt: now
         };
         const profileRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(profileRef, userProfile, { merge: true });
@@ -119,7 +128,10 @@ export function AuthView() {
     try {
         const { getAuth, signInWithEmailAndPassword } = await import('firebase/auth');
         const auth = getAuth();
-        await signInWithEmailAndPassword(auth, values.email, values.password);
+        const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+        const profileRef = doc(firestore, 'users', user.uid);
+        setDocumentNonBlocking(profileRef, { lastSignInAt: new Date().toISOString() }, { merge: true });
         // The onAuthStateChanged listener will handle the redirect
     } catch (error) {
         handleAuthError(error);
@@ -211,8 +223,46 @@ export function AuthView() {
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={signUpForm.control}
+                    name="terms"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            I agree to the{' '}
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="p-0 h-auto"
+                              onClick={() => setView('terms-conditions')}
+                            >
+                              Terms & Conditions
+                            </Button>{' '}
+                            and{' '}
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="p-0 h-auto"
+                              onClick={() => setView('privacy-policy')}
+                            >
+                              Privacy Policy
+                            </Button>
+                            .
+                          </FormLabel>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
 
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || !signUpForm.formState.isValid}>
                     {isSubmitting ? 'Creating Account...' : 'Sign Up'}
                   </Button>
                 </form>
@@ -224,3 +274,5 @@ export function AuthView() {
     </div>
   );
 }
+
+    

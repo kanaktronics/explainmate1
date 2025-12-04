@@ -81,7 +81,7 @@ service cloud.firestore {
      */
     function isImmutableUserProfileData() {
       // Allow changes to all fields except the id.
-      let mutableFields = ['name', 'gradeLevel', 'board', 'weakSubjects', 'isPro', 'proExpiresAt', 'dailyUsage', 'lastUsageDate'];
+      let mutableFields = ['name', 'gradeLevel', 'board', 'weakSubjects', 'isPro', 'proExpiresAt', 'dailyUsage', 'lastUsageDate', 'termsAcceptedAt', 'termsVersion', 'lastSignInAt'];
       return request.resource.data.id == resource.data.id
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(mutableFields);
     }
@@ -98,3 +98,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

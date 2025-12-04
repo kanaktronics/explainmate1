@@ -124,79 +124,81 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isUserLoading || isProfileLoading) return;
 
-    if (user) {
-      let serverProfile: Partial<StudentProfile> = {};
-      let isNewUser = !firestoreProfile;
-
-      if (firestoreProfile) {
+    if (user && firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.isPro || false;
+        // Check for expired pro status
         if (isPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
-          isPro = false;
+          isPro = false; // Downgrade locally
           if (userProfileRef) {
+            // And update firestore in the background
             setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
           }
         }
 
-        serverProfile = {
+        let serverProfile: Partial<StudentProfile> = {
+          ...firestoreProfile,
           id: firestoreProfile.id,
           name: firestoreProfile.name,
           email: firestoreProfile.email,
-          classLevel: firestoreProfile.gradeLevel,
+          classLevel: firestoreProfile.gradeLevel, // mapping from db field
           board: firestoreProfile.board,
           weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
           isPro: isPro,
-          proExpiresAt: firestoreProfile.proExpiresAt,
-          dailyUsage: firestoreProfile.dailyUsage || 0,
-          lastUsageDate: firestoreProfile.lastUsageDate || new Date().toISOString(),
         };
 
         // Daily usage reset logic
-        if (!isToday(new Date(serverProfile.lastUsageDate!))) {
+        if (serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate))) {
           const updatedUsage = { dailyUsage: 0, lastUsageDate: new Date().toISOString() };
           serverProfile = { ...serverProfile, ...updatedUsage };
           if (userProfileRef) {
             setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
           }
         }
-      } else {
-        // Defaults for a new user
-        serverProfile = { id: user.uid, email: user.email!, name: user.displayName || '' };
-      }
 
-      // Load draft from localStorage
-      const profileDraftKey = getProfileDraftKey();
-      let draftProfile: Partial<StudentProfile> = {};
-      if (profileDraftKey) {
-        try {
-          const storedDraft = localStorage.getItem(profileDraftKey);
-          if (storedDraft) {
-            draftProfile = JSON.parse(storedDraft);
-          }
-        } catch (error) {
-          console.error("Failed to parse profile draft from localStorage", error);
+        // Load draft from localStorage
+        const profileDraftKey = getProfileDraftKey();
+        let draftProfile: Partial<StudentProfile> = {};
+        if (profileDraftKey) {
+            try {
+                const storedDraft = localStorage.getItem(profileDraftKey);
+                if (storedDraft) {
+                    draftProfile = JSON.parse(storedDraft);
+                }
+            } catch (error) {
+                console.error("Failed to parse profile draft from localStorage", error);
+            }
         }
-      }
-      
-      // Merge server data and draft, with server data taking precedence for defined fields
-      const finalProfile: StudentProfile = {
+        
+        // Combine: start with defaults, layer on the server data, then layer on draft data
+        // This ensures server data is the source of truth, and draft only fills gaps or provides newer unsaved changes
+        const finalProfile: StudentProfile = {
+            ...defaultProfile,
+            ...serverProfile,
+            ...draftProfile,
+            email: user.email!, // Ensure email and id are always from the auth user object
+            id: user.uid,
+        };
+
+        setStudentProfileState(finalProfile);
+
+        const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+        setIsProfileComplete(isComplete);
+        
+        if (!isComplete) {
+            setIsProfileOpen(true);
+        }
+    } else if (user && !firestoreProfile && !isProfileLoading) {
+      // This is a new user who doesn't have a firestore doc yet.
+      // Prime the state from the auth object and open the profile editor.
+      const newProfile = {
         ...defaultProfile,
-        ...draftProfile,
-        ...serverProfile,
-        email: user.email!,
         id: user.uid,
+        email: user.email!,
+        name: user.displayName || '',
       };
-
-      setStudentProfileState(finalProfile);
-
-      // Check if profile is complete after merging
-      const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
-      setIsProfileComplete(isComplete);
-      if (!isComplete) {
-        setIsProfileOpen(true);
-      } else {
-        // Ensure profile is closed if it is complete
-        setIsProfileOpen(false);
-      }
+      setStudentProfileState(newProfile);
+      setIsProfileComplete(false);
+      setIsProfileOpen(true);
     }
   }, [firestoreProfile, user, isUserLoading, isProfileLoading, getProfileDraftKey, userProfileRef]);
 
@@ -343,7 +345,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const timer = setTimeout(() => {
           showAd();
           sessionStorage.setItem(adShownKey, 'true');
-        }, 30000); // Increased delay to 30s
+        }, 30000);
         return () => clearTimeout(timer);
       }
     }
@@ -369,3 +371,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
