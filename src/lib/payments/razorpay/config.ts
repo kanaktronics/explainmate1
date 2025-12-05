@@ -7,5 +7,5 @@
 
 export const razorpayConfig = {
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_RnqyYTgS9TsvAc',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'RAwvliHBWHAJvxR5AYxMx0N',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'RAFwvliHBWHAJvxR5AYxMx0N',
 };
