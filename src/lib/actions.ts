@@ -42,7 +42,7 @@ function convertToGenkitHistory(chatHistory: ChatMessage[]) {
 const FREE_TIER_EXPLANATION_LIMIT = 5;
 const FREE_TIER_QUIZ_LIMIT = 1;
 
-export async function getExplanation(input: TailorExplanationInput): Promise<TailorExplanationOutput | { error: string }> {
+export async function getExplanation(input: { studentProfile: StudentProfile; chatHistory: ChatMessage[] }): Promise<TailorExplanationOutput | { error: string }> {
   try {
     const { studentProfile, chatHistory } = input;
 
@@ -52,7 +52,11 @@ export async function getExplanation(input: TailorExplanationInput): Promise<Tai
     }
 
     const result = await tailorExplanation({
-      studentProfile,
+      studentProfile: {
+        classLevel: studentProfile.classLevel,
+        board: studentProfile.board,
+        weakSubjects: studentProfile.weakSubjects,
+      },
       chatHistory: convertToGenkitHistory(chatHistory),
     });
     
@@ -96,7 +100,7 @@ export async function getQuiz(input: {
     try {
         const { studentProfile, topic, numQuestions, difficulty } = input;
 
-        if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_QUIZ_LIMIT) {
+        if (!studentProfile.isPro && studentProfile.dailyQuizUsage >= FREE_TIER_QUIZ_LIMIT) {
             return { error: "DAILY_LIMIT_REACHED" };
         }
         

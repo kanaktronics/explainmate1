@@ -17,7 +17,7 @@ interface AppContextType {
   studentProfile: StudentProfile;
   setStudentProfile: (profile: Partial<StudentProfile>) => void;
   saveProfileToFirestore: (profile: Partial<StudentProfile>) => void;
-  incrementUsage: () => void;
+  incrementUsage: (type?: 'explanation' | 'quiz') => void;
   view: AppView;
   setView: (view: AppView) => void;
   chat: ChatMessage[];
@@ -52,6 +52,7 @@ const defaultProfile: StudentProfile = {
     weakSubjects: '',
     isPro: false,
     dailyUsage: 0,
+    dailyQuizUsage: 0,
     lastUsageDate: new Date().toISOString(),
 };
 
@@ -148,7 +149,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         // Daily usage reset logic
         if (serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate))) {
-          const updatedUsage = { dailyUsage: 0, lastUsageDate: new Date().toISOString() };
+          const updatedUsage = { dailyUsage: 0, dailyQuizUsage: 0, lastUsageDate: new Date().toISOString() };
           serverProfile = { ...serverProfile, ...updatedUsage };
           if (userProfileRef) {
             setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
@@ -205,18 +206,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
 
-  const incrementUsage = () => {
+  const incrementUsage = (type: 'explanation' | 'quiz' = 'explanation') => {
     if (!userProfileRef || studentProfile.isPro) return;
-    
-    const newUsage = studentProfile.dailyUsage + 1;
-    
-    setStudentProfileState(prev => ({
-        ...prev,
-        dailyUsage: newUsage,
-        lastUsageDate: new Date().toISOString(),
-    }));
-    
-    setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: new Date().toISOString() }, { merge: true });
+
+    if (type === 'explanation') {
+        const newUsage = (studentProfile.dailyUsage || 0) + 1;
+        setStudentProfileState(prev => ({
+            ...prev,
+            dailyUsage: newUsage,
+            lastUsageDate: new Date().toISOString(),
+        }));
+        setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: new Date().toISOString() }, { merge: true });
+    } else {
+        const newQuizUsage = (studentProfile.dailyQuizUsage || 0) + 1;
+        setStudentProfileState(prev => ({
+            ...prev,
+            dailyQuizUsage: newQuizUsage,
+            lastUsageDate: new Date().toISOString(),
+        }));
+        setDocumentNonBlocking(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: new Date().toISOString() }, { merge: true });
+    }
   }
   
   const updateAndSaveHistory = useCallback((newHistory: HistoryItem[]) => {

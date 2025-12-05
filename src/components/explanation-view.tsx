@@ -192,7 +192,7 @@ export function ExplanationView() {
     
     // Enforce daily limit for free users ON EVERY SUBMISSION
     if (!studentProfile.isPro) {
-        if (studentProfile.dailyUsage >= 5) {
+        if ((studentProfile.dailyUsage || 0) >= 5) {
             showAd({
                 title: "Daily Limit Reached",
                 description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
@@ -221,7 +221,7 @@ export function ExplanationView() {
 
     // Increment usage for free user AFTER the check has passed
     if (!studentProfile.isPro) {
-        incrementUsage();
+        incrementUsage('explanation');
     }
 
     const input = {
@@ -229,7 +229,7 @@ export function ExplanationView() {
       studentProfile: studentProfile,
     };
 
-    const result = await getExplanation(input as any);
+    const result = await getExplanation(input);
 
     if (result && 'error' in result) {
       if (result.error === 'DAILY_LIMIT_REACHED') {
@@ -264,7 +264,7 @@ export function ExplanationView() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100svh_-_8rem)] md:h-full">
+    <div className="flex flex-col h-full">
        <div className="flex-1 overflow-y-auto p-1 space-y-8">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
@@ -336,7 +336,7 @@ export function ExplanationView() {
                             <Textarea 
                                 placeholder="Explain the steps of photosynthesis..." 
                                 {...field}
-                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-sm md:text-base"
+                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-base md:text-sm"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();

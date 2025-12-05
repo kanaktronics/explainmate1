@@ -29,7 +29,7 @@ const quizSetupSchema = z.object({
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
 
 export function QuizView() {
-  const { studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd } = useAppContext();
+  const { user, studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -44,6 +44,11 @@ export function QuizView() {
   const numQuestionsValue = form.watch('numQuestions');
 
   async function onSubmit(values: z.infer<typeof quizSetupSchema>) {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to start a new quiz.' });
+        return;
+    }
     if (!isProfileComplete) {
       toast({
         variant: 'destructive',
@@ -53,7 +58,7 @@ export function QuizView() {
       return;
     }
 
-    if (!studentProfile.isPro && studentProfile.dailyUsage >= 1) {
+    if (!studentProfile.isPro && (studentProfile.dailyQuizUsage || 0) >= 1) {
         showAd({
             title: "Daily Quiz Limit Reached",
             description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
@@ -68,7 +73,7 @@ export function QuizView() {
     setShowResults(false);
 
     if (!studentProfile.isPro) {
-        incrementUsage();
+        incrementUsage('quiz');
     }
 
     const input = {

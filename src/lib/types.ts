@@ -8,6 +8,7 @@ export interface StudentProfile {
   weakSubjects: string;
   isPro: boolean;
   dailyUsage: number;
+  dailyQuizUsage: number;
   lastUsageDate: string;
   proExpiresAt?: string;
 }
