@@ -1,8 +1,12 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Script from 'next/script';
 import { FirebaseClientProvider } from '@/firebase';
+import { AppProvider } from '@/lib/app-context';
+import { AppLayout } from '@/components/app-layout';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export const metadata: Metadata = {
   title: 'ExplainMate AI Tutor',
@@ -23,9 +27,15 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
+          <AppProvider>
+            <SidebarProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </SidebarProvider>
+            <Toaster />
+          </AppProvider>
           <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
-          {children}
-          <Toaster />
         </FirebaseClientProvider>
       </body>
     </html>

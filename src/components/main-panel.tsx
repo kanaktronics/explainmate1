@@ -2,57 +2,16 @@
 'use client';
 
 import { useAppContext } from '@/lib/app-context';
-import { WelcomeScreen } from '@/components/welcome-screen';
-import { ExplanationView } from '@/components/explanation-view';
-import { QuizView } from '@/components/quiz-view';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
-import { AboutView } from './about-view';
-import { ContactView } from './contact-view';
-import { ProMembershipView } from './pro-membership-view';
 import { Button } from './ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sparkles, LogIn } from 'lucide-react';
-import { PrivacyPolicyView } from './privacy-policy-view';
-import { TermsConditionsView } from './terms-conditions-view';
-import { RefundPolicyView } from './refund-policy-view';
-import { ServiceDeliveryPolicyView } from './service-delivery-policy-view';
-import { AuthView } from './auth-view';
-import { ForgotPasswordView } from './forgot-password-view';
+import Link from 'next/link';
 
-export function MainPanel() {
-  const { view, setView, studentProfile, user } = useAppContext();
+export function MainPanel({ children }: { children: React.ReactNode }) {
+  const { studentProfile, user } = useAppContext();
   const isMobile = useIsMobile();
-
-  const renderView = () => {
-    switch(view) {
-      case 'explanation':
-        return <ExplanationView />;
-      case 'quiz':
-        return <QuizView />;
-      case 'about':
-        return <AboutView />;
-      case 'contact':
-        return <ContactView />;
-      case 'pro-membership':
-        return <ProMembershipView />;
-      case 'privacy-policy':
-        return <PrivacyPolicyView />;
-      case 'terms-conditions':
-        return <TermsConditionsView />;
-      case 'refund-policy':
-        return <RefundPolicyView />;
-      case 'service-delivery-policy':
-        return <ServiceDeliveryPolicyView />;
-      case 'auth':
-        return <AuthView />;
-      case 'forgot-password':
-        return <ForgotPasswordView />;
-      case 'welcome':
-      default:
-        return <WelcomeScreen />;
-    }
-  }
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -70,24 +29,24 @@ export function MainPanel() {
 
          <div className="flex items-center gap-2">
             {isMobile && user && !studentProfile.isPro && (
-                <Button size="sm" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90" onClick={() => setView('pro-membership')}>
-                    <Sparkles className="mr-2 h-4 w-4"/>
-                    Upgrade
+                <Button size="sm" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90" asChild>
+                    <Link href="/pricing">
+                      <Sparkles className="mr-2 h-4 w-4"/>
+                      Upgrade
+                    </Link>
                 </Button>
             )}
             {isMobile && !user && (
-                <Button size="sm" variant="outline" onClick={() => setView('auth')}>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Login
+                <Button size="sm" variant="outline" asChild>
+                    <Link href="/auth">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Link>
                 </Button>
             )}
          </div>
       </header>
-      <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-4 sm:p-6 md:p-8 h-full">
-            {renderView()}
-        </div>
-      </main>
+      {children}
     </div>
   );
 }

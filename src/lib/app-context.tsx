@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -8,6 +7,7 @@ import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface AdContent {
     title: string;
@@ -61,7 +61,7 @@ const defaultProfile: StudentProfile = {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { user, firestore, isUserLoading } = useFirebase();
   const [studentProfile, setStudentProfileState] = useState<StudentProfile>(defaultProfile);
-  const [view, setView] = useState<AppView>('welcome');
+  const [view, setViewState] = useState<AppView>('welcome');
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -69,6 +69,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
   const [hasShownFirstAdToday, setHasShownFirstAdToday] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const setView = (view: AppView) => {
+    // If we're setting a view that's part of the main page, navigate home.
+    if (['welcome', 'explanation', 'quiz'].includes(view)) {
+      if(pathname !== '/') {
+        router.push('/');
+      }
+    } else {
+        router.push(`/${view}`);
+    }
+    setViewState(view);
+  };
 
 
   const getHistoryKey = useCallback(() => user ? `explanationHistory_${user.uid}` : null, [user]);
@@ -111,8 +125,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setHistory([]);
         }
       }
-      if (view === 'auth' || view === 'forgot-password') {
-          setView('welcome');
+      if (pathname === '/auth' || pathname === '/forgot-password') {
+          router.push('/');
       }
     } else {
       // Clear all data on logout
@@ -121,7 +135,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setHistory([]);
       setStudentProfileState(defaultProfile);
     }
-  }, [user, isUserLoading, getHistoryKey, view]);
+  }, [user, isUserLoading, getHistoryKey, pathname, router]);
 
 
   // Effect to sync Firestore profile with local state
@@ -360,5 +374,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
