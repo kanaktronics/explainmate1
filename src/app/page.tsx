@@ -154,7 +154,7 @@ function UserProfileSection() {
         return (
             <div className='p-2'>
                 <Button variant="outline" className="w-full" onClick={() => setView('auth')}>
-                    <LogIn />
+                    <LogIn className="mr-2 h-4 w-4" />
                     Sign Up / Login
                 </Button>
             </div>
@@ -192,7 +192,7 @@ function UserProfileSection() {
             </div>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut/>Logout</SidebarMenuButton>
+                    <SidebarMenuButton variant="ghost" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4"/>Logout</SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </>
@@ -231,7 +231,6 @@ function AppLayout() {
         <SidebarHeader>
           <AppLogo />
         </SidebarHeader>
-        {isMobile && <ProSection />}
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -248,7 +247,7 @@ function AppLayout() {
             </SidebarMenuItem>
           </SidebarMenu>
           <SidebarSeparator />
-          {!isMobile && <ProSection />}
+          <ProSection />
           <SidebarSeparator />
           <HistorySection />
         </SidebarContent>
