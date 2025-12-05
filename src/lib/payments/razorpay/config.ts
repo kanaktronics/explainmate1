@@ -1,3 +1,4 @@
+
 // This file holds the configuration for Razorpay.
 // In a real application, you would replace the placeholder values
 // with your actual Razorpay Key ID and Key Secret.
@@ -6,6 +7,6 @@
 // Use environment variables to keep them secure.
 
 export const razorpayConfig = {
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_RmlM1rK1DxWiJ8',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'ZAnMvdN3N2NBI3bYKUE8K1xv',
+  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 };
