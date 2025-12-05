@@ -152,11 +152,9 @@ function UserProfileSection() {
     if (!user) {
         return (
             <div className='p-2'>
-                <Button variant="outline" className="w-full" asChild>
-                    <Link href="/auth">
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Sign Up / Login
-                    </Link>
+                <Button variant="outline" className="w-full" href="/auth">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign Up / Login
                 </Button>
             </div>
         );
@@ -229,7 +227,9 @@ export function AppLayout({children}: {children: React.ReactNode}) {
         <AdPopup isOpen={isAdOpen} onClose={hideAd} title={adContent.title} description={adContent.description} />
         <Sidebar>
             <SidebarHeader>
-            <AppLogo />
+              <Link href="/" className='block'>
+                <AppLogo />
+              </Link>
             </SidebarHeader>
             <SidebarContent>
             <SidebarMenu>

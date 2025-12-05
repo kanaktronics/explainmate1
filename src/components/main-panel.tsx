@@ -19,7 +19,9 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
          <div className='flex items-center gap-4'>
             <SidebarTrigger className="md:hidden"/>
             <div className="md:hidden">
+              <Link href="/">
                 <AppLogo />
+              </Link>
             </div>
          </div>
          
