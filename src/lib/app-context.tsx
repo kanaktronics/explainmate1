@@ -77,17 +77,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   const setView = (view: AppView) => {
-    const isMainView = ['welcome', 'explanation', 'quiz'].includes(view);
-    const isAuthView = ['auth', 'forgot-password'].includes(view);
-    
-    if (isMainView) {
-      if(pathname !== '/') {
+    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz'];
+    if (mainViews.includes(view)) {
+      if (pathname !== '/') {
         router.push('/');
       }
-    } else if (isAuthView) {
-        router.push(`/${view}`);
+      setViewState(view);
+    } else {
+      router.push(`/${view}`);
     }
-    setViewState(view);
   };
 
 
@@ -381,4 +379,5 @@ export const useAppContext = () => {
   return context;
 };
 
+    
     

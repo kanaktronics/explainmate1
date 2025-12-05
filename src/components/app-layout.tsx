@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -136,7 +137,7 @@ function ProSection() {
 }
 
 function UserProfileSection() {
-    const { studentProfile, user, setView } = useAppContext();
+    const { studentProfile, user } = useAppContext();
     const { auth } = useFirebase();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -152,9 +153,11 @@ function UserProfileSection() {
     if (!user) {
         return (
             <div className='p-2'>
-                <Button variant="outline" className="w-full" href="/auth">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/auth">
                     <LogIn className="mr-2 h-4 w-4" />
                     Sign Up / Login
+                  </Link>
                 </Button>
             </div>
         );
@@ -287,3 +290,5 @@ export function AppLayout({children}: {children: React.ReactNode}) {
       </>
   );
 }
+
+    
