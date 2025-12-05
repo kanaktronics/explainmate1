@@ -68,6 +68,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
+  const [hasShownFirstAdToday, setHasShownFirstAdToday] = useState(false);
+
 
   const getHistoryKey = useCallback(() => user ? `explanationHistory_${user.uid}` : null, [user]);
 
@@ -147,14 +149,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
           isPro: isPro,
         };
+        
+        let isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
 
         // Daily usage reset logic
-        if (serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate))) {
+        if (isNewDay) {
           const updatedUsage = { dailyUsage: 0, dailyQuizUsage: 0, lastUsageDate: new Date().toISOString() };
           serverProfile = { ...serverProfile, ...updatedUsage };
           if (userProfileRef) {
             setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
           }
+          setHasShownFirstAdToday(false); // Reset ad flag for new day
         }
         
         const finalProfile: StudentProfile = {
@@ -165,6 +170,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
 
         setStudentProfileState(finalProfile);
+
+        // Show ad on first visit of the day for free users
+        if (!finalProfile.isPro && !hasShownFirstAdToday) {
+            showAd();
+            setHasShownFirstAdToday(true);
+        }
 
         const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
         setIsProfileComplete(isComplete);
@@ -181,7 +192,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setStudentProfileState(newProfile);
       setIsProfileComplete(false);
     }
-  }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef]);
+  }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef, hasShownFirstAdToday]);
 
   
   const setStudentProfile = (profile: Partial<StudentProfile>) => {
@@ -349,3 +360,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
