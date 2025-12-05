@@ -147,7 +147,6 @@ function UserProfileSection() {
     
     const handleLogout = () => {
         auth?.signOut();
-        setView('welcome');
     }
 
     if (!user) {

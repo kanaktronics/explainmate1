@@ -578,7 +578,7 @@ const SidebarMenuButton = React.forwardRef<
       />
     )
 
-    const buttonWithLink = href ? <Link href={href} passHref legacyBehavior>{React.cloneElement(button as React.ReactElement, {ref})}</Link> : button;
+    const buttonWithLink = href ? <Link href={href} >{button}</Link> : button;
 
     if (!tooltip) {
       return buttonWithLink
