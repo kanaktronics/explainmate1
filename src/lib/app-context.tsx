@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { StudentProfile, AppView, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
+import type { StudentProfile, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
 import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -13,6 +13,9 @@ interface AdContent {
     title: string;
     description: string;
 }
+
+type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'about' | 'contact' | 'pricing' | 'privacy-policy' | 'terms-conditions' | 'refund-policy' | 'service-delivery-policy';
+
 
 interface AppContextType {
   studentProfile: StudentProfile;
@@ -73,13 +76,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   const setView = (view: AppView) => {
-    // If we're setting a view that's part of the main page, navigate home.
     if (['welcome', 'explanation', 'quiz'].includes(view)) {
       if(pathname !== '/') {
         router.push('/');
       }
-    } else {
-        router.push(`/${view}`);
     }
     setViewState(view);
   };

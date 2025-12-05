@@ -1,4 +1,5 @@
 
+
 export interface StudentProfile {
   id?: string;
   name: string;
@@ -43,4 +44,4 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password';

@@ -235,13 +235,13 @@ export function AppLayout({children}: {children: React.ReactNode}) {
             <SidebarContent>
             <SidebarMenu>
                 <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleNewExplanation} href="/">
+                <SidebarMenuButton onClick={handleNewExplanation}>
                     <BookOpen />
                     New Chat
                 </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleNewQuiz} href="/">
+                <SidebarMenuButton onClick={handleNewQuiz}>
                     <HelpCircle />
                     New Quiz
                 </SidebarMenuButton>
