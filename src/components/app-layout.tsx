@@ -73,9 +73,9 @@ function HistorySection() {
         isClearingAll={showClearConfirm}
       />
       <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen} className='px-2'>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center px-2 py-1">
             <CollapsibleTrigger asChild>
-                <div className='flex flex-1 items-center gap-2 cursor-pointer p-2'>
+                <div className='flex flex-1 items-center gap-2 cursor-pointer'>
                   <div className='flex items-center gap-2 font-medium text-sm text-sidebar-foreground/70'>
                     <History />
                     History
@@ -91,9 +91,11 @@ function HistorySection() {
             <SidebarMenu>
               {history.map(item => (
                 <SidebarMenuItem key={item.id} className="group/item">
-                  <SidebarMenuButton variant="ghost" onClick={() => handleHistoryClick(item)} className="h-auto flex-col items-start justify-between relative">
-                    <span className="font-semibold text-sm truncate w-full">{item.topic}</span>
-                    <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</span>
+                  <SidebarMenuButton variant="ghost" onClick={() => handleHistoryClick(item)} className="h-auto items-start justify-between relative">
+                    <div className="flex w-full justify-between items-center">
+                        <span className="font-semibold text-sm truncate">{item.topic}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</span>
+                    </div>
                   </SidebarMenuButton>
                   <button onClick={(e) => handleDeleteClick(e, item)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover/item:opacity-100 transition-opacity">
                     <Trash2 className="h-4 w-4" />
