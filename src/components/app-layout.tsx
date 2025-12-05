@@ -72,9 +72,8 @@ function HistorySection() {
         onConfirm={itemToDelete ? confirmDelete : confirmClear}
         isClearingAll={showClearConfirm}
       />
-      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <SidebarGroup>
-          <div className='flex justify-between items-center w-full'>
+      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen} className='px-2'>
+        <div className="flex justify-between items-center">
             <CollapsibleTrigger asChild>
                 <div className='flex flex-1 items-center gap-2 cursor-pointer p-2'>
                   <div className='flex items-center gap-2 font-medium text-sm text-sidebar-foreground/70'>
@@ -84,12 +83,10 @@ function HistorySection() {
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isHistoryOpen ? 'rotate-180' : ''}`} />
                 </div>
             </CollapsibleTrigger>
-            <div className='flex items-center gap-1'>
-                <Button variant="ghost" size="icon" className='h-6 w-6' onClick={() => setShowClearConfirm(true)}>
-                  <X />
-                </Button>
-            </div>
-          </div>
+            <Button variant="ghost" size="icon" className='h-6 w-6' onClick={() => setShowClearConfirm(true)}>
+                <X className='w-4 h-4'/>
+            </Button>
+        </div>
           <CollapsibleContent>
             <SidebarMenu>
               {history.map(item => (
@@ -105,7 +102,6 @@ function HistorySection() {
               ))}
             </SidebarMenu>
           </CollapsibleContent>
-        </SidebarGroup>
       </Collapsible>
     </>
   )
