@@ -6,6 +6,6 @@
 // Use environment variables to keep them secure.
 
 export const razorpayConfig = {
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'YOUR_KEY_ID_HERE',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'YOUR_KEY_SECRET_HERE',
+  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_RnqyYTgS9TsvAc',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'RAwvliHBWHAJvxR5AYxMx0N',
 };
