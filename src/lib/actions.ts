@@ -64,16 +64,21 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
       throw new Error('AI did not return a response.');
     }
     
-    // Check if the AI decided it couldn't answer.
+    // Handle the special "who created you" case
+    if (result.fairWork.includes("Kanak Raj")) {
+        return {
+            explanation: result.fairWork,
+            roughWork: 'N/A',
+            realWorldExamples: 'N/A',
+            fairWork: 'N/A',
+        };
+    }
+
+    // Check if the AI decided it couldn't answer (for non-educational questions).
     if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
         return { error: "I can only answer educational questions. Please ask me something related to your studies." };
     }
     
-    // Handle the special "who created you" case
-    if (result.fairWork.includes("Kanak Raj")) {
-        return { error: result.fairWork };
-    }
-
     return result;
   } catch (e: any) {
     console.error(`An unexpected error occurred:`, e);
