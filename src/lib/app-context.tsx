@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -307,19 +308,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setView('explanation');
   };
   
+  // Effect to show recurring ad for free users
   useEffect(() => {
+    let adInterval: NodeJS.Timeout | undefined;
+
+    // Only set the interval if the user is logged in and not a pro member.
     if (user && !studentProfile.isPro) {
-      const adShownKey = `adShown_${user.uid}`;
-      const adShown = sessionStorage.getItem(adShownKey);
-      if (!adShown) {
-        const timer = setTimeout(() => {
-          showAd();
-          sessionStorage.setItem(adShownKey, 'true');
-        }, 30000);
-        return () => clearTimeout(timer);
-      }
+        // Set an interval to show the ad every hour (3600000 milliseconds)
+        adInterval = setInterval(() => {
+            showAd();
+        }, 3600 * 1000);
     }
-  }, [user, studentProfile.isPro]);
+
+    // Cleanup function: This will be called when the component unmounts
+    // or when the dependencies (user, studentProfile.isPro) change.
+    return () => {
+        if (adInterval) {
+            clearInterval(adInterval);
+        }
+    };
+  }, [user, studentProfile.isPro]); // Rerun effect if user or pro status changes
 
   const value = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
