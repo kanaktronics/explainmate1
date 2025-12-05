@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { TermsConditionsView } from './terms-conditions-view';
 import { PrivacyPolicyView } from './privacy-policy-view';
 import { ScrollArea } from './ui/scroll-area';
+import Link from 'next/link';
 
 const signUpSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -200,8 +201,8 @@ export function AuthView() {
                       <Button type="submit" className="w-full" disabled={isSubmitting}>
                         {isSubmitting ? 'Signing In...' : 'Sign In'}
                       </Button>
-                       <Button variant="link" size="sm" className="w-full" onClick={() => setView('forgot-password')}>
-                        Forgot Password?
+                       <Button variant="link" size="sm" className="w-full" asChild>
+                        <Link href="/forgot-password">Forgot Password?</Link>
                       </Button>
                     </form>
                   </Form>
