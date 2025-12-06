@@ -76,8 +76,13 @@ const SidebarProvider = React.forwardRef<
     )
 
     const toggleSidebar = React.useCallback(() => {
-      setOpen((open) => !open)
-    }, [setOpen])
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          setOpenMobile(true);
+        } else {
+          setOpen((open) => !open)
+        }
+    }, [setOpen, setOpenMobile])
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
@@ -94,7 +99,7 @@ const SidebarProvider = React.forwardRef<
       <SidebarContext.Provider value={contextValue}>
         <TooltipProvider delayDuration={0}>
           <div
-            className={cn("flex min-h-svh w-full", className)}
+            className={cn("flex w-full", className)}
             ref={ref}
             {...props}
           >
@@ -152,7 +157,7 @@ const Sidebar = React.forwardRef<
         <aside
           ref={ref}
           className={cn(
-              "hidden md:flex flex-col h-screen border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+              "hidden md:flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out sticky top-0 h-screen",
               open ? "w-64" : "w-16",
               className
           )}
@@ -170,7 +175,7 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, setOpenMobile } = useSidebar()
+  const { toggleSidebar } = useSidebar()
 
   return (
     <Button
@@ -180,12 +185,7 @@ const SidebarTrigger = React.forwardRef<
       className={cn("h-7 w-7", className)}
       onClick={(event) => {
         onClick?.(event)
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-          setOpenMobile(true);
-        } else {
-          toggleSidebar();
-        }
+        toggleSidebar()
       }}
       {...props}
     >

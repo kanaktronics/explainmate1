@@ -137,9 +137,8 @@ export function ExplanationView() {
   const promptValue = form.watch('prompt');
   
   useEffect(() => {
-    if (resultsRef.current) {
-        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
+    // This scrolls the whole window, which is now intended
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }, [chat, error, isLoading]);
 
 
@@ -274,7 +273,7 @@ export function ExplanationView() {
 
   return (
     <div className="flex flex-col h-full">
-       <div className="flex-1 overflow-y-auto p-1 space-y-8">
+       <div className="flex-1 space-y-8 p-1">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
         <div ref={resultsRef}>
