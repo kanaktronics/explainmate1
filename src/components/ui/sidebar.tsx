@@ -8,7 +8,6 @@ import { PanelLeft } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -28,7 +27,6 @@ type SidebarContext = {
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
-  isMobile: boolean
   toggleSidebar: () => void
 }
 
@@ -60,7 +58,6 @@ const SidebarProvider = React.forwardRef<
     },
     ref
   ) => {
-    const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
 
     const [_open, _setOpen] = React.useState(true)
@@ -78,22 +75,18 @@ const SidebarProvider = React.forwardRef<
     )
 
     const toggleSidebar = React.useCallback(() => {
-      return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
-    }, [isMobile, setOpen, setOpenMobile])
-
+      setOpen((open) => !open)
+    }, [setOpen])
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
         open,
         setOpen,
-        isMobile,
         openMobile,
         setOpenMobile,
         toggleSidebar,
       }),
-      [open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [open, setOpen, openMobile, setOpenMobile, toggleSidebar]
     )
 
     return (
@@ -125,46 +118,46 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, open, openMobile, setOpenMobile } = useSidebar()
-
-    if (isMobile) {
-      const header = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarHeader);
-      const content = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarContent);
-      const footer = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarFooter);
-      
-      return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-          <SheetContent
-            className="w-72 bg-sidebar p-0 text-sidebar-foreground flex flex-col"
-            side="left"
-          >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Main Menu</SheetTitle>
-            </SheetHeader>
-            {header}
-            <ScrollArea className="flex-1 h-full">
-              <div className="flex h-full w-full flex-col">
-                {content}
-              </div>
-            </ScrollArea>
-            {footer}
-          </SheetContent>
-        </Sheet>
-      )
-    }
+    const { open, openMobile, setOpenMobile } = useSidebar()
+    
+    const header = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarHeader);
+    const content = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarContent);
+    const footer = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarFooter);
 
     return (
-      <aside
-        ref={ref}
-        className={cn(
-            "hidden md:flex flex-col h-screen w-64 border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
-            !open && "w-16",
-            className
-        )}
-        {...props}
-      >
-        {children}
-      </aside>
+      <>
+        {/* Mobile Sidebar */}
+        <div className="md:hidden">
+          <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+            <SheetContent
+              className="w-72 bg-sidebar p-0 text-sidebar-foreground flex flex-col"
+              side="left"
+            >
+              <SheetHeader className="sr-only">
+                <SheetTitle>Main Menu</SheetTitle>
+              </SheetHeader>
+              {header}
+              <ScrollArea className="flex-1 h-full">
+                  {content}
+              </ScrollArea>
+              {footer}
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Desktop Sidebar */}
+        <aside
+          ref={ref}
+          className={cn(
+              "hidden md:flex flex-col h-screen border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+              open ? "w-64" : "w-16",
+              className
+          )}
+          {...props}
+        >
+          {children}
+        </aside>
+      </>
     )
   }
 )
@@ -174,7 +167,7 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, setOpenMobile } = useSidebar()
 
   return (
     <Button
@@ -184,7 +177,12 @@ const SidebarTrigger = React.forwardRef<
       className={cn("h-7 w-7", className)}
       onClick={(event) => {
         onClick?.(event)
-        toggleSidebar()
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          setOpenMobile(true);
+        } else {
+          toggleSidebar();
+        }
       }}
       {...props}
     >
@@ -231,7 +229,7 @@ const SidebarFooter = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("mt-auto flex flex-col gap-2 p-4 border-t", className)}
+      className={cn("mt-auto p-4 border-t", className)}
       {...props}
     />
   )
@@ -256,29 +254,16 @@ const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
-  const { isMobile } = useSidebar();
-
-  if (isMobile) {
-    return (
-       <div
-          ref={ref}
-          className={cn(
-            "flex min-h-0 flex-1 flex-col gap-2 p-4",
-            className
-          )}
-          {...props}
-        />
-    )
-  }
-  
   return (
-    <ScrollArea
+    <div
       ref={ref}
-      className={cn("flex-1", className)}
-    >
-      <div className="p-4" {...props} />
-    </ScrollArea>
-  )
+      className={cn(
+        "flex flex-col gap-2 p-4",
+        className
+      )}
+      {...props}
+    />
+  );
 })
 SidebarContent.displayName = "SidebarContent"
 
