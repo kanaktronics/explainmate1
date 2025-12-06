@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ScrollArea } from "./scroll-area"
 
 
 type SidebarContext = {
@@ -130,13 +131,14 @@ const Sidebar = React.forwardRef<
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
           <SheetContent
-            className="w-72 bg-sidebar p-0 text-sidebar-foreground"
+            className="w-72 bg-sidebar p-0 text-sidebar-foreground flex flex-col"
             side="left"
           >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Main Menu</SheetTitle>
-            </SheetHeader>
-            <div className="flex h-full w-full flex-col">{children}</div>
+            <ScrollArea className="h-full">
+              <div className="flex h-full w-full flex-col">
+                {children}
+              </div>
+            </ScrollArea>
           </SheetContent>
         </Sheet>
       )
@@ -206,7 +208,7 @@ const SidebarHeader = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex items-center p-4 border-b", !open && "justify-center", className)}
+      className={cn("flex items-center p-4 border-b sticky top-0 bg-sidebar z-10", !open && "justify-center", className)}
       {...props}
     />
   )
@@ -220,7 +222,7 @@ const SidebarFooter = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn("mt-auto flex flex-col gap-2 p-4 border-t sticky bottom-0 bg-sidebar z-10", className)}
       {...props}
     />
   )

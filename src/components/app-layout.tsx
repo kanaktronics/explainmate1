@@ -137,7 +137,7 @@ function ProSection() {
 function UserProfileSection() {
     const { studentProfile, user } = useAppContext();
     const { auth } = useFirebase();
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(true);
 
     const getInitials = (name?: string | null) => {
         if (!name || typeof name !== 'string') return 'U';
