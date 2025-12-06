@@ -134,6 +134,9 @@ const Sidebar = React.forwardRef<
             className="w-72 bg-sidebar p-0 text-sidebar-foreground flex flex-col"
             side="left"
           >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Main Menu</SheetTitle>
+            </SheetHeader>
             <ScrollArea className="h-full">
               <div className="flex h-full w-full flex-col">
                 {children}
