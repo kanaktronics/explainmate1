@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -124,7 +123,7 @@ export function ExplanationView() {
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
-  const resultsRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const maxPromptLength = studentProfile.isPro ? MAX_PROMPT_LENGTH_PRO : MAX_PROMPT_LENGTH_FREE;
@@ -137,9 +136,8 @@ export function ExplanationView() {
   const promptValue = form.watch('prompt');
   
   useEffect(() => {
-    // This scrolls the whole window, which is now intended
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  }, [chat, error, isLoading]);
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chat, isLoading, error]);
 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -276,32 +274,31 @@ export function ExplanationView() {
        <div className="flex-1 space-y-8 p-1">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
-        <div ref={resultsRef}>
-            {isLoading && (
-              <div className='flex items-start gap-4'>
-                <Avatar className="bg-primary flex-shrink-0">
-                  <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
-                </Avatar>
-                <Card className='w-full'>
-                    <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
-                    <CardContent className="space-y-4">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </CardContent>
-                </Card>
-              </div>
-            )}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-        </div>
+        
+        {isLoading && (
+          <div className='flex items-start gap-4'>
+            <Avatar className="bg-primary flex-shrink-0">
+              <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+            </Avatar>
+            <Card className='w-full'>
+                <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardContent>
+            </Card>
+          </div>
+        )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <div ref={chatEndRef} />
       </div>
-
 
       <div className="p-4 bg-background/80 backdrop-blur-sm sticky bottom-0">
         <Card className="max-w-4xl mx-auto">

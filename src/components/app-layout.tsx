@@ -1,13 +1,10 @@
 
-
 'use client';
 
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -137,8 +134,7 @@ function ProSection() {
 function UserProfileSection() {
     const { studentProfile, user } = useAppContext();
     const { auth } = useFirebase();
-    const [isProfileOpen, setIsProfileOpen] = useState(true);
-
+    
     const getInitials = (name?: string | null) => {
         if (!name || typeof name !== 'string') return 'U';
         return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
@@ -163,20 +159,12 @@ function UserProfileSection() {
 
     return (
         <>
-            <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                <SidebarGroup>
-                    <CollapsibleTrigger className='w-full'>
-                        <SidebarGroupLabel className='flex justify-between items-center cursor-pointer'>
-                            Student Profile
-                            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
-                        </SidebarGroupLabel>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <StudentProfile />
-                    </CollapsibleContent>
-                </SidebarGroup>
+            <Collapsible defaultOpen>
+                <CollapsibleContent>
+                    <StudentProfile />
+                </CollapsibleContent>
             </Collapsible>
-             <SidebarSeparator/>
+            <SidebarSeparator/>
             <div className="flex items-center gap-3 px-4">
                 <Avatar>
                     <AvatarImage src={`https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${studentProfile.name}`} />

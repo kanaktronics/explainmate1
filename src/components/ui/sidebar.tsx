@@ -163,7 +163,11 @@ const Sidebar = React.forwardRef<
           )}
           {...props}
         >
-          {children}
+           {header}
+            <ScrollArea className="flex-1">
+              {content}
+            </ScrollArea>
+           {footer}
         </aside>
       </>
     )
@@ -232,7 +236,7 @@ const SidebarFooter = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("mt-auto p-4 border-t", className)}
+      className={cn("mt-auto p-2 border-t", className)}
       {...props}
     />
   )

@@ -12,7 +12,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
   const { studentProfile, user } = useAppContext();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background">
       <header className="p-4 border-b flex items-center justify-between gap-4 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
          <div className='flex items-center gap-4'>
             <SidebarTrigger />
@@ -46,7 +46,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1">
+      <main className="flex-1 overflow-y-auto">
         {children}
       </main>
     </div>
