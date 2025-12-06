@@ -19,6 +19,9 @@ const fontHeadline = Belleza({
 export const metadata: Metadata = {
   title: 'ExplainMate AI Tutor',
   description: 'Your personal AI-powered tutor',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
