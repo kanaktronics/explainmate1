@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ScrollArea } from "./scroll-area"
+import { ClientOnly } from "../client-only"
 
 
 type SidebarContext = {
@@ -137,9 +138,11 @@ const Sidebar = React.forwardRef<
                 <SheetTitle>Main Menu</SheetTitle>
               </SheetHeader>
               {header}
-              <ScrollArea className="flex-1 h-full">
-                  {content}
-              </ScrollArea>
+              <ClientOnly>
+                <ScrollArea className="flex-1 h-full">
+                    {content}
+                </ScrollArea>
+              </ClientOnly>
               {footer}
             </SheetContent>
           </Sheet>
@@ -254,12 +257,11 @@ const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
-  const { open } = useSidebar();
   return (
-    <ScrollArea
+    <div
       ref={ref}
       className={cn(
-        "flex-1 h-full",
+        "flex flex-col gap-2 p-4",
         className
       )}
       {...props}
@@ -275,7 +277,7 @@ const SidebarGroup = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex flex-col gap-1 p-4", className)}
+      className={cn("flex flex-col gap-1", className)}
       {...props}
     />
   )
@@ -311,7 +313,7 @@ const SidebarMenu = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ul
     ref={ref}
-    className={cn("flex w-full min-w-0 flex-col gap-1 px-4", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-1", className)}
     {...props}
   />
 ))

@@ -72,8 +72,8 @@ function HistorySection() {
         onConfirm={itemToDelete ? confirmDelete : confirmClear}
         isClearingAll={showClearConfirm}
       />
-      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen} className='px-2'>
-        <div className="flex justify-between items-center px-2 py-1">
+      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+         <div className="flex justify-between items-center px-4 py-1">
             <CollapsibleTrigger asChild>
                 <div className='flex flex-1 items-center gap-2 cursor-pointer'>
                   <div className='flex items-center gap-2 font-medium text-sm text-sidebar-foreground/70'>
@@ -116,14 +116,14 @@ function ProSection() {
 
     if (studentProfile.isPro) {
         return (
-            <div className="px-4 py-2 text-sm font-medium text-center text-primary bg-yellow-400/20 rounded-lg mx-2 border border-yellow-400/50">
+            <div className="px-4 py-2 text-sm font-medium text-center text-primary bg-yellow-400/20 rounded-lg mx-4 border border-yellow-400/50">
                 You are using ExplainMate Pro ✨
             </div>
         )
     }
 
     return (
-        <div className="p-2">
+        <div className="px-4">
             <Button className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:opacity-90" asChild>
               <Link href="/pricing">
                 <Sparkles className="mr-2 h-4 w-4"/>
@@ -150,7 +150,7 @@ function UserProfileSection() {
 
     if (!user) {
         return (
-            <div className='p-2'>
+            <div className='p-4'>
                 <Button variant="outline" className="w-full" asChild>
                   <Link href="/auth">
                     <LogIn className="mr-2 h-4 w-4" />
@@ -177,7 +177,7 @@ function UserProfileSection() {
                 </SidebarGroup>
             </Collapsible>
              <SidebarSeparator/>
-            <div className="flex items-center gap-3 px-2">
+            <div className="flex items-center gap-3 px-4">
                 <Avatar>
                     <AvatarImage src={`https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${studentProfile.name}`} />
                     <AvatarFallback>{getInitials(studentProfile.name)}</AvatarFallback>
@@ -252,7 +252,7 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                 <SidebarSeparator />
                 <HistorySection />
                 <SidebarSeparator />
-                <SidebarMenu>
+                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton variant="ghost" href="/about"><Info/>About</SidebarMenuButton>
                     </SidebarMenuItem>
