@@ -28,6 +28,11 @@ const quizSetupSchema = z.object({
 
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
 
+const quizAnswersSchema = z.object({
+    answers: z.record(z.string()),
+});
+
+
 export function QuizView() {
   const { user, studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
@@ -36,12 +41,17 @@ export function QuizView() {
   const [showResults, setShowResults] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof quizSetupSchema>>({
+  const setupForm = useForm<z.infer<typeof quizSetupSchema>>({
     resolver: zodResolver(quizSetupSchema),
     defaultValues: { topic: '', numQuestions: 5, difficulty: 'Medium' },
   });
 
-  const numQuestionsValue = form.watch('numQuestions');
+  const answersForm = useForm<z.infer<typeof quizAnswersSchema>>({
+    resolver: zodResolver(quizAnswersSchema),
+    defaultValues: { answers: {} },
+  });
+
+  const numQuestionsValue = setupForm.watch('numQuestions');
 
   async function onSubmit(values: z.infer<typeof quizSetupSchema>) {
     if (!user) {
@@ -71,6 +81,7 @@ export function QuizView() {
     setQuiz(null);
     setUserAnswers({});
     setShowResults(false);
+    answersForm.reset({ answers: {} });
 
     if (!studentProfile.isPro) {
         incrementUsage('quiz');
@@ -102,20 +113,25 @@ export function QuizView() {
   }
 
   const handleAnswerChange = (questionIndex: number, selectedOption: string) => {
-    setUserAnswers(prev => ({ ...prev, [questionIndex]: { selected: selectedOption, isCorrect: false } }));
+    answersForm.setValue(`answers.${questionIndex}`, selectedOption);
   };
 
-  const checkAnswers = () => {
+  const checkAnswers = (data: z.infer<typeof quizAnswersSchema>) => {
     if (!quiz) return;
     let score = 0;
-    const updatedAnswers = { ...userAnswers };
+    const answered = data.answers;
+    const evaluatedAnswers: UserAnswers = {};
+
     quiz.quiz.forEach((q, index) => {
-        if(updatedAnswers[index]?.selected === q.correctAnswer) {
-            updatedAnswers[index].isCorrect = true;
-            score++;
-        }
+      const selected = answered[index];
+      if (selected) {
+        const isCorrect = selected === q.correctAnswer;
+        if(isCorrect) score++;
+        evaluatedAnswers[index] = { selected, isCorrect };
+      }
     });
-    setUserAnswers(updatedAnswers);
+
+    setUserAnswers(evaluatedAnswers);
     setShowResults(true);
     toast({
         title: "Quiz Finished!",
@@ -124,7 +140,8 @@ export function QuizView() {
   };
   
   const score = Object.values(userAnswers).filter(a => a.isCorrect).length;
-  const progress = quiz ? (Object.keys(userAnswers).length / quiz.quiz.length) * 100 : 0;
+  const answeredQuestions = Object.keys(answersForm.watch('answers') || {}).length;
+  const progress = quiz ? (answeredQuestions / quiz.quiz.length) * 100 : 0;
 
   if (isLoading) return <LoadingSkeleton />;
   if (error) return <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
@@ -138,10 +155,10 @@ export function QuizView() {
             <CardDescription>Enter a topic to test your knowledge. Free users get 1 quiz per day.</CardDescription>
             </CardHeader>
             <CardContent>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <Form {...setupForm}>
+                <form onSubmit={setupForm.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
-                    control={form.control}
+                    control={setupForm.control}
                     name="topic"
                     render={({ field }) => (
                     <FormItem>
@@ -156,7 +173,7 @@ export function QuizView() {
                 {studentProfile.isPro && (
                     <>
                     <FormField
-                    control={form.control}
+                    control={setupForm.control}
                     name="numQuestions"
                     render={({ field }) => (
                         <FormItem>
@@ -174,7 +191,7 @@ export function QuizView() {
                     )}
                     />
                     <FormField
-                        control={form.control}
+                        control={setupForm.control}
                         name="difficulty"
                         render={({ field }) => (
                         <FormItem className="space-y-3">
@@ -219,83 +236,82 @@ export function QuizView() {
   return (
     <div className="space-y-8 p-4">
         <div className='py-4 bg-background/80 backdrop-blur-sm z-10'>
-          <h2 className="text-3xl font-headline text-center mb-2">Quiz: {form.getValues('topic')}</h2>
+          <h2 className="text-3xl font-headline text-center mb-2">Quiz: {setupForm.getValues('topic')}</h2>
           {showResults && <h3 className="text-xl font-semibold text-center text-primary">Your Score: {score}/{quiz.quiz.length}</h3>}
           {!showResults && <Progress value={progress} className="w-full max-w-2xl mx-auto" />}
         </div>
-      {quiz.quiz.map((q, index) => (
-        <QuizCard 
-            key={index} 
-            q={q} 
-            index={index} 
-            userAnswer={userAnswers[index]} 
-            onAnswerChange={handleAnswerChange}
-            showResult={showResults}
-        />
-      ))}
-      <div className="flex justify-center gap-4">
-        {!showResults ? (
-             <Button onClick={checkAnswers} disabled={Object.keys(userAnswers).length !== quiz.quiz.length}>Check Answers</Button>
-        ) : (
-            <Button onClick={() => { setQuiz(null); form.reset({ topic: '', numQuestions: 5, difficulty: 'Medium' }); }}>Try Another Quiz</Button>
-        )}
-      </div>
+        <Form {...answersForm}>
+            <form onSubmit={answersForm.handleSubmit(checkAnswers)} className="space-y-8">
+              {quiz.quiz.map((q, index) => (
+                <QuizCard 
+                    key={index} 
+                    q={q} 
+                    index={index} 
+                    userAnswer={userAnswers[index]} 
+                    onAnswerChange={handleAnswerChange}
+                    showResult={showResults}
+                    control={answersForm.control}
+                    disabled={showResults}
+                />
+              ))}
+              <div className="flex justify-center gap-4">
+                {!showResults ? (
+                    <Button type="submit" disabled={answeredQuestions !== quiz.quiz.length}>Check Answers</Button>
+                ) : (
+                    <Button onClick={() => { setQuiz(null); setupForm.reset({ topic: '', numQuestions: 5, difficulty: 'Medium' }); }}>Try Another Quiz</Button>
+                )}
+              </div>
+            </form>
+        </Form>
     </div>
   );
 }
 
-const QuizCard = ({ q, index, userAnswer, onAnswerChange, showResult }: { q: QuizQuestion, index: number, userAnswer: {selected: string, isCorrect: boolean} | undefined, onAnswerChange: (index: number, option: string) => void, showResult: boolean }) => {
+const QuizCard = ({ q, index, userAnswer, onAnswerChange, showResult, control, disabled }: { q: QuizQuestion, index: number, userAnswer: UserAnswers[number] | undefined, onAnswerChange: (index: number, option: string) => void, showResult: boolean, control: any, disabled: boolean }) => {
     const isAnswered = !!userAnswer;
     const isCorrect = isAnswered && userAnswer.isCorrect;
-    const selected = isAnswered && userAnswer.selected;
+    const selected = isAnswered ? userAnswer.selected : '';
     
-    // Each QuizCard is its own form now
-    const form = useForm();
-
     return (
-        <Card key={index} className={`${showResult && isAnswered ? (isCorrect ? 'border-green-500' : 'border-red-500') : ''}`}>
-          <Form {...form}>
-            <form>
-              <CardHeader>
-                <CardTitle>{index + 1}. {q.question}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name={`question_${index}`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <RadioGroup onValueChange={(value) => onAnswerChange(index, value)} disabled={showResult} value={selected || ''}>
-                          {q.options.map((option, i) => {
-                            const isSelected = selected === option;
-                            const isCorrectAnswer = q.correctAnswer === option;
-                            
-                            let indicatorClass = "";
-                            if (showResult && isCorrectAnswer) indicatorClass = "text-green-500";
-                            if (showResult && isSelected && !isCorrectAnswer) indicatorClass = "text-red-500";
+        <Card className={`${showResult && isAnswered ? (isCorrect ? 'border-green-500' : 'border-red-500') : ''}`}>
+          <CardHeader>
+            <CardTitle>{index + 1}. {q.question}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FormField
+              control={control}
+              name={`answers.${index}`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={disabled}>
+                      {q.options.map((option, i) => {
+                        const isSelected = field.value === option;
+                        const isCorrectAnswer = q.correctAnswer === option;
+                        
+                        let indicatorClass = "";
+                        if (showResult && isCorrectAnswer) indicatorClass = "text-green-500";
+                        if (showResult && isSelected && !isCorrectAnswer) indicatorClass = "text-red-500";
 
-                            return (
-                              <FormItem key={i} className={`flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors ${showResult && isCorrectAnswer ? 'bg-green-500/10' : ''} ${showResult && isSelected && !isCorrectAnswer ? 'bg-red-500/10' : ''}`}>
-                                <FormControl>
-                                  <RadioGroupItem value={option} />
-                                </FormControl>
-                                <FormLabel className={`font-normal flex-1 ${indicatorClass}`}>
-                                  {option}
-                                </FormLabel>
-                                {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
-                                {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
-                              </FormItem>
-                            );
-                          })}
-                        </RadioGroup>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </form>
-          </Form>
+                        return (
+                          <FormItem key={i} className={`flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors ${showResult && isCorrectAnswer ? 'bg-green-500/10' : ''} ${showResult && isSelected && !isCorrectAnswer ? 'bg-red-500/10' : ''}`}>
+                            <FormControl>
+                              <RadioGroupItem value={option} />
+                            </FormControl>
+                            <FormLabel className={`font-normal flex-1 ${indicatorClass}`}>
+                              {option}
+                            </FormLabel>
+                            {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
+                            {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
+                          </FormItem>
+                        );
+                      })}
+                    </RadioGroup>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </CardContent>
           {showResult && (
             <CardFooter>
                 <Alert variant={isCorrect ? 'default' : 'destructive'} className={`${isCorrect ? 'bg-green-500/10 border-green-500/50' : ''}`}>
@@ -324,3 +340,5 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
+
+    
