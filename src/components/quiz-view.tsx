@@ -131,92 +131,94 @@ export function QuizView() {
 
   if (!quiz) {
     return (
-      <Card className="max-w-lg mx-auto">
-        <CardHeader>
-          <CardTitle className="font-headline text-2xl">Create a New Quiz</CardTitle>
-          <CardDescription>Enter a topic to test your knowledge. Free users get 1 quiz per day.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
-                name="topic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Topic</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., The Solar System" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {studentProfile.isPro && (
-                <>
-                <FormField
-                  control={form.control}
-                  name="numQuestions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Questions: {numQuestionsValue}</FormLabel>
-                      <FormControl>
-                        <Slider
-                          min={1}
-                          max={15}
-                          step={1}
-                          value={[field.value]}
-                          onValueChange={(value) => field.onChange(value[0])}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+      <div className='p-4'>
+        <Card className="max-w-lg mx-auto">
+            <CardHeader>
+            <CardTitle className="font-headline text-2xl">Create a New Quiz</CardTitle>
+            <CardDescription>Enter a topic to test your knowledge. Free users get 1 quiz per day.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                     control={form.control}
-                    name="difficulty"
+                    name="topic"
                     render={({ field }) => (
-                    <FormItem className="space-y-3">
-                        <FormLabel>Difficulty</FormLabel>
+                    <FormItem>
+                        <FormLabel>Topic</FormLabel>
                         <FormControl>
-                        <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                        >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl><RadioGroupItem value="Easy" /></FormControl>
-                                <FormLabel className="font-normal">Easy</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl><RadioGroupItem value="Medium" /></FormControl>
-                                <FormLabel className="font-normal">Medium</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl><RadioGroupItem value="Hard" /></FormControl>
-                                <FormLabel className="font-normal">Hard</FormLabel>
-                            </FormItem>
-                        </RadioGroup>
+                        <Input placeholder="e.g., The Solar System" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
                 />
-                </>
-              )}
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Generating Quiz...' : 'Start Quiz'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                {studentProfile.isPro && (
+                    <>
+                    <FormField
+                    control={form.control}
+                    name="numQuestions"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Number of Questions: {numQuestionsValue}</FormLabel>
+                        <FormControl>
+                            <Slider
+                            min={1}
+                            max={15}
+                            step={1}
+                            value={[field.value]}
+                            onValueChange={(value) => field.onChange(value[0])}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="difficulty"
+                        render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Difficulty</FormLabel>
+                            <FormControl>
+                            <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex flex-col space-y-1"
+                            >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="Easy" /></FormControl>
+                                    <FormLabel className="font-normal">Easy</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="Medium" /></FormControl>
+                                    <FormLabel className="font-normal">Medium</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="Hard" /></FormControl>
+                                    <FormLabel className="font-normal">Hard</FormLabel>
+                                </FormItem>
+                            </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    </>
+                )}
+                <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading ? 'Generating Quiz...' : 'Start Quiz'}
+                </Button>
+                </form>
+            </Form>
+            </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-        <div className='sticky top-0 py-4 bg-background/80 backdrop-blur-sm z-10'>
+    <div className="space-y-8 p-4">
+        <div className='py-4 bg-background/80 backdrop-blur-sm z-10'>
           <h2 className="text-3xl font-headline text-center mb-2">Quiz: {form.getValues('topic')}</h2>
           {showResults && <h3 className="text-xl font-semibold text-center text-primary">Your Score: {score}/{quiz.quiz.length}</h3>}
           {!showResults && <Progress value={progress} className="w-full max-w-2xl mx-auto" />}
@@ -307,7 +309,7 @@ const QuizCard = ({ q, index, userAnswer, onAnswerChange, showResult }: { q: Qui
 };
 
 const LoadingSkeleton = () => (
-  <div className="space-y-4">
+  <div className="space-y-4 p-4">
     <Skeleton className="h-10 w-1/3 mx-auto" />
     {[...Array(3)].map((_, i) => (
       <Card key={i}>

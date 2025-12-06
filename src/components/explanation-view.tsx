@@ -270,8 +270,8 @@ export function ExplanationView() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-       <div className="flex-1 space-y-8 p-1">
+    <div className="flex flex-col">
+       <div className="flex-1 space-y-8 p-4">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
         
