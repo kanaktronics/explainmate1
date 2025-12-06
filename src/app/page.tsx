@@ -22,7 +22,7 @@ export default function Home() {
   }
 
   return (
-    <div className="container mx-auto p-2 sm:p-4 md:p-6 h-full">
+    <div className="container mx-auto p-2 sm:p-4 md:p-6">
         {renderView()}
     </div>
   );
