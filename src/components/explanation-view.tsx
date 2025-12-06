@@ -47,7 +47,7 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
         </Avatar>
         {hasMultipleTabs ? (
             <Tabs defaultValue="explanation" className="w-full">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
                     <TabsTrigger value="roughWork"><Codesandbox className="mr-2" />Rough Work</TabsTrigger>
                     <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World</TabsTrigger>
@@ -271,7 +271,7 @@ export function ExplanationView() {
 
   return (
     <div className="flex flex-col">
-       <div className="flex-1 space-y-8 p-4">
+       <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
         
