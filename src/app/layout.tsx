@@ -19,11 +19,11 @@ const fontHeadline = Belleza({
 export const metadata: Metadata = {
   title: 'ExplainMate AI Tutor',
   description: 'Your personal AI-powered tutor for simplifying any topic. Get step-by-step explanations, rough work, real-world examples, and quizzes.',
-  metadataBase: new URL('https://explainmate.ai'),
+  metadataBase: new URL('https://explainmate.tech'),
   openGraph: {
     title: 'ExplainMate AI Tutor',
     description: 'Your personal AI-powered tutor for simplifying any topic.',
-    url: 'https://explainmate.ai',
+    url: 'https://explainmate.tech',
     siteName: 'ExplainMate',
     images: [
       {
