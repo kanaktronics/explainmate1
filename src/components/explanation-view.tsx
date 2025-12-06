@@ -270,8 +270,8 @@ export function ExplanationView() {
   };
 
   return (
-    <div>
-       <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4">
+    <>
+       <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4 overflow-y-auto">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
         
@@ -300,7 +300,7 @@ export function ExplanationView() {
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-4 bg-background/80 backdrop-blur-sm sticky bottom-0">
+      <div className="p-4 bg-background/80 backdrop-blur-sm mt-auto">
         <Card className="max-w-4xl mx-auto">
           <CardContent className="p-2">
             <Form {...form}>
@@ -368,6 +368,6 @@ export function ExplanationView() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 }

@@ -15,7 +15,9 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-screen bg-background">
       <header className="p-4 border-b flex items-center justify-between gap-4 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
          <div className='flex items-center gap-4'>
-            <SidebarTrigger className="md:hidden" />
+            <div className="md:hidden">
+              <SidebarTrigger />
+            </div>
             <div className="md:hidden">
               <Link href="/">
                 <AppLogo />
@@ -46,7 +48,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1">
         {children}
       </main>
     </div>
