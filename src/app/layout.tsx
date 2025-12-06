@@ -4,7 +4,6 @@ import './globals.css';
 import { ClientLayout } from '@/components/client-layout';
 import { Alegreya, Belleza } from 'next/font/google';
 import { cn } from '@/lib/utils';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const fontBody = Alegreya({
   subsets: ['latin'],
@@ -17,8 +16,6 @@ const fontHeadline = Belleza({
   variable: '--font-headline',
 });
 
-const socialImage = PlaceHolderImages.find(p => p.id === 'social-share');
-
 export const metadata: Metadata = {
   title: 'ExplainMate AI Tutor',
   description: 'Your personal AI-powered tutor for simplifying any topic. Get step-by-step explanations, rough work, real-world examples, and quizzes.',
@@ -30,10 +27,10 @@ export const metadata: Metadata = {
     siteName: 'ExplainMate',
     images: [
       {
-        url: socialImage?.imageUrl || 'https://picsum.photos/seed/social-share/1200/630',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'ExplainMate AI Tutor',
+        alt: 'ExplainMate AI Tutor Social Preview',
       },
     ],
     locale: 'en_US',
@@ -43,7 +40,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'ExplainMate AI Tutor',
     description: 'Your personal AI-powered tutor for simplifying any topic.',
-    images: [socialImage?.imageUrl || 'https://picsum.photos/seed/social-share/1200/630'],
+    images: ['/og-image.png'],
   },
   icons: {
     icon: '/favicon.ico',
