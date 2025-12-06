@@ -47,7 +47,7 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
         </Avatar>
         {hasMultipleTabs ? (
             <Tabs defaultValue="explanation" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
                     <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
                     <TabsTrigger value="roughWork"><Codesandbox className="mr-2" />Rough Work</TabsTrigger>
                     <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World</TabsTrigger>
