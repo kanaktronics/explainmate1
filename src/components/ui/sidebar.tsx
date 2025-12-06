@@ -115,7 +115,7 @@ SidebarProvider.displayName = "SidebarProvider"
 
 const Sidebar = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div">
+  React.ComponentProps<"div"> & { children: React.ReactNode }
 >(
   (
     {
@@ -128,6 +128,10 @@ const Sidebar = React.forwardRef<
     const { isMobile, open, openMobile, setOpenMobile } = useSidebar()
 
     if (isMobile) {
+      const header = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarHeader);
+      const content = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarContent);
+      const footer = React.Children.toArray(children).find((child) => React.isValidElement(child) && child.type === SidebarFooter);
+      
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
           <SheetContent
@@ -137,11 +141,13 @@ const Sidebar = React.forwardRef<
             <SheetHeader className="sr-only">
               <SheetTitle>Main Menu</SheetTitle>
             </SheetHeader>
-            <ScrollArea className="h-full">
+            {header}
+            <ScrollArea className="flex-1 h-full">
               <div className="flex h-full w-full flex-col">
-                {children}
+                {content}
               </div>
             </ScrollArea>
+            {footer}
           </SheetContent>
         </Sheet>
       )
@@ -211,7 +217,7 @@ const SidebarHeader = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex items-center p-4 border-b sticky top-0 bg-sidebar z-10", !open && "justify-center", className)}
+      className={cn("flex items-center p-4 border-b", !open && "justify-center", className)}
       {...props}
     />
   )
@@ -225,7 +231,7 @@ const SidebarFooter = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("mt-auto flex flex-col gap-2 p-4 border-t sticky bottom-0 bg-sidebar z-10", className)}
+      className={cn("mt-auto flex flex-col gap-2 p-4 border-t", className)}
       {...props}
     />
   )
@@ -250,15 +256,28 @@ const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
+  const { isMobile } = useSidebar();
+
+  if (isMobile) {
+    return (
+       <div
+          ref={ref}
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-2 p-4",
+            className
+          )}
+          {...props}
+        />
+    )
+  }
+  
   return (
-    <div
+    <ScrollArea
       ref={ref}
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-4",
-        className
-      )}
-      {...props}
-    />
+      className={cn("flex-1", className)}
+    >
+      <div className="p-4" {...props} />
+    </ScrollArea>
   )
 })
 SidebarContent.displayName = "SidebarContent"
