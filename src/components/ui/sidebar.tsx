@@ -254,11 +254,12 @@ const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
+  const { open } = useSidebar();
   return (
-    <div
+    <ScrollArea
       ref={ref}
       className={cn(
-        "flex flex-col gap-2 p-4",
+        "flex-1 h-full",
         className
       )}
       {...props}
@@ -274,7 +275,7 @@ const SidebarGroup = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex flex-col gap-1", className)}
+      className={cn("flex flex-col gap-1 p-4", className)}
       {...props}
     />
   )
@@ -310,7 +311,7 @@ const SidebarMenu = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ul
     ref={ref}
-    className={cn("flex w-full min-w-0 flex-col gap-1", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-1 px-4", className)}
     {...props}
   />
 ))

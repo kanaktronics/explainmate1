@@ -233,26 +233,25 @@ export function AppLayout({children}: {children: React.ReactNode}) {
               </Link>
             </SidebarHeader>
             <SidebarContent>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleNewExplanation}>
-                    <BookOpen />
-                    New Chat
-                </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleNewQuiz}>
-                    <HelpCircle />
-                    New Quiz
-                </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-            <SidebarSeparator />
-            <ProSection />
-            <SidebarSeparator />
-            <HistorySection />
-            </SidebarContent>
-            <SidebarFooter>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleNewExplanation}>
+                        <BookOpen />
+                        New Chat
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleNewQuiz}>
+                        <HelpCircle />
+                        New Quiz
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+                <SidebarSeparator />
+                <ProSection />
+                <SidebarSeparator />
+                <HistorySection />
+                <SidebarSeparator />
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton variant="ghost" href="/about"><Info/>About</SidebarMenuButton>
@@ -276,7 +275,8 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                         <SidebarMenuButton variant="ghost" href="/service-delivery-policy"><Truck/>Service Delivery</SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-                <SidebarSeparator/>
+            </SidebarContent>
+            <SidebarFooter>
                 <UserProfileSection />
             </SidebarFooter>
         </Sidebar>
