@@ -49,7 +49,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-hidden">
         {children}
       </main>
     </div>
