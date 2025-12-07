@@ -24,6 +24,7 @@ import Image from 'next/image';
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const FREE_TIER_EXPLANATION_LIMIT = 5;
 
 const explanationSchema = z.object({
   prompt: z.string().min(1, { message: 'Please ask a question.' }),
@@ -175,6 +176,14 @@ export function ExplanationView() {
     if (!user) {
         setView('auth');
         toast({ title: 'Login Required', description: 'Please sign in to get explanations.' });
+        return;
+    }
+
+    if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_EXPLANATION_LIMIT) {
+        showAd({
+            title: "Daily Limit Reached",
+            description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
+        });
         return;
     }
     

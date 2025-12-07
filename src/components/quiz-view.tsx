@@ -32,6 +32,7 @@ const quizAnswersSchema = z.object({
     answers: z.record(z.string()),
 });
 
+const FREE_TIER_QUIZ_LIMIT = 1;
 
 export function QuizView() {
   const { user, studentProfile, setStudentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView } = useAppContext();
@@ -66,6 +67,13 @@ export function QuizView() {
         description: 'Please complete your student profile for a tailored quiz.',
       });
       return;
+    }
+    if (!studentProfile.isPro && (studentProfile.dailyQuizUsage || 0) >= FREE_TIER_QUIZ_LIMIT) {
+        showAd({
+            title: "Daily Quiz Limit Reached",
+            description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
+        });
+        return;
     }
 
     setIsLoading(true);
