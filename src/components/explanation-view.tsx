@@ -179,7 +179,7 @@ export function ExplanationView() {
         return;
     }
 
-    if (!studentProfile.isPro && studentProfile.dailyUsage >= FREE_TIER_EXPLANATION_LIMIT) {
+    if (!studentProfile.isPro && (studentProfile.dailyUsage || 0) >= FREE_TIER_EXPLANATION_LIMIT) {
         showAd({
             title: "Daily Limit Reached",
             description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
@@ -283,38 +283,37 @@ export function ExplanationView() {
     return null;
   };
 
-  if (chat.length === 0 && !isLoading && !error) {
-    return <WelcomeScreen />;
-  }
-
   return (
     <div className='flex flex-col h-full'>
-      <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4 overflow-y-auto">
-        {chat.map(renderMessage)}
-        
-        {isLoading && (
-          <div className='flex items-start gap-4'>
-            <Avatar className="bg-primary flex-shrink-0">
-              <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
-            </Avatar>
-            <Card className='w-full'>
-                <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
-                <CardContent className="space-y-4">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                </CardContent>
-            </Card>
-          </div>
-        )}
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Heads up!</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <div ref={chatEndRef} />
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-1 sm:p-2 md:p-4 space-y-8">
+            {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
+            {chat.map(renderMessage)}
+            
+            {isLoading && (
+              <div className='flex items-start gap-4'>
+                <Avatar className="bg-primary flex-shrink-0">
+                  <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+                </Avatar>
+                <Card className='w-full'>
+                    <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardContent>
+                </Card>
+              </div>
+            )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Heads up!</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div ref={chatEndRef} />
+        </div>
       </div>
 
       <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-sm">

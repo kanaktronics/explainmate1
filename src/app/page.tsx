@@ -19,13 +19,14 @@ export default function Home() {
         return <QuizView />;
       case 'welcome':
       default:
-        return <WelcomeScreen />;
+        // Welcome is part of ExplanationView now, but we keep this for routing logic
+        return <ExplanationView />;
     }
   }
 
-  if (view === 'explanation') {
+  if (view === 'explanation' || view === 'welcome') {
     return (
-       <div className={cn("container mx-auto h-full p-0 sm:p-0 md:p-0")}>
+       <div className={cn("h-full")}>
           <ExplanationView />
       </div>
     )
@@ -33,7 +34,7 @@ export default function Home() {
 
   return (
     <ScrollArea className="h-full">
-      <div className={cn("container mx-auto p-2 sm:p-4 md:p-6 min-h-full")}>
+      <div className={cn("container mx-auto p-2 sm:p-4 md:p-6")}>
           {renderView()}
       </div>
     </ScrollArea>
