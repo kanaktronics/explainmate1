@@ -305,9 +305,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setChat(prevChat => {
         const updatedChat = [...prevChat, message];
         
-        // Handle history saving
-        if (updatedChat.length === 2 && updatedChat[0].role === 'user' && updatedChat[1].role === 'assistant') {
-            const firstUserMessage = updatedChat[0];
+        // This is a new chat, so we create a new history item.
+        if (prevChat.length === 0 && message.role === 'user') {
+            // Do nothing yet, wait for the assistant's response.
+            return updatedChat;
+        }
+
+        if (prevChat.length === 1 && message.role === 'assistant') {
+            const firstUserMessage = prevChat[0];
             const topicContent = firstUserMessage.content;
             let topic = '';
 
@@ -324,33 +329,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               messages: updatedChat,
             };
 
-            setHistory(prevHistory => {
-              const newHistory = [newHistoryItem, ...prevHistory];
-              updateAndSaveHistory(newHistory);
-              return newHistory;
-            });
+            const newHistory = [newHistoryItem, ...history];
+            updateAndSaveHistory(newHistory);
 
-        } else if (updatedChat.length > 2) {
-            setHistory(prevHistory => {
-                const firstMessage = updatedChat[0];
-                if (!firstMessage) return prevHistory;
+        } else if (prevChat.length > 1) { // This is an existing chat, update the history.
+            const firstMessage = prevChat[0];
+            let historyUpdated = false;
 
-                let historyUpdated = false;
-                const newHistory = prevHistory.map(item => {
-                    if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
-                        historyUpdated = true;
-                        return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
-                    }
-                    return item;
-                });
-                
-                if (historyUpdated) {
-                    updateAndSaveHistory(newHistory);
-                    return newHistory;
+            const newHistory = history.map(item => {
+                // Find the matching history item by the first message
+                if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
+                    historyUpdated = true;
+                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
                 }
-                return prevHistory;
+                return item;
             });
+            
+            if (historyUpdated) {
+                updateAndSaveHistory(newHistory);
+            }
         }
+        
         return updatedChat;
     });
   };
