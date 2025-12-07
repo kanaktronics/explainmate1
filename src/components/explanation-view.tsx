@@ -225,7 +225,7 @@ export function ExplanationView() {
     const result = await getExplanation(input);
 
     if (result && 'error' in result) {
-      let friendlyError = 'An unexpected error occurred while generating the response. Please try again.';
+      let friendlyError = 'An unexpected error occurred. Please try again.';
       switch (result.error) {
         case 'DAILY_LIMIT_REACHED':
           showAd({
@@ -235,17 +235,17 @@ export function ExplanationView() {
           setChat(chat); // Revert optimistic update
           break;
         case 'PRO_RATE_LIMIT':
-          friendlyError = "You're learning so fast! Please take a short break before asking another question to ensure fair usage for everyone.";
-          setChat(chat);
-          break;
+            friendlyError = "It looks like you're sending requests faster than normal learning activity. To protect ExplainMate and ensure fair usage for everyone, we've temporarily paused your requests. Please wait a moment and try again.";
+            setChat(chat);
+            break;
         case 'PRO_DAILY_LIMIT':
-          friendlyError = "Wow, you've been studying hard! You've reached the fair usage limit for today. Your limit will reset tomorrow.";
-          setChat(chat);
-          break;
+            friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support and we’ll unlock additional access for you.";
+            setChat(chat);
+            break;
         case 'ACCOUNT_BLOCKED':
-          friendlyError = "Your account has been temporarily suspended due to unusual activity. Please contact support.";
-          setChat(chat);
-          break;
+            friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support and we will review it.";
+            setChat(chat);
+            break;
         default:
           friendlyError = result.error;
           setChat(chat);
