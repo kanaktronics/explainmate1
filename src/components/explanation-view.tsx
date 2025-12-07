@@ -215,9 +215,8 @@ export function ExplanationView() {
       userMessageContent.imageUrl = values.image;
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
-    const newChatHistory = [...(chat || []), userMessage];
     
-    setChat(newChatHistory); // Optimistically update UI
+    addToChat(userMessage); 
     
     form.reset();
     setImagePreview(null);
@@ -231,7 +230,7 @@ export function ExplanationView() {
     }
 
     const input = {
-      chatHistory: newChatHistory,
+      chatHistory: [...chat, userMessage],
       studentProfile: studentProfile,
     };
 
@@ -251,7 +250,7 @@ export function ExplanationView() {
       }
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
-      addToChat(assistantMessage, newChatHistory);
+      addToChat(assistantMessage);
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
        setChat(chat || []); // Revert optimistic update
@@ -359,7 +358,7 @@ export function ExplanationView() {
                     </div>
                 </div>
 
-                <Button type="submit" disabled={isLoading} size="icon">
+                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon">
                   <Send />
                   <span className="sr-only">Send</span>
                 </Button>

@@ -27,7 +27,7 @@ interface AppContextType {
   setView: (view: AppView) => void;
   chat: ChatMessage[];
   setChat: (chat: ChatMessage[]) => void;
-  addToChat: (message: ChatMessage, currentChat: ChatMessage[]) => void;
+  addToChat: (message: ChatMessage) => void;
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
@@ -284,44 +284,47 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [updateAndSaveHistory]);
   
-  const addToChat = (message: ChatMessage, currentChat: ChatMessage[]) => {
-      const updatedChat = [...currentChat, message];
-      setChat(updatedChat);
-
-      if (updatedChat.length === 2 && updatedChat[0].role === 'user' && updatedChat[1].role === 'assistant') {
-        const firstUserMessage = updatedChat[0];
-        const topicContent = firstUserMessage.content;
-        let topic = '';
-
-        if (typeof topicContent === 'string') {
-          topic = topicContent.substring(0, 50);
-        } else if (typeof topicContent === 'object' && 'text' in topicContent) {
-          topic = topicContent.text.substring(0,50);
-        }
+  const addToChat = useCallback((message: ChatMessage) => {
+    setChat(prevChat => {
+        const updatedChat = [...prevChat, message];
         
-        addToHistory({ topic, messages: updatedChat });
-      } else {
-         setHistory(prevHistory => {
-            const firstMessage = updatedChat[0];
-            if (!firstMessage) return prevHistory;
+        // Handle history saving
+        if (updatedChat.length === 2 && updatedChat[0].role === 'user' && updatedChat[1].role === 'assistant') {
+            const firstUserMessage = updatedChat[0];
+            const topicContent = firstUserMessage.content;
+            let topic = '';
 
-            let historyUpdated = false;
-            const updatedHistory = prevHistory.map(item => {
-                if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
-                    historyUpdated = true;
-                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
-                }
-                return item;
-            });
-            
-            if(historyUpdated) {
-                updateAndSaveHistory(updatedHistory);
-                return updatedHistory;
+            if (typeof topicContent === 'string') {
+                topic = topicContent.substring(0, 50);
+            } else if (typeof topicContent === 'object' && 'text' in topicContent) {
+                topic = topicContent.text.substring(0, 50);
             }
-            return prevHistory;
-        });
-      }
-  };
+            
+            addToHistory({ topic, messages: updatedChat });
+        } else if (updatedChat.length > 2) {
+            setHistory(prevHistory => {
+                const firstMessage = updatedChat[0];
+                if (!firstMessage) return prevHistory;
+
+                let historyUpdated = false;
+                const updatedHistory = prevHistory.map(item => {
+                    if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
+                        historyUpdated = true;
+                        return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
+                    }
+                    return item;
+                });
+                
+                if (historyUpdated) {
+                    updateAndSaveHistory(updatedHistory);
+                    return updatedHistory;
+                }
+                return prevHistory;
+            });
+        }
+        return updatedChat;
+    });
+  }, [addToHistory, updateAndSaveHistory]);
   
   const deleteFromHistory = (id: string) => {
     const newHistory = history.filter(item => item.id !== id);
