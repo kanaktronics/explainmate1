@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle, Zap, Image, Infinity, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle, Zap, Image, Infinity, Clock, AlertCircle, Phone } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { Button } from "./ui/button";
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,9 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { add } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 
 export function ProMembershipView() {
@@ -20,13 +23,23 @@ export function ProMembershipView() {
     const { studentProfile, setStudentProfile } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'failure'>('idle');
+    const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState('');
     const { firestore, user } = useFirebase();
 
     const handleBuyPro = async () => {
         setIsLoading(true);
+
+        if (!/^\d{10}$/.test(phoneNumber)) {
+            toast({ variant: 'destructive', title: 'Invalid Phone Number', description: 'Please enter a valid 10-digit phone number.' });
+            setIsLoading(false);
+            return;
+        }
+
         if (!user || !firestore) {
              toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to purchase a Pro membership.' });
              setIsLoading(false);
+             setIsPhoneDialogOpen(false);
              return;
         }
 
@@ -66,7 +79,7 @@ export function ProMembershipView() {
                 prefill: {
                     name: studentProfile.name,
                     email: studentProfile.email,
-                    contact: '9999999999' // Placeholder
+                    contact: phoneNumber
                 },
                 theme: {
                     color: '#FF8216'
@@ -93,6 +106,7 @@ export function ProMembershipView() {
             });
         } finally {
             setIsLoading(false);
+            setIsPhoneDialogOpen(false);
         }
     };
     
@@ -128,62 +142,95 @@ export function ProMembershipView() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <header className="text-center space-y-2">
-                <h1 className="text-5xl font-headline text-primary">Upgrade to ExplainMate Pro</h1>
-                <p className="text-xl text-muted-foreground">
-                    Unlock unlimited access and powerful features to supercharge your learning.
-                </p>
-            </header>
-
-            <Card className="shadow-lg border-primary/50">
-                <CardHeader className="items-center text-center">
-                    <Badge variant="destructive" className="mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 py-1 px-4 text-sm">Best Value</Badge>
-                    <CardTitle className="text-3xl font-headline">Pro Membership</CardTitle>
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-5xl font-bold text-primary">₹99</p>
-                      <p className="text-2xl font-semibold text-muted-foreground"><del>₹359</del></p>
+        <>
+            <Dialog open={isPhoneDialogOpen} onOpenChange={setIsPhoneDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Your Phone Number</DialogTitle>
+                        <DialogDescription>
+                            Please enter your 10-digit phone number to proceed with the payment.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="phone" className="text-right">
+                                Phone
+                            </Label>
+                            <Input
+                                id="phone"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                className="col-span-3"
+                                placeholder="e.g., 9876543210"
+                                type="tel"
+                            />
+                        </div>
                     </div>
-                    <CardDescription>/ 2 months (Limited Time Offer)</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <ul className="space-y-4 text-lg">
-                        <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span><span className="font-semibold">Unlimited</span> explanations & quizzes (vs. 5 explanations & 1 quiz per day)</span>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span><span className="font-semibold">Upload images</span> and diagrams for analysis</span>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span>Ask <span className="font-semibold">longer, more complex questions</span></span>
-                        </li>
-                         <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span>Choose the number of <span className="font-semibold">quiz questions (up to 15)</span></span>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span>Select quiz <span className="font-semibold">difficulty (Easy, Medium, Hard)</span></span>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span><span className="font-semibold">Faster</span> response times</span>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                            <span><span className="font-semibold">Dedicated "Pro" badge</span> on your profile</span>
-                        </li>
-                    </ul>
-                </CardContent>
-                <CardFooter>
-                    <Button onClick={handleBuyPro} disabled={isLoading} className="w-full text-lg py-6 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90 text-primary-foreground">
-                        {isLoading ? 'Processing...' : 'Buy Pro Now'}
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
+                    <DialogFooter>
+                        <Button onClick={handleBuyPro} disabled={isLoading}>
+                            {isLoading ? 'Processing...' : 'Proceed to Payment'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <div className="max-w-4xl mx-auto space-y-8">
+                <header className="text-center space-y-2">
+                    <h1 className="text-5xl font-headline text-primary">Upgrade to ExplainMate Pro</h1>
+                    <p className="text-xl text-muted-foreground">
+                        Unlock unlimited access and powerful features to supercharge your learning.
+                    </p>
+                </header>
+
+                <Card className="shadow-lg border-primary/50">
+                    <CardHeader className="items-center text-center">
+                        <Badge variant="destructive" className="mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 py-1 px-4 text-sm">Best Value</Badge>
+                        <CardTitle className="text-3xl font-headline">Pro Membership</CardTitle>
+                        <div className="flex items-baseline gap-2">
+                        <p className="text-5xl font-bold text-primary">₹99</p>
+                        <p className="text-2xl font-semibold text-muted-foreground"><del>₹359</del></p>
+                        </div>
+                        <CardDescription>/ 2 months (Limited Time Offer)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <ul className="space-y-4 text-lg">
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span><span className="font-semibold">Unlimited</span> explanations & quizzes (vs. 5 explanations & 1 quiz per day)</span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span><span className="font-semibold">Upload images</span> and diagrams for analysis</span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span>Ask <span className="font-semibold">longer, more complex questions</span></span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span>Choose the number of <span className="font-semibold">quiz questions (up to 15)</span></span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span>Select quiz <span className="font-semibold">difficulty (Easy, Medium, Hard)</span></span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span><span className="font-semibold">Faster</span> response times</span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                <span><span className="font-semibold">Dedicated "Pro" badge</span> on your profile</span>
+                            </li>
+                        </ul>
+                    </CardContent>
+                    <CardFooter>
+                        <Button onClick={() => setIsPhoneDialogOpen(true)} disabled={isLoading} className="w-full text-lg py-6 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90 text-primary-foreground">
+                            {isLoading ? 'Processing...' : 'Buy Pro Now'}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        </>
     );
 }
