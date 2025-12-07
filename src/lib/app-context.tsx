@@ -68,7 +68,7 @@ const defaultProfile: StudentProfile = {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { user, firestore, isUserLoading } = useFirebase();
   const [studentProfile, setStudentProfileState] = useState<StudentProfile>(defaultProfile);
-  const [view, setViewState] = useState<AppView>('welcome');
+  const [view, setViewState] = useState<AppView>('explanation');
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -318,7 +318,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
             
             const newHistoryItem: HistoryItem = {
-              id: Date.now().toString(),
+              id: `${Date.now()}-${Math.random()}`,
               timestamp: new Date().toISOString(),
               topic,
               messages: updatedChat,
