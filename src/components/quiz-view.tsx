@@ -68,14 +68,6 @@ export function QuizView() {
       return;
     }
 
-    if (!studentProfile.isPro && (studentProfile.dailyQuizUsage || 0) >= 1) {
-        showAd({
-            title: "Daily Quiz Limit Reached",
-            description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
-        });
-        return;
-    }
-
     setIsLoading(true);
     setError(null);
     setQuiz(null);
@@ -83,9 +75,7 @@ export function QuizView() {
     setShowResults(false);
     answersForm.reset({ answers: {} });
 
-    if (!studentProfile.isPro) {
-        incrementUsage('quiz');
-    }
+    incrementUsage('quiz');
 
     const input = {
       topic: values.topic,
@@ -122,14 +112,6 @@ export function QuizView() {
        }
     } else if (result) {
       setQuiz(result);
-      if (studentProfile.isPro) {
-        const now = new Date().toISOString();
-        const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
-        setStudentProfile({
-          proDailyRequests: (studentProfile.proDailyRequests || 0) + 1,
-          proRequestTimestamps: newTimestamps,
-        })
-      }
     } else {
       setError("An unexpected error occurred and the AI did not return a response.");
     }

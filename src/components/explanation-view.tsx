@@ -196,15 +196,6 @@ export function ExplanationView() {
         return;
     }
     
-    // Daily limit check for free users is now on the server, but we can do a client-side check to give instant feedback.
-    if (!studentProfile.isPro && studentProfile.dailyUsage >= 5) {
-        showAd({
-            title: "Daily Limit Reached",
-            description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
-        });
-        return;
-    }
-    
     setIsLoading(true);
     setError(null);
     
@@ -224,10 +215,7 @@ export function ExplanationView() {
         fileInputRef.current.value = '';
     }
 
-    // Optimistically increment usage for free users
-    if (!studentProfile.isPro) {
-        incrementUsage('explanation');
-    }
+    incrementUsage('explanation');
 
     const input = {
       chatHistory: currentChat,
@@ -269,15 +257,6 @@ export function ExplanationView() {
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage);
-       // Also update the local pro usage state optimistically after a successful call
-      if (studentProfile.isPro) {
-        const now = new Date().toISOString();
-        const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
-        setStudentProfile({
-          proDailyRequests: (studentProfile.proDailyRequests || 0) + 1,
-          proRequestTimestamps: newTimestamps,
-        })
-      }
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
        setChat(chat); // Revert optimistic update

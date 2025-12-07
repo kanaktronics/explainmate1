@@ -46,8 +46,8 @@ const FREE_TIER_QUIZ_LIMIT = 1;
 
 // Pro Tier Fair Usage Limits
 const PRO_REQUESTS_PER_MINUTE = 15;
-const PRO_REQUESTS_DAILY_CEILING = 200;
-const PRO_TIMESTAMP_HISTORY_LIMIT = 100; // Keep the last 100 timestamps
+const PRO_REQUESTS_DAILY_CEILING = 750; // Increased daily ceiling
+const PRO_TIMESTAMP_HISTORY_LIMIT = 100;
 
 async function checkProFairUsage(studentProfile: StudentProfile): Promise<{ allowed: boolean; error?: string }> {
   if (studentProfile.isBlocked) {
@@ -71,29 +71,6 @@ async function checkProFairUsage(studentProfile: StudentProfile): Promise<{ allo
   }
 
   return { allowed: true };
-}
-
-async function recordProUsage(userId: string) {
-    const { firestore } = initializeFirebase();
-    const userRef = doc(firestore, 'users', userId);
-
-    const currentTimestamp = new Date().toISOString();
-    
-    // To prevent the array from growing indefinitely, we'll implement a trimming mechanism.
-    // This is a simplified version. A more robust solution might use a server-side transaction.
-    // For now, we'll add the new timestamp and then slice it on the client if needed.
-    // The server-side update will be simpler.
-    
-    // We can't easily trim the array atomically on the client without transactions,
-    // so we'll just add the timestamp. The list size is managed in the check logic.
-    // The `proRequestTimestamps` array will be capped at PRO_TIMESTAMP_HISTORY_LIMIT items.
-    // A better approach for high-traffic apps might be a Cloud Function.
-    
-    await updateDoc(userRef, {
-        proDailyRequests: increment(1),
-        proRequestTimestamps: arrayUnion(currentTimestamp), // Note: arrayUnion prevents duplicates if called rapidly.
-        lastUsageDate: currentTimestamp
-    });
 }
 
 
@@ -130,11 +107,6 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
       throw new Error('AI did not return a response.');
     }
 
-    // Record usage *after* a successful AI response
-    if (studentProfile.isPro) {
-        await recordProUsage(userId);
-    }
-    
     // Handle the special "who created you" case
     if (result.fairWork.includes("Kanak Raj")) {
         return {
@@ -187,7 +159,7 @@ export async function getQuiz(input: {
                 return { error: usageCheck.error || 'PRO_USAGE_LIMIT' };
             }
         } else {
-            if (studentProfile.dailyQuizUsage >= FREE_TIER_QUIZ_LIMIT) {
+            if ((studentProfile.dailyQuizUsage || 0) >= FREE_TIER_QUIZ_LIMIT) {
                 return { error: "DAILY_LIMIT_REACHED" };
             }
         }
@@ -205,11 +177,6 @@ export async function getQuiz(input: {
 
         if (!result) {
           throw new Error('AI did not return a response.');
-        }
-
-        // Record usage *after* a successful AI response
-        if (studentProfile.isPro) {
-            await recordProUsage(userId);
         }
 
         return result;

@@ -225,8 +225,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   
   const setStudentProfile = (profile: Partial<StudentProfile>) => {
-    const updatedProfile = {...studentProfile, ...profile};
-    setStudentProfileState(updatedProfile);
+    setStudentProfileState(prev => ({...prev, ...profile}));
   };
 
   const saveProfileToFirestore = (values: Partial<StudentProfile>) => {
@@ -248,24 +247,45 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   const incrementUsage = (type: 'explanation' | 'quiz' = 'explanation') => {
-    if (!userProfileRef || studentProfile.isPro) return;
+    if (!userProfileRef) return;
+    
+    const now = new Date().toISOString();
+    
+    if (studentProfile.isPro) {
+        // Optimistically update local state for pro user
+        const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
+        setStudentProfileState(prev => ({
+            ...prev,
+            proDailyRequests: (prev.proDailyRequests || 0) + 1,
+            proRequestTimestamps: newTimestamps,
+            lastUsageDate: now
+        }));
 
-    if (type === 'explanation') {
-        const newUsage = (studentProfile.dailyUsage || 0) + 1;
-        setStudentProfileState(prev => ({
-            ...prev,
-            dailyUsage: newUsage,
-            lastUsageDate: new Date().toISOString(),
-        }));
-        setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: new Date().toISOString() }, { merge: true });
+        setDocumentNonBlocking(userProfileRef, { 
+            proDailyRequests: (studentProfile.proDailyRequests || 0) + 1,
+            proRequestTimestamps: newTimestamps,
+            lastUsageDate: now
+        }, { merge: true });
+
     } else {
-        const newQuizUsage = (studentProfile.dailyQuizUsage || 0) + 1;
-        setStudentProfileState(prev => ({
-            ...prev,
-            dailyQuizUsage: newQuizUsage,
-            lastUsageDate: new Date().toISOString(),
-        }));
-        setDocumentNonBlocking(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: new Date().toISOString() }, { merge: true });
+        // Optimistically update local state for free user
+        if (type === 'explanation') {
+            const newUsage = (studentProfile.dailyUsage || 0) + 1;
+            setStudentProfileState(prev => ({
+                ...prev,
+                dailyUsage: newUsage,
+                lastUsageDate: now
+            }));
+            setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: now }, { merge: true });
+        } else {
+            const newQuizUsage = (studentProfile.dailyQuizUsage || 0) + 1;
+            setStudentProfileState(prev => ({
+                ...prev,
+                dailyQuizUsage: newQuizUsage,
+                lastUsageDate: now
+            }));
+            setDocumentNonBlocking(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: now }, { merge: true });
+        }
     }
   }
   
