@@ -283,11 +283,14 @@ export function ExplanationView() {
     return null;
   };
 
+  if (chat.length === 0 && !isLoading && !error) {
+    return <WelcomeScreen />;
+  }
+
   return (
     <div className='flex flex-col h-full'>
-       <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4">
-        {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
-        {chat && chat.map(renderMessage)}
+      <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4 overflow-y-auto">
+        {chat.map(renderMessage)}
         
         {isLoading && (
           <div className='flex items-start gap-4'>
@@ -314,7 +317,7 @@ export function ExplanationView() {
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-4 bg-background/80 backdrop-blur-sm mt-auto sticky bottom-0">
+      <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-sm">
         <Card className="max-w-4xl mx-auto">
           <CardContent className="p-2">
             <Form {...form}>
@@ -385,5 +388,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    

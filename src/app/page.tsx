@@ -23,9 +23,17 @@ export default function Home() {
     }
   }
 
+  if (view === 'explanation') {
+    return (
+       <div className={cn("container mx-auto h-full p-0 sm:p-0 md:p-0")}>
+          <ExplanationView />
+      </div>
+    )
+  }
+
   return (
     <ScrollArea className="h-full">
-      <div className={cn("container mx-auto p-2 sm:p-4 md:p-6", view === 'explanation' ? 'h-full flex flex-col' : 'min-h-full')}>
+      <div className={cn("container mx-auto p-2 sm:p-4 md:p-6 min-h-full")}>
           {renderView()}
       </div>
     </ScrollArea>
