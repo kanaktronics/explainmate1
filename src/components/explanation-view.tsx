@@ -285,7 +285,7 @@ export function ExplanationView() {
 
   return (
     <div className='flex flex-col h-full'>
-       <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4 overflow-y-auto">
+       <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
         
@@ -314,7 +314,7 @@ export function ExplanationView() {
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-4 bg-background/80 backdrop-blur-sm mt-auto">
+      <div className="p-4 bg-background/80 backdrop-blur-sm mt-auto sticky bottom-0">
         <Card className="max-w-4xl mx-auto">
           <CardContent className="p-2">
             <Form {...form}>

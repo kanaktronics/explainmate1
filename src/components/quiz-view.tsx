@@ -249,7 +249,7 @@ export function QuizView() {
 
   return (
     <div className="space-y-8 p-4">
-        <div className='py-4 bg-background/80 backdrop-blur-sm z-10'>
+        <div className='py-4 bg-background/80 backdrop-blur-sm z-10 sticky top-0'>
           <h2 className="text-3xl font-headline text-center mb-2">Quiz: {setupForm.getValues('topic')}</h2>
           {showResults && <h3 className="text-xl font-semibold text-center text-primary">Your Score: {score}/{quiz.quiz.length}</h3>}
           {!showResults && <Progress value={progress} className="w-full max-w-2xl mx-auto" />}
