@@ -118,7 +118,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
+  const { user, studentProfile, setStudentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -196,15 +196,13 @@ export function ExplanationView() {
         return;
     }
     
-    // Enforce daily limit for free users ON EVERY SUBMISSION
-    if (!studentProfile.isPro) {
-        if ((studentProfile.dailyUsage || 0) >= 5) {
-            showAd({
-                title: "Daily Limit Reached",
-                description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
-            });
-            return; // Stop execution
-        }
+    // Daily limit check for free users is now on the server, but we can do a client-side check to give instant feedback.
+    if (!studentProfile.isPro && studentProfile.dailyUsage >= 5) {
+        showAd({
+            title: "Daily Limit Reached",
+            description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
+        });
+        return;
     }
     
     setIsLoading(true);
@@ -218,42 +216,71 @@ export function ExplanationView() {
     
     addToChat(userMessage); 
     
+    const currentChat = [...chat, userMessage];
+
     form.reset();
     setImagePreview(null);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
 
-    // Increment usage for free user AFTER the check has passed
+    // Optimistically increment usage for free users
     if (!studentProfile.isPro) {
         incrementUsage('explanation');
     }
 
     const input = {
-      chatHistory: [...chat, userMessage],
+      chatHistory: currentChat,
       studentProfile: studentProfile,
     };
 
     const result = await getExplanation(input);
 
     if (result && 'error' in result) {
-      if (result.error === 'DAILY_LIMIT_REACHED') {
-         showAd({
+      let friendlyError = 'An unexpected error occurred while generating the response. Please try again.';
+      switch (result.error) {
+        case 'DAILY_LIMIT_REACHED':
+          showAd({
             title: "Daily Limit Reached",
             description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
-        });
-         setChat(chat || []); // Revert optimistic update
-      } else {
-        setError(result.error);
-        // Revert optimistic update on other errors too
-        setChat(chat || []);
+          });
+          setChat(chat); // Revert optimistic update
+          break;
+        case 'PRO_RATE_LIMIT':
+          friendlyError = "You're learning so fast! Please take a short break before asking another question to ensure fair usage for everyone.";
+          setChat(chat);
+          break;
+        case 'PRO_DAILY_LIMIT':
+          friendlyError = "Wow, you've been studying hard! You've reached the fair usage limit for today. Your limit will reset tomorrow.";
+          setChat(chat);
+          break;
+        case 'ACCOUNT_BLOCKED':
+          friendlyError = "Your account has been temporarily suspended due to unusual activity. Please contact support.";
+          setChat(chat);
+          break;
+        default:
+          friendlyError = result.error;
+          setChat(chat);
+          break;
+      }
+      if(result.error !== 'DAILY_LIMIT_REACHED') {
+          setError(friendlyError);
       }
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage);
+       // Also update the local pro usage state optimistically after a successful call
+      if (studentProfile.isPro) {
+        const now = new Date().toISOString();
+        const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
+        setStudentProfile({
+          proDailyRequests: (studentProfile.proDailyRequests || 0) + 1,
+          proRequestTimestamps: newTimestamps,
+        })
+      }
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
-       setChat(chat || []); // Revert optimistic update
+       setChat(chat); // Revert optimistic update
     }
     setIsLoading(false);
   }
@@ -269,7 +296,7 @@ export function ExplanationView() {
   };
 
   return (
-    <>
+    <div className='h-full flex flex-col'>
        <div className="flex-1 space-y-8 p-1 sm:p-2 md:p-4 overflow-y-auto">
         {chat && chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
         {chat && chat.map(renderMessage)}
@@ -292,7 +319,7 @@ export function ExplanationView() {
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>Heads up!</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -367,6 +394,6 @@ export function ExplanationView() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

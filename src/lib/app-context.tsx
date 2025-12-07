@@ -59,6 +59,9 @@ const defaultProfile: StudentProfile = {
     dailyUsage: 0,
     dailyQuizUsage: 0,
     lastUsageDate: new Date().toISOString(),
+    proDailyRequests: 0,
+    proRequestTimestamps: [],
+    isBlocked: false,
 };
 
 
@@ -166,16 +169,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           board: firestoreProfile.board,
           weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
           isPro: isPro,
+          proDailyRequests: firestoreProfile.proDailyRequests,
+          proRequestTimestamps: firestoreProfile.proRequestTimestamps,
+          isBlocked: firestoreProfile.isBlocked,
         };
         
         let isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
 
         // Daily usage reset logic
         if (isNewDay) {
-          const updatedUsage = { dailyUsage: 0, dailyQuizUsage: 0, lastUsageDate: new Date().toISOString() };
+          const updatedUsage = { 
+              dailyUsage: 0, 
+              dailyQuizUsage: 0, 
+              proDailyRequests: 0,
+              lastUsageDate: new Date().toISOString() 
+            };
           serverProfile = { ...serverProfile, ...updatedUsage };
           if (userProfileRef) {
-            setDocumentNonBlocking(userProfileRef, updatedUsage, { merge: true });
+            setDocumentNonBlocking(userProfileRef, { ...updatedUsage, proRequestTimestamps: [] }, { merge: true });
           }
           setHasShownFirstAdToday(false); // Reset ad flag for new day
         }
@@ -270,21 +281,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [getHistoryKey]);
 
-  const addToHistory = useCallback((item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
-    const newHistoryItem: HistoryItem = {
-        ...item,
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-    };
-    // Use a function for state update to get the latest history state
-    setHistory(prevHistory => {
-        const updatedHistory = [newHistoryItem, ...prevHistory];
-        updateAndSaveHistory(updatedHistory);
-        return updatedHistory;
-    });
-  }, [updateAndSaveHistory]);
-  
-  const addToChat = useCallback((message: ChatMessage) => {
+  const addToChat = (message: ChatMessage) => {
     setChat(prevChat => {
         const updatedChat = [...prevChat, message];
         
@@ -300,14 +297,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 topic = topicContent.text.substring(0, 50);
             }
             
-            addToHistory({ topic, messages: updatedChat });
+            const newHistoryItem: HistoryItem = {
+              id: Date.now().toString(),
+              timestamp: new Date().toISOString(),
+              topic,
+              messages: updatedChat,
+            };
+
+            setHistory(prevHistory => {
+              const newHistory = [newHistoryItem, ...prevHistory];
+              updateAndSaveHistory(newHistory);
+              return newHistory;
+            });
+
         } else if (updatedChat.length > 2) {
             setHistory(prevHistory => {
                 const firstMessage = updatedChat[0];
                 if (!firstMessage) return prevHistory;
 
                 let historyUpdated = false;
-                const updatedHistory = prevHistory.map(item => {
+                const newHistory = prevHistory.map(item => {
                     if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
                         historyUpdated = true;
                         return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
@@ -316,15 +325,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 });
                 
                 if (historyUpdated) {
-                    updateAndSaveHistory(updatedHistory);
-                    return updatedHistory;
+                    updateAndSaveHistory(newHistory);
+                    return newHistory;
                 }
                 return prevHistory;
             });
         }
         return updatedChat;
     });
-  }, [addToHistory, updateAndSaveHistory]);
+  };
   
   const deleteFromHistory = (id: string) => {
     const newHistory = history.filter(item => item.id !== id);
@@ -381,6 +390,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
-    

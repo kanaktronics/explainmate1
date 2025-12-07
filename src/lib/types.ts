@@ -12,6 +12,10 @@ export interface StudentProfile {
   dailyQuizUsage: number;
   lastUsageDate: string;
   proExpiresAt?: string;
+  // Pro fair usage
+  proDailyRequests?: number;
+  proRequestTimestamps?: string[];
+  isBlocked?: boolean;
 }
 
 export interface Explanation {

@@ -34,7 +34,7 @@ const quizAnswersSchema = z.object({
 
 
 export function QuizView() {
-  const { user, studentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView } = useAppContext();
+  const { user, studentProfile, setStudentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -96,16 +96,40 @@ export function QuizView() {
 
     const result = await getQuiz(input as any);
     if (result && 'error' in result) {
-      if (result.error === 'DAILY_LIMIT_REACHED') {
-         showAd({
-            title: "Daily Quiz Limit Reached",
-            description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
-        });
-      } else {
-        setError(result.error);
-      }
+      let friendlyError = 'An unexpected error occurred while generating the quiz. Please try again.';
+       switch (result.error) {
+         case 'DAILY_LIMIT_REACHED':
+           showAd({
+             title: "Daily Quiz Limit Reached",
+             description: "You've used your free quiz for today. Upgrade to Pro for unlimited quizzes."
+           });
+           break;
+        case 'PRO_RATE_LIMIT':
+          friendlyError = "You're learning so fast! Please take a short break before creating another quiz to ensure fair usage for everyone.";
+          break;
+        case 'PRO_DAILY_LIMIT':
+          friendlyError = "Wow, you've been studying hard! You've reached the fair usage limit for today. Your limit will reset tomorrow.";
+          break;
+        case 'ACCOUNT_BLOCKED':
+          friendlyError = "Your account has been temporarily suspended due to unusual activity. Please contact support.";
+          break;
+         default:
+           friendlyError = result.error;
+           break;
+       }
+       if(result.error !== 'DAILY_LIMIT_REACHED') {
+          setError(friendlyError);
+       }
     } else if (result) {
       setQuiz(result);
+      if (studentProfile.isPro) {
+        const now = new Date().toISOString();
+        const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
+        setStudentProfile({
+          proDailyRequests: (studentProfile.proDailyRequests || 0) + 1,
+          proRequestTimestamps: newTimestamps,
+        })
+      }
     } else {
       setError("An unexpected error occurred and the AI did not return a response.");
     }
@@ -144,7 +168,7 @@ export function QuizView() {
   const progress = quiz ? (answeredQuestions / quiz.quiz.length) * 100 : 0;
 
   if (isLoading) return <LoadingSkeleton />;
-  if (error) return <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
+  if (error) return <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Heads up!</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
 
   if (!quiz) {
     return (
@@ -340,5 +364,3 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
-    
