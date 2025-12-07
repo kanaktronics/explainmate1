@@ -7,6 +7,7 @@ import { AppLogo } from './app-logo';
 import { Button } from './ui/button';
 import { Sparkles, LogIn } from 'lucide-react';
 import Link from 'next/link';
+import { ScrollArea } from './ui/scroll-area';
 
 export function MainPanel({ children }: { children: React.ReactNode }) {
   const { studentProfile, user } = useAppContext();
@@ -48,7 +49,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1">
+      <main className="flex-1 overflow-y-auto">
         {children}
       </main>
     </div>
