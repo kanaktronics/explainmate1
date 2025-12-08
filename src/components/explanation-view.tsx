@@ -67,21 +67,13 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
     });
   }
   
-  useEffect(() => {
-    // If playback rate changes while this card is speaking, restart it with the new rate
-    if (isPlaying && utteranceRef.current && 'speechSynthesis' in window && speechSynthesis.speaking) {
-        speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = playbackRate;
-        utterance.onend = () => {
-            setIsPlaying(false);
-            utteranceRef.current = null;
-        };
-        utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
+  const handleSpeedChange = (rate: number) => {
+    setPlaybackRate(rate);
+    if (isPlaying) {
+      speechSynthesis.cancel();
+      setIsPlaying(false);
     }
-  }, [playbackRate, text, isPlaying]);
+  };
 
 
   useEffect(() => {
@@ -113,10 +105,10 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
                       <Button variant="ghost" size="icon"><MoreVertical/></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={() => setPlaybackRate(0.5)}>Speed: 0.5x {playbackRate === 0.5 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>Speed: 1x {playbackRate === 1 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setPlaybackRate(1.5)}>Speed: 1.5x {playbackRate === 1.5 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setPlaybackrate(2)}>Speed: 2x {playbackRate === 2 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(0.5)}>Speed: 0.5x {playbackRate === 0.5 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>Speed: 1x {playbackRate === 1 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>Speed: 1.5x {playbackRate === 1.5 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(2)}>Speed: 2x {playbackRate === 2 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
                       </DropdownMenuItem>
@@ -537,6 +529,8 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
 
     
 
