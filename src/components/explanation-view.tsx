@@ -23,7 +23,6 @@ import Image from 'next/image';
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const FREE_TIER_EXPLANATION_LIMIT = 5;
 
 const explanationSchema = z.object({
   prompt: z.string().min(1, { message: 'Please ask a question.' }),
@@ -31,11 +30,10 @@ const explanationSchema = z.object({
 });
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const [isAudioLoading, setIsAudioLoading] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioStates, setAudioStates] = useState<Record<string, { src: string | null; isLoading: boolean; error: string | null }>>({});
   const audioRef = useRef<HTMLAudioElement>(null);
-  
+  const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
+
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
       return <p className="text-muted-foreground">No content available for this section.</p>;
@@ -43,30 +41,67 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
     return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />;
   };
 
-  const handleListen = async (text: string) => {
-    setIsAudioLoading(true);
-    setAudioError(null);
-    setAudioSrc(null);
+  const handleListen = async (text: string, id: string) => {
+    if (audioRef.current) {
+        if (activeAudioId === id && !audioRef.current.paused) {
+            audioRef.current.pause();
+            return;
+        }
+    }
+    
+    setActiveAudioId(id);
+
+    // If audio is already loaded, just play it
+    if (audioStates[id]?.src) {
+        if (audioRef.current) {
+            audioRef.current.src = audioStates[id].src!;
+            audioRef.current.play();
+        }
+        return;
+    }
+
+    setAudioStates(prev => ({ ...prev, [id]: { src: null, isLoading: true, error: null } }));
+
     try {
         const result = await getAudioForText({ text });
         if (result.error) {
             throw new Error(result.error);
         }
-        setAudioSrc(result.audioDataUri);
+        setAudioStates(prev => ({ ...prev, [id]: { src: result.audioDataUri, isLoading: false, error: null } }));
     } catch(e: any) {
-        setAudioError(e.message || "Failed to generate audio.");
-    } finally {
-        setIsAudioLoading(false);
+        setAudioStates(prev => ({ ...prev, [id]: { src: null, isLoading: false, error: e.message || "Failed to generate audio." } }));
     }
   };
   
   useEffect(() => {
-    if (audioSrc && audioRef.current) {
+    if (activeAudioId && audioStates[activeAudioId]?.src && audioRef.current) {
+      audioRef.current.src = audioStates[activeAudioId].src!;
       audioRef.current.play();
     }
-  }, [audioSrc]);
+  }, [audioStates, activeAudioId]);
+
 
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
+
+  const renderAudioFeedback = (id: string) => {
+    const state = audioStates[id];
+    if (!state) return null;
+    return (
+        <>
+            {activeAudioId === id && <audio ref={audioRef} controls className='w-full mb-4' />}
+            {state.error && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{state.error}</AlertDescription></Alert>}
+        </>
+    );
+  }
+
+  const renderListenButton = (text: string, id: string) => {
+      const isLoading = audioStates[id]?.isLoading;
+      return (
+        <Button variant="ghost" size="icon" onClick={() => handleListen(text, id)} disabled={isLoading}>
+            {isLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+        </Button>
+      )
+  }
 
   return (
     <div className="flex items-start gap-4">
@@ -85,13 +120,10 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                 <Card>
                     <CardHeader className='flex-row items-center justify-between'>
                       <CardTitle>Explanation</CardTitle>
-                      <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.explanation)} disabled={isAudioLoading}>
-                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
-                      </Button>
+                      {renderListenButton(explanation.explanation, 'explanation')}
                     </CardHeader>
                     <CardContent>
-                      {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
-                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                      {renderAudioFeedback('explanation')}
                       {renderContent(explanation.explanation)}
                     </CardContent>
                 </Card>
@@ -100,13 +132,10 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                 <Card>
                     <CardHeader className='flex-row items-center justify-between'>
                       <CardTitle>Rough Work</CardTitle>
-                      <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.roughWork)} disabled={isAudioLoading}>
-                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
-                      </Button>
+                      {renderListenButton(explanation.roughWork, 'roughWork')}
                     </CardHeader>
                     <CardContent>
-                      {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
-                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                      {renderAudioFeedback('roughWork')}
                       {renderContent(explanation.roughWork)}
                     </CardContent>
                 </Card>
@@ -115,14 +144,11 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                 <Card>
                     <CardHeader className='flex-row items-center justify-between'>
                       <CardTitle>Real-World Examples</CardTitle>
-                      <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.realWorldExamples)} disabled={isAudioLoading}>
-                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
-                      </Button>
+                      {renderListenButton(explanation.realWorldExamples, 'realWorld')}
                     </CardHeader>
                     <CardContent>
-                       {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
-                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
-                      {renderContent(explanation.realWorldExamples)}
+                       {renderAudioFeedback('realWorld')}
+                       {renderContent(explanation.realWorldExamples)}
                     </CardContent>
                 </Card>
                 </TabsContent>
@@ -130,14 +156,11 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                 <Card>
                     <CardHeader className='flex-row items-center justify-between'>
                       <CardTitle>Fair Work (Notebook-ready)</CardTitle>
-                       <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.fairWork)} disabled={isAudioLoading}>
-                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
-                      </Button>
+                       {renderListenButton(explanation.fairWork, 'fairWork')}
                     </CardHeader>
                     <CardContent>
-                       {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
-                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
-                      {renderContent(explanation.fairWork)}
+                       {renderAudioFeedback('fairWork')}
+                       {renderContent(explanation.fairWork)}
                     </CardContent>
                 </Card>
                 </TabsContent>
@@ -146,13 +169,10 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
              <Card className='w-full'>
                 <CardHeader className='flex-row items-center justify-between'>
                   <CardTitle>Explanation</CardTitle>
-                  <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.explanation)} disabled={isAudioLoading}>
-                    {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
-                  </Button>
+                   {renderListenButton(explanation.explanation, 'explanation')}
                 </CardHeader>
                 <CardContent>
-                    {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
-                    {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                    {renderAudioFeedback('explanation')}
                     {renderContent(explanation.explanation)}
                 </CardContent>
             </Card>
