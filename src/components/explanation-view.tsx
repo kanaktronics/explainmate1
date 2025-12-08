@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation } from '@/lib/actions';
+import { getExplanation, getAudioForText } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, X } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, Volume2, X, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -31,12 +31,40 @@ const explanationSchema = z.object({
 });
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
       return <p className="text-muted-foreground">No content available for this section.</p>;
     }
     return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />;
   };
+
+  const handleListen = async (text: string) => {
+    setIsAudioLoading(true);
+    setAudioError(null);
+    setAudioSrc(null);
+    try {
+        const result = await getAudioForText({ text });
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        setAudioSrc(result.audioDataUri);
+    } catch(e: any) {
+        setAudioError(e.message || "Failed to generate audio.");
+    } finally {
+        setIsAudioLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (audioSrc && audioRef.current) {
+      audioRef.current.play();
+    }
+  }, [audioSrc]);
 
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
 
@@ -55,33 +83,78 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                 </TabsList>
                 <TabsContent value="explanation">
                 <Card>
-                    <CardHeader><CardTitle>Explanation</CardTitle></CardHeader>
-                    <CardContent>{renderContent(explanation.explanation)}</CardContent>
+                    <CardHeader className='flex-row items-center justify-between'>
+                      <CardTitle>Explanation</CardTitle>
+                      <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.explanation)} disabled={isAudioLoading}>
+                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
+                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                      {renderContent(explanation.explanation)}
+                    </CardContent>
                 </Card>
                 </TabsContent>
                 <TabsContent value="roughWork">
                 <Card>
-                    <CardHeader><CardTitle>Rough Work</CardTitle></CardHeader>
-                    <CardContent>{renderContent(explanation.roughWork)}</CardContent>
+                    <CardHeader className='flex-row items-center justify-between'>
+                      <CardTitle>Rough Work</CardTitle>
+                      <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.roughWork)} disabled={isAudioLoading}>
+                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
+                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                      {renderContent(explanation.roughWork)}
+                    </CardContent>
                 </Card>
                 </TabsContent>
                 <TabsContent value="realWorld">
                 <Card>
-                    <CardHeader><CardTitle>Real-World Examples</CardTitle></CardHeader>
-                    <CardContent>{renderContent(explanation.realWorldExamples)}</CardContent>
+                    <CardHeader className='flex-row items-center justify-between'>
+                      <CardTitle>Real-World Examples</CardTitle>
+                      <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.realWorldExamples)} disabled={isAudioLoading}>
+                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                       {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
+                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                      {renderContent(explanation.realWorldExamples)}
+                    </CardContent>
                 </Card>
                 </TabsContent>
                 <TabsContent value="fairWork">
                 <Card>
-                    <CardHeader><CardTitle>Fair Work (Notebook-ready)</CardTitle></CardHeader>
-                    <CardContent>{renderContent(explanation.fairWork)}</CardContent>
+                    <CardHeader className='flex-row items-center justify-between'>
+                      <CardTitle>Fair Work (Notebook-ready)</CardTitle>
+                       <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.fairWork)} disabled={isAudioLoading}>
+                        {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                       {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
+                      {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                      {renderContent(explanation.fairWork)}
+                    </CardContent>
                 </Card>
                 </TabsContent>
             </Tabs>
         ) : (
              <Card className='w-full'>
-                <CardHeader><CardTitle>Explanation</CardTitle></CardHeader>
-                <CardContent>{renderContent(explanation.explanation)}</CardContent>
+                <CardHeader className='flex-row items-center justify-between'>
+                  <CardTitle>Explanation</CardTitle>
+                  <Button variant="ghost" size="icon" onClick={() => handleListen(explanation.explanation)} disabled={isAudioLoading}>
+                    {isAudioLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                    {audioSrc && <audio ref={audioRef} src={audioSrc} controls className='w-full mb-4' />}
+                    {audioError && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{audioError}</AlertDescription></Alert>}
+                    {renderContent(explanation.explanation)}
+                </CardContent>
             </Card>
         )}
     </div>
