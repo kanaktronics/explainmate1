@@ -38,6 +38,10 @@ const nextConfig = {
   devIndicators: {
     allowedDevOrigins: ['*.cloudworkstations.dev'],
   },
+  serverActions: {
+    bodySizeLimit: '5mb',
+    maxDuration: 120,
+  },
 };
 
 module.exports = nextConfig;
