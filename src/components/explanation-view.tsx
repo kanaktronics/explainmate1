@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation } from '@/lib/actions';
+import { getExplanation, getSpokenAudio } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -41,56 +41,82 @@ interface ExplanationCardProps {
 const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
-  const [language, setLanguage] = useState('en-IN');
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  useEffect(() => {
-    const getVoices = () => {
-      const availableVoices = speechSynthesis.getVoices();
-      setVoices(availableVoices);
-    };
-    
-    // Voices are loaded asynchronously
-    getVoices();
-    speechSynthesis.onvoiceschanged = getVoices;
-
-    return () => {
-        speechSynthesis.onvoiceschanged = null;
-    }
-  }, []);
-
+  const [language, setLanguage] = useState<'English' | 'Hindi' | 'Hinglish'>('English');
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
 
   const isPlaying = activeAudioId === cardId;
 
-  const handleListen = useCallback(() => {
-    if (!text || text === 'N/A' || !('speechSynthesis' in window)) {
-      return;
+  const handleListen = async () => {
+    if (!text || text === 'N/A') return;
+    
+    // If this card's audio is already playing, pause it.
+    if (isPlaying && audioRef.current) {
+        audioRef.current.pause();
+        setActiveAudioId(null);
+        return;
+    }
+    
+    // If another card's audio is playing, stop it. The global activeAudioId change will handle UI.
+    if (activeAudioId && activeAudioId !== cardId) {
+        // This relies on the audio player in the other component stopping itself when activeAudioId changes.
     }
 
-    speechSynthesis.cancel();
-    
+    // If we already have the audio URL for the current settings, just play it.
+    if (audioUrl && audioRef.current) {
+        setActiveAudioId(cardId);
+        audioRef.current.play();
+        return;
+    }
+
+    setIsLoadingAudio(true);
+    setActiveAudioId(cardId); // Set active early to show loading state
+
+    try {
+        const result = await getSpokenAudio({ text, language });
+        if (result && 'error' in result) {
+            throw new Error(result.error);
+        }
+        if (result) {
+            setAudioUrl(result.audio);
+        }
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Audio Generation Failed',
+            description: error.message || 'Could not generate audio. Please try again.',
+        });
+        setActiveAudioId(null); // Clear active status on error
+    } finally {
+        setIsLoadingAudio(false);
+    }
+  };
+
+  useEffect(() => {
+    // When a new audio URL is set, play it.
+    if (audioUrl && audioRef.current && activeAudioId === cardId) {
+        audioRef.current.play();
+    }
+  }, [audioUrl, activeAudioId, cardId]);
+  
+  useEffect(() => {
+      // If this card is no longer the active one, pause its audio.
+      if (activeAudioId !== cardId && audioRef.current) {
+          audioRef.current.pause();
+      }
+  }, [activeAudioId, cardId]);
+
+
+  useEffect(() => {
+    // Reset audio when language or text changes
+    setAudioUrl(null);
     if (isPlaying) {
       setActiveAudioId(null);
-    } else {
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      const selectedVoice = voices.find(voice => voice.lang === language);
-      if (selectedVoice) {
-          utterance.voice = selectedVoice;
-      }
-      utterance.lang = language;
-      utterance.rate = playbackRate;
-      utteranceRef.current = utterance;
-
-      utterance.onend = () => {
-        setActiveAudioId(null);
-      };
-
-      speechSynthesis.speak(utterance);
-      setActiveAudioId(cardId);
     }
-  }, [text, isPlaying, playbackRate, cardId, setActiveAudioId, language, voices]);
+  }, [language, text, setActiveAudioId, isPlaying]);
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -101,28 +127,14 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
 
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
-    if (isPlaying) {
-        speechSynthesis.cancel();
-        setActiveAudioId(null);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
     }
   };
   
-  const handleLanguageChange = (lang: string) => {
+  const handleLanguageChange = (lang: 'English' | 'Hindi' | 'Hinglish') => {
       setLanguage(lang);
-      if (isPlaying) {
-          speechSynthesis.cancel();
-          setActiveAudioId(null);
-      }
   }
-
-  useEffect(() => {
-    return () => {
-      if (isPlaying) {
-        speechSynthesis.cancel();
-      }
-    };
-  }, [isPlaying]);
-
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -133,11 +145,12 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
 
   return (
     <Card>
+        {audioUrl && <audio ref={audioRef} src={audioUrl} onEnded={() => setActiveAudioId(null)} onPlay={() => audioRef.current && (audioRef.current.playbackRate = playbackRate)}/>}
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
             <div className='flex items-center gap-2'>
               <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
-                  {isPlaying ? <Pause /> : <Volume2 />}
+                  {isLoadingAudio ? <Loader2 className="animate-spin" /> : (isPlaying ? <Pause /> : <Volume2 />)}
               </Button>
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -151,9 +164,9 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
                       <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>1.5x {playbackRate === 1.5 && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                        <DropdownMenuLabel>Language</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => handleLanguageChange('en-IN')}>English {language === 'en-IN' && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleLanguageChange('hi-IN')}>Hindi {language === 'hi-IN' && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleLanguageChange('hi-IN')}>Hinglish {language === 'hi-IN' && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleLanguageChange('English')}>English {language === 'English' && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleLanguageChange('Hindi')}>Hindi {language === 'Hindi' && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleLanguageChange('Hinglish')}>Hinglish {language === 'Hinglish' && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
@@ -173,6 +186,15 @@ const AssistantMessage = ({ explanation, messageId }: { explanation: Explanation
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
   const { activeAudioId, setActiveAudioId } = useAppContext();
   
+  // When this component unmounts, if its audio is playing, stop it.
+  useEffect(() => {
+    return () => {
+        if (activeAudioId?.startsWith(`${messageId}-`)) {
+            setActiveAudioId(null);
+        }
+    }
+  }, [activeAudioId, messageId, setActiveAudioId]);
+
   return (
     <div className="flex items-start gap-4">
         <Avatar className="bg-primary flex-shrink-0">
@@ -236,7 +258,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd, activeAudioId, setActiveAudioId } = useAppContext();
+  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -258,17 +280,6 @@ export function ExplanationView() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat, isLoading, error]);
-
-  // Stop speech when navigating away or unmounting
-  useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) {
-        speechSynthesis.cancel();
-        setActiveAudioId(null);
-      }
-    };
-  }, [setActiveAudioId]);
-
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
