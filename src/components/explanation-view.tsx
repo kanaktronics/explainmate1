@@ -66,10 +66,28 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
         setTimeout(() => setIsCopied(false), 2000);
     });
   }
+  
+  useEffect(() => {
+    // If playback rate changes while this card is speaking, restart it with the new rate
+    if (isPlaying && utteranceRef.current && 'speechSynthesis' in window && speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = playbackRate;
+        utterance.onend = () => {
+            setIsPlaying(false);
+            utteranceRef.current = null;
+        };
+        utteranceRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+    }
+  }, [playbackRate, text, isPlaying]);
+
 
   useEffect(() => {
+    // Cleanup: ensure speech is stopped when the component unmounts
     return () => {
-        if (speechSynthesis.speaking) {
+        if (utteranceRef.current && 'speechSynthesis' in window) {
             speechSynthesis.cancel();
         }
     };
@@ -98,7 +116,7 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
                       <DropdownMenuItem onSelect={() => setPlaybackRate(0.5)}>Speed: 0.5x {playbackRate === 0.5 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>Speed: 1x {playbackRate === 1 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setPlaybackRate(1.5)}>Speed: 1.5x {playbackRate === 1.5 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setPlaybackRate(2)}>Speed: 2x {playbackRate === 2 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setPlaybackrate(2)}>Speed: 2x {playbackRate === 2 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
                       </DropdownMenuItem>
@@ -369,7 +387,7 @@ export function ExplanationView() {
             setChat(chat);
             break;
         case 'PRO_DAILY_LIMIT':
-            friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support and we’ll unlock additional access for you.";
+            friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support and we’ll unlock additional access for you.";
             setChat(chat);
             break;
         case 'ACCOUNT_BLOCKED':
@@ -519,5 +537,7 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
 
     
