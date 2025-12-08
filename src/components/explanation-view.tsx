@@ -43,6 +43,7 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
 
   const isPlaying = activeAudioId === cardId;
 
@@ -51,29 +52,34 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       return;
     }
 
-    // If this card is already playing, the user wants to stop it.
     if (isPlaying) {
       speechSynthesis.cancel();
       setActiveAudioId(null);
       return;
     }
     
-    // If any other card is playing, stop it before starting this one.
     if (activeAudioId !== null) {
       speechSynthesis.cancel();
     }
-
-    const utterance = new SpeechSynthesisUtterance(text);
+    
+    const textToSpeak = text.substring(currentCharIndex);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = playbackRate;
+    
+    utterance.onboundary = (event) => {
+        setCurrentCharIndex(currentCharIndex + event.charIndex);
+    };
+
     utterance.onend = () => {
       setActiveAudioId(null);
+      setCurrentCharIndex(0); // Reset on completion
       utteranceRef.current = null;
     };
     
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
     setActiveAudioId(cardId);
-  }, [text, isPlaying, playbackRate, cardId, activeAudioId, setActiveAudioId]);
+  }, [text, isPlaying, playbackRate, cardId, activeAudioId, setActiveAudioId, currentCharIndex]);
 
 
   const handleCopy = () => {
@@ -84,23 +90,45 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   }
   
   const handleSpeedChange = (rate: number) => {
+    if (rate === playbackRate) return;
+    
+    const wasPlaying = isPlaying;
     setPlaybackRate(rate);
-    // Stop any currently playing audio when speed changes, so the new speed applies on next play.
-    if (isPlaying) {
-      speechSynthesis.cancel();
-      setActiveAudioId(null);
+
+    if (wasPlaying) {
+      speechSynthesis.cancel(); // Stop current speech
+      
+      // We need to re-trigger the speech with the new rate.
+      // A slight timeout allows the state to update before we restart.
+      setTimeout(() => {
+        if (!text || text === 'N/A') return;
+
+        const textToSpeak = text.substring(currentCharIndex);
+        const newUtterance = new SpeechSynthesisUtterance(textToSpeak);
+        newUtterance.rate = rate;
+        newUtterance.onboundary = (event) => {
+            setCurrentCharIndex(currentCharIndex + event.charIndex);
+        };
+        newUtterance.onend = () => {
+          setActiveAudioId(null);
+          setCurrentCharIndex(0);
+          utteranceRef.current = null;
+        };
+
+        utteranceRef.current = newUtterance;
+        speechSynthesis.speak(newUtterance);
+        setActiveAudioId(cardId); // Ensure it's still the active one
+      }, 50);
     }
   };
 
 
   useEffect(() => {
-    // Cleanup: ensure speech is stopped when the component unmounts or the active audio changes
-    return () => {
-        if (utteranceRef.current && isPlaying) {
-            speechSynthesis.cancel();
-        }
-    };
-  }, [isPlaying]);
+    // If this card is no longer the active one, reset its character index.
+    if (activeAudioId !== cardId && currentCharIndex !== 0) {
+      setCurrentCharIndex(0);
+    }
+  }, [activeAudioId, cardId, currentCharIndex]);
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -558,3 +586,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
