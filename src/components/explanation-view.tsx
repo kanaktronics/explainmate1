@@ -291,18 +291,14 @@ export function ExplanationView() {
             {chat.map(renderMessage)}
             
             {isLoading && (
-              <div className='flex items-start gap-4'>
-                <Avatar className="bg-primary flex-shrink-0">
+               <div className='flex items-start gap-4'>
+                <Avatar className="bg-primary flex-shrink-0 animate-pulse">
                   <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
                 </Avatar>
-                <Card className='w-full'>
-                    <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
-                    <CardContent className="space-y-4">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </CardContent>
-                </Card>
+                <div className='w-full space-y-2'>
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-8 w-3/4" />
+                </div>
               </div>
             )}
             {error && (
