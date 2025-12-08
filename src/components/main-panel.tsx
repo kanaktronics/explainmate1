@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import { useAppContext } from '@/lib/app-context';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
@@ -8,9 +9,27 @@ import { Button } from './ui/button';
 import { Sparkles, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from './ui/scroll-area';
+import { usePathname } from 'next/navigation';
 
 export function MainPanel({ children }: { children: React.ReactNode }) {
   const { studentProfile, user } = useAppContext();
+  const pathname = usePathname();
+
+  const legalPages = [
+    '/about',
+    '/contact',
+    '/privacy-policy',
+    '/terms-conditions',
+    '/refund-policy',
+    '/service-delivery-policy',
+    '/pricing',
+  ];
+
+  const needsScroll = legalPages.includes(pathname);
+
+  const ContentWrapper = needsScroll ? ScrollArea : React.Fragment;
+  const contentWrapperProps = needsScroll ? { className: 'h-full' } : {};
+  const innerDivClass = needsScroll ? "container mx-auto p-4 sm:p-6 md:p-8" : "h-full";
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -50,7 +69,11 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
          </div>
       </header>
       <main className="flex-1 overflow-hidden">
-        {children}
+        <ContentWrapper {...contentWrapperProps}>
+            <div className={innerDivClass}>
+                {children}
+            </div>
+        </ContentWrapper>
       </main>
     </div>
   );
