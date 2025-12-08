@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -31,8 +32,28 @@ const explanationSchema = z.object({
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   const [audioStates, setAudioStates] = useState<Record<string, { src: string | null; isLoading: boolean; error: string | null }>>({});
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Create a single audio element instance
+    audioRef.current = new Audio();
+    
+    const audio = audioRef.current;
+    
+    // Add event listener for when playback ends
+    const handleEnded = () => {
+        setActiveAudioId(null);
+    };
+    audio.addEventListener('ended', handleEnded);
+
+    // Cleanup on component unmount
+    return () => {
+        audio.removeEventListener('ended', handleEnded);
+        audio.pause();
+        audioRef.current = null;
+    };
+  }, []);
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -42,21 +63,24 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   };
 
   const handleListen = async (text: string, id: string) => {
-    if (audioRef.current) {
-        if (activeAudioId === id && !audioRef.current.paused) {
+    if (!audioRef.current) return;
+
+    // If clicking the currently playing audio, toggle pause/play
+    if (activeAudioId === id) {
+        if (audioRef.current.paused) {
+            audioRef.current.play();
+        } else {
             audioRef.current.pause();
-            return;
         }
+        return;
     }
     
     setActiveAudioId(id);
 
     // If audio is already loaded, just play it
     if (audioStates[id]?.src) {
-        if (audioRef.current) {
-            audioRef.current.src = audioStates[id].src!;
-            audioRef.current.play();
-        }
+        audioRef.current.src = audioStates[id].src!;
+        audioRef.current.play();
         return;
     }
 
@@ -64,34 +88,29 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
 
     try {
         const result = await getAudioForText({ text });
-        if (result.error) {
-            throw new Error(result.error);
+        if (result.error || !result.audioDataUri) {
+            throw new Error(result.error || 'Failed to generate audio.');
         }
         setAudioStates(prev => ({ ...prev, [id]: { src: result.audioDataUri, isLoading: false, error: null } }));
+        if (audioRef.current) {
+            audioRef.current.src = result.audioDataUri;
+            audioRef.current.play();
+        }
     } catch(e: any) {
         setAudioStates(prev => ({ ...prev, [id]: { src: null, isLoading: false, error: e.message || "Failed to generate audio." } }));
+        setActiveAudioId(null); // Reset active audio on error
     }
   };
-  
-  useEffect(() => {
-    if (activeAudioId && audioStates[activeAudioId]?.src && audioRef.current) {
-      audioRef.current.src = audioStates[activeAudioId].src!;
-      audioRef.current.play();
-    }
-  }, [audioStates, activeAudioId]);
 
 
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
 
   const renderAudioFeedback = (id: string) => {
     const state = audioStates[id];
-    if (!state) return null;
-    return (
-        <>
-            {activeAudioId === id && <audio ref={audioRef} controls className='w-full mb-4' />}
-            {state.error && <Alert variant="destructive" className="mb-4"><AlertCircle/><AlertDescription>{state.error}</AlertDescription></Alert>}
-        </>
-    );
+    if (state?.error) {
+       return <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4"/><AlertDescription>{state.error}</AlertDescription></Alert>
+    }
+    return null;
   }
 
   const renderListenButton = (text: string, id: string) => {
@@ -235,7 +254,7 @@ export function ExplanationView() {
   }, [chat, isLoading, error]);
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
         const recognition = recognitionRef.current;
@@ -444,14 +463,16 @@ export function ExplanationView() {
             {chat.map(renderMessage)}
             
             {isLoading && (
-               <div className='flex items-start gap-4'>
-                <Avatar className="bg-primary flex-shrink-0 animate-pulse">
-                  <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
-                </Avatar>
-                <div className='w-full space-y-2'>
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-8 w-3/4" />
-                </div>
+              <div className="flex items-start gap-4 animate-pulse">
+                  <Avatar className="bg-primary flex-shrink-0">
+                      <AvatarFallback>
+                          <BrainCircuit className="text-primary-foreground h-6 w-6" />
+                      </AvatarFallback>
+                  </Avatar>
+                  <div className="w-full space-y-2">
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-6 w-3/4" />
+                  </div>
               </div>
             )}
             {error && (

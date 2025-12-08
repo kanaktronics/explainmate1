@@ -192,11 +192,11 @@ export async function getQuiz(input: {
     }
 }
 
-export async function getAudioForText(input: TextToSpeechInput): Promise<TextToSpeechOutput | { error: string }> {
+export async function getAudioForText(input: TextToSpeechInput): Promise<TextToSpeechOutput> {
   try {
     const result = await textToSpeech(input);
-    if (!result) {
-      throw new Error('AI did not return a response for TTS.');
+    if (!result || (!result.audioDataUri && !result.error)) {
+      return { error: 'An unexpected response was received from the server.' };
     }
     return result;
   } catch (e: any) {
