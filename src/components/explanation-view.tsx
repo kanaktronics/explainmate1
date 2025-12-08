@@ -94,14 +94,13 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
 
 
   useEffect(() => {
-    // Cleanup: ensure speech is stopped when the component unmounts
+    // Cleanup: ensure speech is stopped when the component unmounts or the active audio changes
     return () => {
         if (utteranceRef.current && isPlaying) {
             speechSynthesis.cancel();
-            setActiveAudioId(null);
         }
     };
-  }, [isPlaying, setActiveAudioId]);
+  }, [isPlaying]);
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
