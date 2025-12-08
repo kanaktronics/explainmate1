@@ -40,6 +40,7 @@ const ChatMessageSchema = z.object({
 const TailorExplanationInputSchema = z.object({
   chatHistory: z.array(ChatMessageSchema).describe('The full conversation history between the user and the assistant. The assistant\'s content is a stringified JSON of the previous turn\'s full output.'),
   studentProfile: StudentProfileSchema,
+  languageInstruction: z.string().describe('A per-request instruction specifying the language to respond in.'),
 });
 export type TailorExplanationInput = z.infer<typeof TailorExplanationInputSchema>;
 
@@ -78,7 +79,9 @@ const prompt = ai.definePrompt({
 
   CRITICAL OUTPUT RULES:
   1.  Educational Focus: Your primary function is to answer educational questions (e.g., school subjects like science, math, history). If the user's request is clearly not an educational question (e.g., asking for personal opinions, inappropriate content, or casual conversation unrelated to learning), then you MUST set all four output fields to 'N/A'. Otherwise, provide a detailed and high-quality response across all four sections. Do not provide short, superficial answers for valid questions.
-  2.  Respond in the User's Language (No Exceptions): Your response MUST be in the same language as the user's last message in the chat history. If the user's last message is in Hindi, your entire response must be in Hindi. If it is in English, respond in English. This is the most important rule.
+  
+  LANGUAGE OVERRIDE FOR THIS TURN:
+  {{{languageInstruction}}}
 
   Student Profile (Use this for context, do not mention it):
   - Class Level: {{{studentProfile.classLevel}}}

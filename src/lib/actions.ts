@@ -70,6 +70,21 @@ async function checkProFairUsage(studentProfile: StudentProfile): Promise<{ allo
   return { allowed: true };
 }
 
+function detectLanguageLabel(text: string): "english" | "hindi" | "hinglish" {
+  // Check for Devanagari script characters for Hindi
+  const hasDevanagari = /[\u0900-\u097F]/.test(text);
+  if (hasDevanagari) return "hindi";
+
+  // Check for common Hinglish words in Latin script
+  const hindiWords = ["hai", "nahi", "kya", "kaise", "tha", "thi", "hun", "raha", "rahi", "kyun", "kab"];
+  const lower = text.toLowerCase();
+  const isHinglish = hindiWords.some(w => lower.split(/\s+/).includes(w));
+
+  if (isHinglish) return "hinglish";
+
+  return "english";
+}
+
 
 export async function getExplanation(input: { studentProfile: StudentProfile; chatHistory: ChatMessage[] }): Promise<TailorExplanationOutput | { error: string }> {
   try {
@@ -91,6 +106,22 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
         }
     }
 
+    const lastUserMessage = chatHistory[chatHistory.length - 1];
+    let userQuestion = '';
+    if (typeof lastUserMessage.content === 'string') {
+        userQuestion = lastUserMessage.content;
+    } else if (typeof lastUserMessage.content === 'object' && 'text' in lastUserMessage.content) {
+        userQuestion = lastUserMessage.content.text;
+    }
+
+    const lang = detectLanguageLabel(userQuestion);
+
+    const langInstruction = {
+        english: `For THIS message, reply ONLY in clear English. Do NOT use Hindi or Hinglish, even if previous messages were in another language.`,
+        hindi: `For THIS message, reply ONLY in simple, clear Hindi (using Devanagari script). Do NOT use English sentences unless needed for technical terms.`,
+        hinglish: `For THIS message, reply ONLY in Hinglish (Hindi written in English letters). Do NOT answer in pure English or pure Devanagari Hindi.`,
+    }[lang];
+
     const result = await tailorExplanation({
       studentProfile: {
         classLevel: studentProfile.classLevel,
@@ -98,6 +129,7 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
         weakSubjects: studentProfile.weakSubjects,
       },
       chatHistory: convertToGenkitHistory(chatHistory),
+      languageInstruction: langInstruction,
     });
     
     if (!result) {
