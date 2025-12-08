@@ -43,7 +43,6 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const lastSpokenIndexRef = useRef(0);
 
   const isPlaying = activeAudioId === cardId;
 
@@ -52,33 +51,28 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       return;
     }
 
-    if (activeAudioId && activeAudioId !== cardId) {
-      speechSynthesis.cancel();
-    }
+    // Always cancel any speech before starting a new one or stopping.
+    // This handles the case where another card is playing.
+    speechSynthesis.cancel();
     
     if (isPlaying) {
-      speechSynthesis.cancel();
+      // If the current card was playing, just stop it and update state.
       setActiveAudioId(null);
     } else {
-      lastSpokenIndexRef.current = 0; // Reset for new play
+      // If another card was playing, it's now stopped. Start this new one.
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
       utteranceRef.current = utterance;
 
-      utterance.onboundary = (event) => {
-        // Correctly update the ref to the current character index
-        lastSpokenIndexRef.current = event.charIndex;
-      };
-
       utterance.onend = () => {
+        // When speech finishes naturally, update the state.
         setActiveAudioId(null);
-        lastSpokenIndexRef.current = 0;
       };
 
       speechSynthesis.speak(utterance);
       setActiveAudioId(cardId);
     }
-  }, [text, isPlaying, playbackRate, cardId, activeAudioId, setActiveAudioId]);
+  }, [text, isPlaying, playbackRate, cardId, setActiveAudioId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -90,35 +84,13 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   const handleSpeedChange = (rate: number) => {
     if (rate === playbackRate) return;
     
-    const wasPlaying = isPlaying;
     setPlaybackRate(rate);
 
-    if (wasPlaying) {
-        // Get the last known position BEFORE canceling
-        const resumeFromIndex = lastSpokenIndexRef.current;
+    // If audio is playing when speed changes, stop it and reset the UI.
+    // The user can then press play again to hear it at the new speed.
+    if (isPlaying) {
         speechSynthesis.cancel();
-        
-        // Use a timeout to ensure the speech system is ready for a new utterance
-        setTimeout(() => {
-            if (!text || text === 'N/A') return;
-            const textToSpeak = text.substring(resumeFromIndex);
-            const newUtterance = new SpeechSynthesisUtterance(textToSpeak);
-            newUtterance.rate = rate;
-            utteranceRef.current = newUtterance;
-            
-            newUtterance.onboundary = (event) => {
-                // Important: The charIndex is relative to the new utterance, so we add the offset
-                lastSpokenIndexRef.current = resumeFromIndex + event.charIndex;
-            };
-            
-            newUtterance.onend = () => {
-                setActiveAudioId(null);
-                lastSpokenIndexRef.current = 0;
-            };
-
-            speechSynthesis.speak(newUtterance);
-            setActiveAudioId(cardId);
-        }, 50);
+        setActiveAudioId(null);
     }
   };
 
