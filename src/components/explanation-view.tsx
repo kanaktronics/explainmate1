@@ -43,7 +43,7 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const [currentCharIndex, setCurrentCharIndex] = useState(0);
+  const lastSpokenIndexRef = useRef(0);
 
   const isPlaying = activeAudioId === cardId;
 
@@ -52,37 +52,31 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       return;
     }
 
+    if (activeAudioId && activeAudioId !== cardId) {
+      speechSynthesis.cancel();
+    }
+
     if (isPlaying) {
       speechSynthesis.cancel();
       setActiveAudioId(null);
-      return;
-    }
-    
-    // Stop any other card that might be playing
-    if (activeAudioId !== null) {
-      speechSynthesis.cancel();
-    }
-    
-    const textToSpeak = text.substring(currentCharIndex);
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = playbackRate;
-    
-    let localCharIndex = currentCharIndex;
-    utterance.onboundary = (event) => {
-        localCharIndex = currentCharIndex + event.charIndex;
-    };
+    } else {
+      const utterance = new SpeechSynthesisUtterance(text.substring(lastSpokenIndexRef.current));
+      utterance.rate = playbackRate;
+      utteranceRef.current = utterance;
 
-    utterance.onend = () => {
-      setActiveAudioId(null);
-      setCurrentCharIndex(0); // Reset on completion
-      utteranceRef.current = null;
-    };
-    
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-    setActiveAudioId(cardId);
-  }, [text, isPlaying, playbackRate, cardId, activeAudioId, setActiveAudioId, currentCharIndex]);
+      utterance.onboundary = (event) => {
+        lastSpokenIndexRef.current += event.charLength;
+      };
 
+      utterance.onend = () => {
+        setActiveAudioId(null);
+        lastSpokenIndexRef.current = 0;
+      };
+
+      speechSynthesis.speak(utterance);
+      setActiveAudioId(cardId);
+    }
+  }, [text, isPlaying, playbackRate, cardId, activeAudioId, setActiveAudioId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -90,7 +84,7 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
         setTimeout(() => setIsCopied(false), 2000);
     });
   }
-  
+
   const handleSpeedChange = (rate: number) => {
     if (rate === playbackRate) return;
     
@@ -98,60 +92,44 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
     setPlaybackRate(rate);
 
     if (wasPlaying) {
-      speechSynthesis.cancel(); // Stop current speech
-      
-      // We need to re-trigger the speech with the new rate.
-      // A slight timeout allows the state to update before we restart.
-      setTimeout(() => {
-        if (!text || text === 'N/A') return;
-
-        const utterance = utteranceRef.current;
-        let lastKnownIndex = currentCharIndex;
-
-        if (utterance && (utterance as any)._localCharIndex) {
-            lastKnownIndex = (utterance as any)._localCharIndex;
-        }
-
-        const textToSpeak = text.substring(lastKnownIndex);
-        const newUtterance = new SpeechSynthesisUtterance(textToSpeak);
-        newUtterance.rate = rate;
-
-        let localCharIndex = lastKnownIndex;
-        newUtterance.onboundary = (event) => {
-             localCharIndex = lastKnownIndex + event.charIndex;
-             (newUtterance as any)._localCharIndex = localCharIndex; // Store it on the object
-        };
-
-        newUtterance.onend = () => {
-          setActiveAudioId(null);
-          setCurrentCharIndex(0);
-          utteranceRef.current = null;
-        };
+        speechSynthesis.cancel();
         
-        setCurrentCharIndex(lastKnownIndex);
-        utteranceRef.current = newUtterance;
-        speechSynthesis.speak(newUtterance);
-        setActiveAudioId(cardId); // Ensure it's still the active one
-      }, 50);
+        // Use a timeout to ensure the state update has propagated
+        setTimeout(() => {
+            if (!text || text === 'N/A') return;
+            const textToSpeak = text.substring(lastSpokenIndexRef.current);
+            const newUtterance = new SpeechSynthesisUtterance(textToSpeak);
+            newUtterance.rate = rate;
+            utteranceRef.current = newUtterance;
+            
+            newUtterance.onboundary = (event) => {
+                lastSpokenIndexRef.current += event.charLength;
+            };
+            
+            newUtterance.onend = () => {
+                setActiveAudioId(null);
+                lastSpokenIndexRef.current = 0;
+            };
+
+            speechSynthesis.speak(newUtterance);
+            setActiveAudioId(cardId);
+        }, 50);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (utteranceRef.current) {
+        speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    // If this card is no longer the active one, reset its character index.
-    if (activeAudioId !== cardId && currentCharIndex !== 0) {
-      setCurrentCharIndex(0);
+    if (activeAudioId !== cardId) {
+        lastSpokenIndexRef.current = 0;
     }
-  }, [activeAudioId, cardId, currentCharIndex]);
-
-  useEffect(() => {
-      return () => {
-          // If this card's audio is playing when the component unmounts, stop it.
-          if (isPlaying && utteranceRef.current) {
-              speechSynthesis.cancel();
-          }
-      };
-  }, [isPlaying]);
+  }, [activeAudioId, cardId]);
 
 
   const renderContent = (content: string) => {
@@ -610,5 +588,7 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
 
     
