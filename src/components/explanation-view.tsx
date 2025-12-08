@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, Volume2, X, LoaderCircle } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, Volume2, X, LoaderCircle, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -30,30 +30,108 @@ const explanationSchema = z.object({
   image: z.string().optional(),
 });
 
-const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
-  const [audioStates, setAudioStates] = useState<Record<string, { src: string | null; isLoading: boolean; error: string | null }>>({});
+const audioStore: {
+  activeAudio: HTMLAudioElement | null;
+  activeId: string | null;
+  setActiveAudio: (audio: HTMLAudioElement, id: string) => void;
+  stopActiveAudio: () => void;
+} = {
+  activeAudio: null,
+  activeId: null,
+  setActiveAudio(audio, id) {
+    if (this.activeAudio && this.activeId !== id) {
+      this.activeAudio.pause();
+    }
+    this.activeAudio = audio;
+    this.activeId = id;
+  },
+  stopActiveAudio() {
+    if (this.activeAudio) {
+      this.activeAudio.pause();
+      this.activeAudio = null;
+      this.activeId = null;
+    }
+  }
+};
+
+
+const ExplanationCard = ({ title, text, audioId }: { title: string, text: string, audioId: string }) => {
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Create a single audio element instance
     audioRef.current = new Audio();
-    
     const audio = audioRef.current;
-    
-    // Add event listener for when playback ends
-    const handleEnded = () => {
-        setActiveAudioId(null);
-    };
-    audio.addEventListener('ended', handleEnded);
 
-    // Cleanup on component unmount
-    return () => {
-        audio.removeEventListener('ended', handleEnded);
-        audio.pause();
-        audioRef.current = null;
+    const onEnded = () => {
+      setIsPlaying(false);
+      audioStore.stopActiveAudio();
     };
-  }, []);
+    const onPause = () => {
+      if(audioStore.activeId === audioId) {
+        setIsPlaying(false);
+      }
+    };
+    const onPlay = () => {
+      if(audioStore.activeId === audioId) {
+        setIsPlaying(true);
+      }
+    };
+    
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('play', onPlay);
+
+    return () => {
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('play', onPlay);
+    };
+  }, [audioId]);
+  
+  const handleListen = async () => {
+    if (!text || text === 'N/A') return;
+    if (!audioRef.current) return;
+    
+    // Toggle play/pause if this audio is the active one
+    if (isPlaying && audioStore.activeId === audioId) {
+        audioRef.current.pause();
+        return;
+    }
+    if (!isPlaying && audioStore.activeId === audioId && audioRef.current.src) {
+        audioRef.current.play();
+        return;
+    }
+
+    audioStore.setActiveAudio(audioRef.current, audioId);
+
+    if (audioSrc) {
+        audioRef.current.src = audioSrc;
+        audioRef.current.play();
+        return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+        const result = await getAudioForText({ text });
+        if (result.error || !result.audioDataUri) {
+            throw new Error(result.error || 'Failed to generate audio.');
+        }
+        setAudioSrc(result.audioDataUri);
+        if (audioRef.current) {
+            audioRef.current.src = result.audioDataUri;
+            audioRef.current.play();
+        }
+    } catch (e: any) {
+        setError(e.message || "Failed to generate audio.");
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -62,65 +140,25 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
     return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />;
   };
 
-  const handleListen = async (text: string, id: string) => {
-    if (!audioRef.current) return;
+  return (
+    <Card>
+        <CardHeader className='flex-row items-center justify-between'>
+            <CardTitle>{title}</CardTitle>
+            <Button variant="ghost" size="icon" onClick={handleListen} disabled={isLoading || !text || text === 'N/A'}>
+                {isLoading ? <LoaderCircle className="animate-spin" /> : (isPlaying && audioStore.activeId === audioId ? <Pause /> : <Volume2 />)}
+            </Button>
+        </CardHeader>
+        <CardContent>
+            {error && <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4"/><AlertDescription>{error}</AlertDescription></Alert>}
+            {renderContent(text)}
+        </CardContent>
+    </Card>
+  )
+}
 
-    // If clicking the currently playing audio, toggle pause/play
-    if (activeAudioId === id) {
-        if (audioRef.current.paused) {
-            audioRef.current.play();
-        } else {
-            audioRef.current.pause();
-        }
-        return;
-    }
-    
-    setActiveAudioId(id);
-
-    // If audio is already loaded, just play it
-    if (audioStates[id]?.src) {
-        audioRef.current.src = audioStates[id].src!;
-        audioRef.current.play();
-        return;
-    }
-
-    setAudioStates(prev => ({ ...prev, [id]: { src: null, isLoading: true, error: null } }));
-
-    try {
-        const result = await getAudioForText({ text });
-        if (result.error || !result.audioDataUri) {
-            throw new Error(result.error || 'Failed to generate audio.');
-        }
-        setAudioStates(prev => ({ ...prev, [id]: { src: result.audioDataUri, isLoading: false, error: null } }));
-        if (audioRef.current) {
-            audioRef.current.src = result.audioDataUri;
-            audioRef.current.play();
-        }
-    } catch(e: any) {
-        setAudioStates(prev => ({ ...prev, [id]: { src: null, isLoading: false, error: e.message || "Failed to generate audio." } }));
-        setActiveAudioId(null); // Reset active audio on error
-    }
-  };
-
-
+const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
-
-  const renderAudioFeedback = (id: string) => {
-    const state = audioStates[id];
-    if (state?.error) {
-       return <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4"/><AlertDescription>{state.error}</AlertDescription></Alert>
-    }
-    return null;
-  }
-
-  const renderListenButton = (text: string, id: string) => {
-      const isLoading = audioStates[id]?.isLoading;
-      return (
-        <Button variant="ghost" size="icon" onClick={() => handleListen(text, id)} disabled={isLoading}>
-            {isLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
-        </Button>
-      )
-  }
+  const baseId = explanation.explanation.substring(0, 10) + Date.now();
 
   return (
     <div className="flex items-start gap-4">
@@ -136,65 +174,20 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                     <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
                 </TabsList>
                 <TabsContent value="explanation">
-                <Card>
-                    <CardHeader className='flex-row items-center justify-between'>
-                      <CardTitle>Explanation</CardTitle>
-                      {renderListenButton(explanation.explanation, 'explanation')}
-                    </CardHeader>
-                    <CardContent>
-                      {renderAudioFeedback('explanation')}
-                      {renderContent(explanation.explanation)}
-                    </CardContent>
-                </Card>
+                  <ExplanationCard title="Explanation" text={explanation.explanation} audioId={`${baseId}-explanation`} />
                 </TabsContent>
                 <TabsContent value="roughWork">
-                <Card>
-                    <CardHeader className='flex-row items-center justify-between'>
-                      <CardTitle>Rough Work</CardTitle>
-                      {renderListenButton(explanation.roughWork, 'roughWork')}
-                    </CardHeader>
-                    <CardContent>
-                      {renderAudioFeedback('roughWork')}
-                      {renderContent(explanation.roughWork)}
-                    </CardContent>
-                </Card>
+                   <ExplanationCard title="Rough Work" text={explanation.roughWork} audioId={`${baseId}-roughWork`} />
                 </TabsContent>
                 <TabsContent value="realWorld">
-                <Card>
-                    <CardHeader className='flex-row items-center justify-between'>
-                      <CardTitle>Real-World Examples</CardTitle>
-                      {renderListenButton(explanation.realWorldExamples, 'realWorld')}
-                    </CardHeader>
-                    <CardContent>
-                       {renderAudioFeedback('realWorld')}
-                       {renderContent(explanation.realWorldExamples)}
-                    </CardContent>
-                </Card>
+                   <ExplanationCard title="Real-World Examples" text={explanation.realWorldExamples} audioId={`${baseId}-realWorld`} />
                 </TabsContent>
                 <TabsContent value="fairWork">
-                <Card>
-                    <CardHeader className='flex-row items-center justify-between'>
-                      <CardTitle>Fair Work (Notebook-ready)</CardTitle>
-                       {renderListenButton(explanation.fairWork, 'fairWork')}
-                    </CardHeader>
-                    <CardContent>
-                       {renderAudioFeedback('fairWork')}
-                       {renderContent(explanation.fairWork)}
-                    </CardContent>
-                </Card>
+                   <ExplanationCard title="Fair Work (Notebook-ready)" text={explanation.fairWork} audioId={`${baseId}-fairWork`} />
                 </TabsContent>
             </Tabs>
         ) : (
-             <Card className='w-full'>
-                <CardHeader className='flex-row items-center justify-between'>
-                  <CardTitle>Explanation</CardTitle>
-                   {renderListenButton(explanation.explanation, 'explanation')}
-                </CardHeader>
-                <CardContent>
-                    {renderAudioFeedback('explanation')}
-                    {renderContent(explanation.explanation)}
-                </CardContent>
-            </Card>
+             <ExplanationCard title="Explanation" text={explanation.explanation} audioId={`${baseId}-explanation`} />
         )}
     </div>
   );
@@ -230,7 +223,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { user, studentProfile, setStudentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
+  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd, FREE_TIER_EXPLANATION_LIMIT } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -470,6 +463,7 @@ export function ExplanationView() {
                       </AvatarFallback>
                   </Avatar>
                   <div className="w-full space-y-2">
+                      <Skeleton className="h-8 w-1/4 mb-4" />
                       <Skeleton className="h-24 w-full" />
                       <Skeleton className="h-6 w-3/4" />
                   </div>
@@ -566,3 +560,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
