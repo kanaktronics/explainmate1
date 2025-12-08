@@ -5,8 +5,6 @@ import { tailorExplanation } from '@/ai/flows/tailor-explanations-to-student-pro
 import type { TailorExplanationInput, TailorExplanationOutput } from '@/ai/flows/tailor-explanations-to-student-profile';
 import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quizzes';
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
-import { textToSpeech } from '@/ai/flows/text-to-speech';
-import type { TextToSpeechInput, TextToSpeechOutput } from '@/ai/flows/text-to-speech';
 import { ChatMessage, StudentProfile } from './types';
 import { getFirestore, doc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
@@ -190,24 +188,4 @@ export async function getQuiz(input: {
         }
         return { error: 'An unexpected error occurred while generating the quiz. Please try again.' };
     }
-}
-
-export async function getAudioForText(input: TextToSpeechInput): Promise<TextToSpeechOutput> {
-  try {
-    const result = await textToSpeech(input);
-    if (!result) {
-      return { error: 'An unexpected response was received from the server.' };
-    }
-    if (result.error && result.error.includes('blocked')) {
-      return { error: 'The text could not be converted to speech due to safety filters. Please try different wording.' };
-    }
-    return result;
-  } catch (e: any) {
-    console.error("Error generating audio:", e);
-    const errorMessage = e.message || '';
-    if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('unavailable')) {
-        return { error: 'The audio generation service is busy. Please try again in a moment.' };
-    }
-    return { error: 'Failed to generate audio for this explanation.' };
-  }
 }

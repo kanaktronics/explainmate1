@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation, getAudioForText } from '@/lib/actions';
+import { getExplanation } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, Volume2, X, LoaderCircle, Pause } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, Volume2, X, LoaderCircle, Pause, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -30,34 +30,41 @@ const explanationSchema = z.object({
   image: z.string().optional(),
 });
 
-const ExplanationCard = ({ title, text, audioId }: { title: string, text: string, audioId: string }) => {
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const handleListen = async () => {
-    if (!text || text === 'N/A') return;
-    
-    // If we already have the audio, just toggle the player
-    if (audioSrc) {
-      // Logic to play/pause can be added here if needed
-      return;
+const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const handleListen = () => {
+    if (!text || text === 'N/A' || !('speechSynthesis' in window)) {
+        // Optionally, show a toast or alert if TTS is not supported
+        return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-        const result = await getAudioForText({ text });
-        if (result.error || !result.audioDataUri) {
-            throw new Error(result.error || 'Failed to generate audio.');
-        }
-        setAudioSrc(result.audioDataUri);
-    } catch (e: any) {
-        setError(e.message || "Failed to generate audio.");
-    } finally {
-        setIsLoading(false);
+    if (speechSynthesis.speaking && isPlaying) {
+        speechSynthesis.cancel();
+        setIsPlaying(false);
+    } else {
+        speechSynthesis.cancel(); // Stop any other playing audio
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => {
+            setIsPlaying(false);
+            utteranceRef.current = null;
+        };
+        utteranceRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+        setIsPlaying(true);
     }
   };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+        if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+        }
+    };
+  }, []);
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -70,18 +77,11 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
     <Card>
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
-            <Button variant="ghost" size="icon" onClick={handleListen} disabled={isLoading || !text || text === 'N/A'}>
-                {isLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
+            <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'}>
+                {isPlaying ? <Pause /> : <Volume2 />}
             </Button>
         </CardHeader>
         <CardContent>
-            {error && <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4"/><AlertDescription>{error}</AlertDescription></Alert>}
-            {audioSrc && (
-              <audio controls autoPlay className="w-full mb-4">
-                <source src={audioSrc} type="audio/wav" />
-                Your browser does not support the audio element.
-              </audio>
-            )}
             {renderContent(text)}
         </CardContent>
     </Card>
@@ -90,8 +90,7 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
-  const baseId = explanation.explanation.substring(0, 10) + Date.now();
-
+  
   return (
     <div className="flex items-start gap-4">
         <Avatar className="bg-primary flex-shrink-0">
@@ -106,20 +105,20 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                     <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
                 </TabsList>
                 <TabsContent value="explanation">
-                  <ExplanationCard title="Explanation" text={explanation.explanation} audioId={`${baseId}-explanation`} />
+                  <ExplanationCard title="Explanation" text={explanation.explanation} />
                 </TabsContent>
                 <TabsContent value="roughWork">
-                   <ExplanationCard title="Rough Work" text={explanation.roughWork} audioId={`${baseId}-roughWork`} />
+                   <ExplanationCard title="Rough Work" text={explanation.roughWork} />
                 </TabsContent>
                 <TabsContent value="realWorld">
-                   <ExplanationCard title="Real-World Examples" text={explanation.realWorldExamples} audioId={`${baseId}-realWorld`} />
+                   <ExplanationCard title="Real-World Examples" text={explanation.realWorldExamples} />
                 </TabsContent>
                 <TabsContent value="fairWork">
-                   <ExplanationCard title="Fair Work (Notebook-ready)" text={explanation.fairWork} audioId={`${baseId}-fairWork`} />
+                   <ExplanationCard title="Fair Work (Notebook-ready)" text={explanation.fairWork} />
                 </TabsContent>
             </Tabs>
         ) : (
-             <ExplanationCard title="Explanation" text={explanation.explanation} audioId={`${baseId}-explanation`} />
+             <ExplanationCard title="Explanation" text={explanation.explanation} />
         )}
     </div>
   );
@@ -492,7 +491,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
-
-    
