@@ -30,88 +30,19 @@ const explanationSchema = z.object({
   image: z.string().optional(),
 });
 
-const audioStore: {
-  activeAudio: HTMLAudioElement | null;
-  activeId: string | null;
-  setActiveAudio: (audio: HTMLAudioElement, id: string) => void;
-  stopActiveAudio: () => void;
-} = {
-  activeAudio: null,
-  activeId: null,
-  setActiveAudio(audio, id) {
-    if (this.activeAudio && this.activeId !== id) {
-      this.activeAudio.pause();
-    }
-    this.activeAudio = audio;
-    this.activeId = id;
-  },
-  stopActiveAudio() {
-    if (this.activeAudio) {
-      this.activeAudio.pause();
-      this.activeAudio = null;
-      this.activeId = null;
-    }
-  }
-};
-
-
 const ExplanationCard = ({ title, text, audioId }: { title: string, text: string, audioId: string }) => {
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    audioRef.current = new Audio();
-    const audio = audioRef.current;
-
-    const onEnded = () => {
-      setIsPlaying(false);
-      audioStore.stopActiveAudio();
-    };
-    const onPause = () => {
-      if(audioStore.activeId === audioId) {
-        setIsPlaying(false);
-      }
-    };
-    const onPlay = () => {
-      if(audioStore.activeId === audioId) {
-        setIsPlaying(true);
-      }
-    };
-    
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('play', onPlay);
-
-    return () => {
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('play', onPlay);
-    };
-  }, [audioId]);
+  const [showPlayer, setShowPlayer] = useState(false);
   
   const handleListen = async () => {
     if (!text || text === 'N/A') return;
-    if (!audioRef.current) return;
     
-    // Toggle play/pause if this audio is the active one
-    if (isPlaying && audioStore.activeId === audioId) {
-        audioRef.current.pause();
-        return;
-    }
-    if (!isPlaying && audioStore.activeId === audioId && audioRef.current.src) {
-        audioRef.current.play();
-        return;
-    }
-
-    audioStore.setActiveAudio(audioRef.current, audioId);
-
+    // If we already have the audio, just toggle the player
     if (audioSrc) {
-        audioRef.current.src = audioSrc;
-        audioRef.current.play();
-        return;
+      setShowPlayer(!showPlayer);
+      return;
     }
 
     setIsLoading(true);
@@ -122,10 +53,7 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
             throw new Error(result.error || 'Failed to generate audio.');
         }
         setAudioSrc(result.audioDataUri);
-        if (audioRef.current) {
-            audioRef.current.src = result.audioDataUri;
-            audioRef.current.play();
-        }
+        setShowPlayer(true);
     } catch (e: any) {
         setError(e.message || "Failed to generate audio.");
     } finally {
@@ -145,11 +73,17 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
             <Button variant="ghost" size="icon" onClick={handleListen} disabled={isLoading || !text || text === 'N/A'}>
-                {isLoading ? <LoaderCircle className="animate-spin" /> : (isPlaying && audioStore.activeId === audioId ? <Pause /> : <Volume2 />)}
+                {isLoading ? <LoaderCircle className="animate-spin" /> : <Volume2 />}
             </Button>
         </CardHeader>
         <CardContent>
             {error && <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4"/><AlertDescription>{error}</AlertDescription></Alert>}
+            {showPlayer && audioSrc && (
+              <audio controls autoPlay className="w-full mb-4">
+                <source src={audioSrc} type="audio/wav" />
+                Your browser does not support the audio element.
+              </audio>
+            )}
             {renderContent(text)}
         </CardContent>
     </Card>
@@ -223,7 +157,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd, FREE_TIER_EXPLANATION_LIMIT } = useAppContext();
+  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -344,7 +278,7 @@ export function ExplanationView() {
         return;
     }
 
-    if (!studentProfile.isPro && (studentProfile.dailyUsage || 0) >= FREE_TIER_EXPLANATION_LIMIT) {
+    if (!studentProfile.isPro && (studentProfile.dailyUsage || 0) >= 5) {
         showAd({
             title: "Daily Limit Reached",
             description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
@@ -456,16 +390,16 @@ export function ExplanationView() {
             {chat.map(renderMessage)}
             
             {isLoading && (
-              <div className="flex items-start gap-4 animate-pulse">
-                  <Avatar className="bg-primary flex-shrink-0">
+              <div className="flex items-start gap-4">
+                  <Avatar className="bg-primary flex-shrink-0 animate-pulse">
                       <AvatarFallback>
                           <BrainCircuit className="text-primary-foreground h-6 w-6" />
                       </AvatarFallback>
                   </Avatar>
-                  <div className="w-full space-y-2">
-                      <Skeleton className="h-8 w-1/4 mb-4" />
+                  <div className="w-full space-y-4">
+                      <Skeleton className="h-8 w-1/4" />
                       <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-16 w-full" />
                   </div>
               </div>
             )}
@@ -560,5 +494,7 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
 
     
