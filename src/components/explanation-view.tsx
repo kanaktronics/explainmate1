@@ -14,12 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, Volume2, X, LoaderCircle, Pause, Play } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, LoaderCircle, Pause, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import Image from 'next/image';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
@@ -32,11 +33,12 @@ const explanationSchema = z.object({
 
 const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [isCopied, setIsCopied] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const handleListen = () => {
     if (!text || text === 'N/A' || !('speechSynthesis' in window)) {
-        // Optionally, show a toast or alert if TTS is not supported
         return;
     }
 
@@ -44,9 +46,10 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
         speechSynthesis.cancel();
         setIsPlaying(false);
     } else {
-        speechSynthesis.cancel(); // Stop any other playing audio
+        speechSynthesis.cancel(); 
         
         const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = playbackRate;
         utterance.onend = () => {
             setIsPlaying(false);
             utteranceRef.current = null;
@@ -57,7 +60,13 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
     }
   };
 
-  // Cleanup on component unmount
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    });
+  }
+
   useEffect(() => {
     return () => {
         if (speechSynthesis.speaking) {
@@ -77,9 +86,25 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
     <Card>
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
-            <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'}>
-                {isPlaying ? <Pause /> : <Volume2 />}
-            </Button>
+            <div className='flex items-center gap-2'>
+              <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'}>
+                  {isPlaying ? <Pause /> : <Volume2 />}
+              </Button>
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon"><MoreVertical/></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                      <DropdownMenuItem onSelect={() => setPlaybackRate(0.5)}>Speed: 0.5x {playbackRate === 0.5 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>Speed: 1x {playbackRate === 1 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setPlaybackRate(1.5)}>Speed: 1.5x {playbackRate === 1.5 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setPlaybackRate(2)}>Speed: 2x {playbackRate === 2 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleCopy}>
+                          {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
+                      </DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
         </CardHeader>
         <CardContent>
             {renderContent(text)}
@@ -394,7 +419,10 @@ export function ExplanationView() {
                       </AvatarFallback>
                   </Avatar>
                   <div className="w-full space-y-4">
-                      <Skeleton className="h-8 w-1/4" />
+                      <div className='flex gap-2'>
+                        <Skeleton className="h-8 w-1/4" />
+                        <Skeleton className="h-8 w-1/4" />
+                      </div>
                       <Skeleton className="h-24 w-full" />
                       <Skeleton className="h-16 w-full" />
                   </div>
@@ -491,3 +519,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
