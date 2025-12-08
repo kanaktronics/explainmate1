@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -14,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, PenSquare, Send, User, X } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Codesandbox, Globe, Image as ImageIcon, Mic, PenSquare, Send, User, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -96,8 +95,8 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'S';
   }
 
-  const text = typeof content === 'string' ? content : content.text;
-  const imageUrl = typeof content === 'object' && 'imageUrl' in content ? content.imageUrl : undefined;
+  const textPart = typeof content === 'string' ? content : (content as { text?: string }).text;
+  const imageUrl = typeof content === 'object' && content !== null && 'imageUrl' in content ? content.imageUrl : undefined;
 
   return (
     <div className="flex items-start gap-4 justify-end">
@@ -106,7 +105,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
           {imageUrl && (
             <Image src={imageUrl} alt="Uploaded diagram" width={200} height={200} className="rounded-md mb-2" />
           )}
-          <p className="font-semibold">{text}</p>
+          {textPart && <p className="font-semibold">{textPart}</p>}
         </CardContent>
       </Card>
       <Avatar>
@@ -126,6 +125,8 @@ export function ExplanationView() {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const maxPromptLength = studentProfile.isPro ? MAX_PROMPT_LENGTH_PRO : MAX_PROMPT_LENGTH_FREE;
 
@@ -140,6 +141,65 @@ export function ExplanationView() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat, isLoading, error]);
 
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        const recognition = recognitionRef.current;
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            form.setValue('prompt', form.getValues('prompt') + transcript);
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error', event.error);
+            toast({
+                variant: 'destructive',
+                title: 'Voice Recognition Error',
+                description: event.error === 'not-allowed' 
+                    ? 'Microphone access was denied. Please allow it in your browser settings.'
+                    : 'An error occurred during voice recognition.',
+            });
+            setIsListening(false);
+        };
+    }
+
+    return () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+    };
+  }, [form, toast]);
+
+
+  const handleListen = () => {
+      if (!recognitionRef.current) {
+          toast({
+              variant: 'destructive',
+              title: 'Not Supported',
+              description: 'Your browser does not support voice-to-text.',
+          });
+          return;
+      }
+
+      if (isListening) {
+          recognitionRef.current.stop();
+      } else {
+          recognitionRef.current.start();
+      }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -371,6 +431,15 @@ export function ExplanationView() {
                     </div>
                 </div>
 
+                 <Button 
+                    type="button" 
+                    variant={isListening ? "destructive" : "ghost"}
+                    size="icon" 
+                    onClick={handleListen}
+                    title="Ask with your voice"
+                    >
+                    <Mic />
+                </Button>
                 <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon">
                   <Send />
                   <span className="sr-only">Send</span>
