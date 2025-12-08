@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, LoaderCircle, Pause, Play } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -41,23 +41,27 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
     if (!text || text === 'N/A' || !('speechSynthesis' in window)) {
         return;
     }
-
-    if (speechSynthesis.speaking && isPlaying) {
-        speechSynthesis.cancel();
-        setIsPlaying(false);
-    } else {
-        speechSynthesis.cancel(); 
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = playbackRate;
-        utterance.onend = () => {
-            setIsPlaying(false);
-            utteranceRef.current = null;
-        };
-        utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
-        setIsPlaying(true);
+  
+    // Always cancel any ongoing speech before starting a new one or stopping.
+    // This prevents multiple audio streams from playing simultaneously.
+    speechSynthesis.cancel();
+  
+    // If the user intended to stop the current speech, we just return.
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
     }
+  
+    // Proceed to create and speak the new utterance.
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = playbackRate;
+    utterance.onend = () => {
+        setIsPlaying(false);
+        utteranceRef.current = null;
+    };
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
   };
 
   const handleCopy = () => {
@@ -69,6 +73,7 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
   
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
+    // Stop any currently playing audio when speed changes, so the new speed applies on next play.
     if (isPlaying) {
       speechSynthesis.cancel();
       setIsPlaying(false);
@@ -97,7 +102,7 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
             <div className='flex items-center gap-2'>
-              <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'}>
+              <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
                   {isPlaying ? <Pause /> : <Volume2 />}
               </Button>
               <DropdownMenu>
@@ -535,3 +540,4 @@ export function ExplanationView() {
     
 
     
+
