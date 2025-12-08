@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -37,7 +38,7 @@ function HistorySection() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleHistoryClick = (item: HistoryItem) => {
-    loadChatFromHistory(item.messages);
+    loadChatFromHistory(item);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, item: HistoryItem) => {
@@ -188,7 +189,7 @@ function UserProfileSection() {
 }
 
 export function AppLayout({children}: {children: React.ReactNode}) {
-  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView } = useAppContext();
+  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId } = useAppContext();
   const { toast } = useToast();
 
   const handleNewExplanation = () => {
@@ -198,6 +199,7 @@ export function AppLayout({children}: {children: React.ReactNode}) {
         return;
     }
     setChat([]);
+    setActiveHistoryId(null);
     setView('explanation');
   };
 
@@ -276,3 +278,5 @@ export function AppLayout({children}: {children: React.ReactNode}) {
       </>
   );
 }
+
+    

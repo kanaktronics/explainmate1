@@ -31,7 +31,7 @@ interface AppContextType {
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
-  loadChatFromHistory: (messages: ChatMessage[]) => void;
+  loadChatFromHistory: (historyItem: HistoryItem) => void;
   deleteFromHistory: (id: string) => void;
   clearHistory: () => void;
   isProfileComplete: boolean;
@@ -41,6 +41,8 @@ interface AppContextType {
   adContent: Partial<AdContent>;
   user: User | null;
   isUserLoading: boolean;
+  activeHistoryId: string | null;
+  setActiveHistoryId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -72,6 +74,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
@@ -140,6 +143,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setChat([]);
       setQuiz(null);
       setHistory([]);
+      setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
     }
   }, [user, isUserLoading, getHistoryKey, pathname, router]);
@@ -305,13 +309,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setChat(prevChat => {
         const updatedChat = [...prevChat, message];
         
-        // This is a new chat, so we create a new history item.
-        if (prevChat.length === 0 && message.role === 'user') {
-            // Do nothing yet, wait for the assistant's response.
-            return updatedChat;
-        }
-
-        if (prevChat.length === 1 && message.role === 'assistant') {
+        // If we are continuing an existing chat from history
+        if (activeHistoryId) {
+             const newHistory = history.map(item => {
+                if (item.id === activeHistoryId) {
+                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
+                }
+                return item;
+            });
+            updateAndSaveHistory(newHistory);
+        } else if (prevChat.length === 1 && message.role === 'assistant') { // If it's a new chat, create a history item
             const firstUserMessage = prevChat[0];
             const topicContent = firstUserMessage.content;
             let topic = '';
@@ -329,25 +336,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               messages: updatedChat,
             };
 
-            const newHistory = [newHistoryItem, ...history];
-            updateAndSaveHistory(newHistory);
-
-        } else if (prevChat.length > 1) { // This is an existing chat, update the history.
-            const firstMessage = prevChat[0];
-            let historyUpdated = false;
-
-            const newHistory = history.map(item => {
-                // Find the matching history item by the first message
-                if (item.messages[0] && JSON.stringify(item.messages[0].content) === JSON.stringify(firstMessage.content)) {
-                    historyUpdated = true;
-                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
-                }
-                return item;
-            });
-            
-            if (historyUpdated) {
-                updateAndSaveHistory(newHistory);
-            }
+            setActiveHistoryId(newHistoryItem.id); // Set the new chat as active
+            updateAndSaveHistory([newHistoryItem, ...history]);
         }
         
         return updatedChat;
@@ -357,14 +347,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteFromHistory = (id: string) => {
     const newHistory = history.filter(item => item.id !== id);
     updateAndSaveHistory(newHistory);
+    if (activeHistoryId === id) {
+        setChat([]);
+        setActiveHistoryId(null);
+    }
   };
   
   const clearHistory = () => {
     updateAndSaveHistory([]);
+    setChat([]);
+    setActiveHistoryId(null);
   };
 
-  const loadChatFromHistory = (messages: ChatMessage[]) => {
-    setChat(messages);
+  const loadChatFromHistory = (historyItem: HistoryItem) => {
+    setChat(historyItem.messages);
+    setActiveHistoryId(historyItem.id);
     setView('explanation');
   };
   
@@ -389,10 +386,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [user, studentProfile.isPro]); // Rerun effect if user or pro status changes
 
-  const value = { 
+  const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
     quiz, setQuiz, history, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
-    isAdOpen, showAd, hideAd, adContent, user, isUserLoading
+    isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
   };
 
   return (
