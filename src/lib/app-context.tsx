@@ -41,6 +41,8 @@ interface AppContextType {
   adContent: Partial<AdContent>;
   user: User | null;
   isUserLoading: boolean;
+  activeAudioId: string | null;
+  setActiveAudioId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -76,6 +78,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
   const [hasShownFirstAdToday, setHasShownFirstAdToday] = useState(false);
+  const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -392,7 +395,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const value = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
     quiz, setQuiz, history, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
-    isAdOpen, showAd, hideAd, adContent, user, isUserLoading
+    isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeAudioId, setActiveAudioId
   };
 
   return (

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -31,38 +31,50 @@ const explanationSchema = z.object({
   image: z.string().optional(),
 });
 
-const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+interface ExplanationCardProps {
+  cardId: string;
+  title: string;
+  text: string;
+  activeAudioId: string | null;
+  setActiveAudioId: (id: string | null) => void;
+}
+
+const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const handleListen = () => {
+  const isPlaying = activeAudioId === cardId;
+
+  const handleListen = useCallback(() => {
     if (!text || text === 'N/A' || !('speechSynthesis' in window)) {
-        return;
-    }
-  
-    // Always cancel any ongoing speech before starting a new one or stopping.
-    // This prevents multiple audio streams from playing simultaneously.
-    speechSynthesis.cancel();
-  
-    // If the user intended to stop the current speech, we just return.
-    if (isPlaying) {
-      setIsPlaying(false);
       return;
     }
-  
-    // Proceed to create and speak the new utterance.
+
+    // If this card is already playing, the user wants to stop it.
+    if (isPlaying) {
+      speechSynthesis.cancel();
+      setActiveAudioId(null);
+      return;
+    }
+    
+    // If any other card is playing, stop it before starting this one.
+    if (activeAudioId !== null) {
+      speechSynthesis.cancel();
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = playbackRate;
     utterance.onend = () => {
-        setIsPlaying(false);
-        utteranceRef.current = null;
+      setActiveAudioId(null);
+      utteranceRef.current = null;
     };
+    
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-    setIsPlaying(true);
-  };
+    setActiveAudioId(cardId);
+  }, [text, isPlaying, playbackRate, cardId, activeAudioId, setActiveAudioId]);
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -76,7 +88,7 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
     // Stop any currently playing audio when speed changes, so the new speed applies on next play.
     if (isPlaying) {
       speechSynthesis.cancel();
-      setIsPlaying(false);
+      setActiveAudioId(null);
     }
   };
 
@@ -84,11 +96,12 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
   useEffect(() => {
     // Cleanup: ensure speech is stopped when the component unmounts
     return () => {
-        if (utteranceRef.current && 'speechSynthesis' in window) {
+        if (utteranceRef.current && isPlaying) {
             speechSynthesis.cancel();
+            setActiveAudioId(null);
         }
     };
-  }, []);
+  }, [isPlaying, setActiveAudioId]);
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -128,8 +141,9 @@ const ExplanationCard = ({ title, text }: { title: string, text: string }) => {
   )
 }
 
-const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
+const AssistantMessage = ({ explanation, messageId }: { explanation: Explanation, messageId: number }) => {
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
+  const { activeAudioId, setActiveAudioId } = useAppContext();
   
   return (
     <div className="flex items-start gap-4">
@@ -145,20 +159,20 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                     <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
                 </TabsList>
                 <TabsContent value="explanation">
-                  <ExplanationCard title="Explanation" text={explanation.explanation} />
+                  <ExplanationCard cardId={`${messageId}-explanation`} title="Explanation" text={explanation.explanation} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
                 </TabsContent>
                 <TabsContent value="roughWork">
-                   <ExplanationCard title="Rough Work" text={explanation.roughWork} />
+                   <ExplanationCard cardId={`${messageId}-roughWork`} title="Rough Work" text={explanation.roughWork} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
                 </TabsContent>
                 <TabsContent value="realWorld">
-                   <ExplanationCard title="Real-World Examples" text={explanation.realWorldExamples} />
+                   <ExplanationCard cardId={`${messageId}-realWorld`} title="Real-World Examples" text={explanation.realWorldExamples} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
                 </TabsContent>
                 <TabsContent value="fairWork">
-                   <ExplanationCard title="Fair Work (Notebook-ready)" text={explanation.fairWork} />
+                   <ExplanationCard cardId={`${messageId}-fairWork`} title="Fair Work (Notebook-ready)" text={explanation.fairWork} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
                 </TabsContent>
             </Tabs>
         ) : (
-             <ExplanationCard title="Explanation" text={explanation.explanation} />
+             <ExplanationCard cardId={`${messageId}-explanation`} title="Explanation" text={explanation.explanation} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
         )}
     </div>
   );
@@ -194,7 +208,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
+  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd, activeAudioId, setActiveAudioId } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -216,6 +230,17 @@ export function ExplanationView() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat, isLoading, error]);
+
+  // Stop speech when navigating away or unmounting
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        setActiveAudioId(null);
+      }
+    };
+  }, [setActiveAudioId]);
+
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -414,7 +439,7 @@ export function ExplanationView() {
       return <UserMessage key={index} content={message.content} />;
     }
     if (message.role === 'assistant') {
-      return <AssistantMessage key={index} explanation={message.content as Explanation} />;
+      return <AssistantMessage key={index} messageId={index} explanation={message.content as Explanation} />;
     }
     return null;
   };
@@ -534,10 +559,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
-
-    
-
-    
-
