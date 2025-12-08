@@ -198,6 +198,9 @@ export async function getAudioForText(input: TextToSpeechInput): Promise<TextToS
     if (!result || (!result.audioDataUri && !result.error)) {
       return { error: 'An unexpected response was received from the server.' };
     }
+    if (result.error && result.error.includes('blocked')) {
+      return { error: 'The text could not be converted to speech due to safety filters. Please try different wording.' };
+    }
     return result;
   } catch (e: any) {
     console.error("Error generating audio:", e);
