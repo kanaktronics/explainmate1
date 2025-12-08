@@ -55,17 +55,19 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
     if (activeAudioId && activeAudioId !== cardId) {
       speechSynthesis.cancel();
     }
-
+    
     if (isPlaying) {
       speechSynthesis.cancel();
       setActiveAudioId(null);
     } else {
-      const utterance = new SpeechSynthesisUtterance(text.substring(lastSpokenIndexRef.current));
+      lastSpokenIndexRef.current = 0; // Reset for new play
+      const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
       utteranceRef.current = utterance;
 
       utterance.onboundary = (event) => {
-        lastSpokenIndexRef.current += event.charLength;
+        // Correctly update the ref to the current character index
+        lastSpokenIndexRef.current = event.charIndex;
       };
 
       utterance.onend = () => {
@@ -92,18 +94,21 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
     setPlaybackRate(rate);
 
     if (wasPlaying) {
+        // Get the last known position BEFORE canceling
+        const resumeFromIndex = lastSpokenIndexRef.current;
         speechSynthesis.cancel();
         
-        // Use a timeout to ensure the state update has propagated
+        // Use a timeout to ensure the speech system is ready for a new utterance
         setTimeout(() => {
             if (!text || text === 'N/A') return;
-            const textToSpeak = text.substring(lastSpokenIndexRef.current);
+            const textToSpeak = text.substring(resumeFromIndex);
             const newUtterance = new SpeechSynthesisUtterance(textToSpeak);
             newUtterance.rate = rate;
             utteranceRef.current = newUtterance;
             
             newUtterance.onboundary = (event) => {
-                lastSpokenIndexRef.current += event.charLength;
+                // Important: The charIndex is relative to the new utterance, so we add the offset
+                lastSpokenIndexRef.current = resumeFromIndex + event.charIndex;
             };
             
             newUtterance.onend = () => {
@@ -118,18 +123,13 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   };
 
   useEffect(() => {
+    // Cleanup function to cancel speech if the component unmounts while speaking
     return () => {
-      if (utteranceRef.current) {
+      if (isPlaying) {
         speechSynthesis.cancel();
       }
     };
-  }, []);
-
-  useEffect(() => {
-    if (activeAudioId !== cardId) {
-        lastSpokenIndexRef.current = 0;
-    }
-  }, [activeAudioId, cardId]);
+  }, [isPlaying]);
 
 
   const renderContent = (content: string) => {
@@ -588,6 +588,8 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
 
     
 
