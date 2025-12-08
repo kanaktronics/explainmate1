@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation } from '@/lib/actions';
+import { getExplanation, getSpokenAudio } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,23 +41,38 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const [language, setLanguage] = useState<'English' | 'Hindi' | 'Hinglish'>('English');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const { toast } = useToast();
-
+  
   const handleListen = () => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
-        toast({ variant: 'destructive', title: 'Not Supported', description: 'Your browser does not support text-to-speech.' });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Not Supported',
+        description: 'Your browser does not support text-to-speech.',
+      });
+      return;
     }
 
-    if (window.speechSynthesis.speaking && utteranceRef.current) {
-        window.speechSynthesis.cancel();
-        setIsPlaying(false);
-        if (utteranceRef.current.text === text) { // If we are stopping the current card's audio
-            return;
-        }
+    if (isPlaying && !isPaused) {
+      // If currently playing, pause it.
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+      return;
     }
+
+    if (isPlaying && isPaused) {
+      // If paused, resume it.
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+      return;
+    }
+
+    // If not playing at all, start new speech.
+    window.speechSynthesis.cancel(); // Stop any other speech first.
+    setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
@@ -76,13 +91,35 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     if (selectedVoice) {
         utterance.voice = selectedVoice;
     }
-
+    
+    utterance.lang = language === 'English' ? 'en-US' : 'hi-IN';
     utterance.rate = playbackRate;
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => {
-        setIsPlaying(false);
-        toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      setIsPaused(false);
+    };
+    utterance.onpause = () => {
+      // This event confirms pause state.
+    };
+    utterance.onresume = () => {
+      // This event confirms resume state.
+    };
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+      utteranceRef.current = null;
+    };
+    utterance.onerror = (event) => {
+      // Only fire error if it's not a cancellation/interruption.
+      if (event.error !== 'interrupted' && event.error !== 'canceled') {
+        toast({
+            variant: 'destructive',
+            title: 'Speech Error',
+            description: 'Could not play the audio.',
+        });
+      }
+      setIsPlaying(false);
+      setIsPaused(false);
     };
 
     window.speechSynthesis.speak(utterance);
@@ -114,13 +151,30 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
     if (isPlaying && utteranceRef.current) {
-        // To change speed, we must stop and start again
         window.speechSynthesis.cancel();
-        const newUtterance = new SpeechSynthesisUtterance(utteranceRef.current.text);
+        
+        const newUtterance = new SpeechSynthesisUtterance(text);
         newUtterance.voice = utteranceRef.current.voice;
+        newUtterance.lang = utteranceRef.current.lang;
         newUtterance.rate = rate;
-        newUtterance.onstart = () => setIsPlaying(true);
-        newUtterance.onend = () => setIsPlaying(false);
+        
+        newUtterance.onstart = () => {
+          setIsPlaying(true);
+          setIsPaused(false);
+        };
+        newUtterance.onend = () => {
+          setIsPlaying(false);
+          setIsPaused(false);
+          utteranceRef.current = null;
+        };
+         newUtterance.onerror = (event) => {
+            if (event.error !== 'interrupted' && event.error !== 'canceled') {
+                toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
+            }
+            setIsPlaying(false);
+            setIsPaused(false);
+        };
+        
         window.speechSynthesis.speak(newUtterance);
         utteranceRef.current = newUtterance;
     }
@@ -131,6 +185,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
       if (isPlaying) {
           window.speechSynthesis.cancel();
           setIsPlaying(false);
+          setIsPaused(false);
       }
   }
 
@@ -147,7 +202,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
             <CardTitle>{title}</CardTitle>
             <div className='flex items-center gap-2'>
               <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
-                  {isPlaying ? <Pause /> : <Volume2 />}
+                  {isPlaying && !isPaused ? <Pause /> : <Volume2 />}
               </Button>
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
