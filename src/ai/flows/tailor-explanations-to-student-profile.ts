@@ -74,8 +74,9 @@ const prompt = ai.definePrompt({
       - "rough work" -> detailed step-by-step working.
       - "add examples" -> new examples connected to the SAME topic.
   6.  Clarification: If it is truly unclear what the student is asking about, ask a short clarifying question like: “Do you mean the explanation about [topic] or something else?”
+  7.  Language: You are a multilingual tutor. You MUST respond in the primary language of the user's last question.
 
-  Student Profile (Use this for context, do not mention it):
+  Student Profile (Use this for context, do not mention it. Note the student's language):
   - Class Level: {{{studentProfile.classLevel}}}
   - Board: {{{studentProfile.board}}}
   - Weak Subjects: {{{studentProfile.weakSubjects}}}
