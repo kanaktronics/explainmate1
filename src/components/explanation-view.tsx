@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation, getSpokenAudio } from '@/lib/actions';
+import { getExplanation } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2 } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -39,7 +39,7 @@ interface ExplanationCardProps {
 const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
-  const [language, setLanguage] = useState<'English' | 'Hindi' | 'Hinglish'>('English');
+  const [language, setLanguage] = useState<'English' | 'Hindi'>('English');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -80,7 +80,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     const voices = window.speechSynthesis.getVoices();
     let selectedVoice: SpeechSynthesisVoice | undefined;
 
-    if (language === 'Hindi' || language === 'Hinglish') {
+    if (language === 'Hindi') {
         selectedVoice = voices.find(v => v.lang.startsWith('hi'));
     } else {
         selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
@@ -99,10 +99,12 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
       setIsPaused(false);
     };
     utterance.onpause = () => {
-      // This event confirms pause state.
+      setIsPaused(true);
+      setIsPlaying(true);
     };
     utterance.onresume = () => {
-      // This event confirms resume state.
+      setIsPaused(false);
+      setIsPlaying(true);
     };
     utterance.onend = () => {
       setIsPlaying(false);
@@ -110,7 +112,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
       utteranceRef.current = null;
     };
     utterance.onerror = (event) => {
-      // Only fire error if it's not a cancellation/interruption.
       if (event.error !== 'interrupted' && event.error !== 'canceled') {
         toast({
             variant: 'destructive',
@@ -133,7 +134,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
         window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
         return () => {
             window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-            // Cleanup: cancel speech if component unmounts
             if (utteranceRef.current) {
                 window.speechSynthesis.cancel();
             }
@@ -180,7 +180,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     }
   };
   
-  const handleLanguageChange = (lang: 'English' | 'Hindi' | 'Hinglish') => {
+  const handleLanguageChange = (lang: 'English' | 'Hindi') => {
       setLanguage(lang);
       if (isPlaying) {
           window.speechSynthesis.cancel();
@@ -196,13 +196,19 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />;
   };
 
+  const getButtonIcon = () => {
+    if (isPlaying && !isPaused) return <Pause />;
+    if (isPlaying && isPaused) return <Play />;
+    return <Volume2 />;
+  }
+
   return (
     <Card>
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
             <div className='flex items-center gap-2'>
               <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
-                  {isPlaying && !isPaused ? <Pause /> : <Volume2 />}
+                  {getButtonIcon()}
               </Button>
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -218,7 +224,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
                        <DropdownMenuLabel>Language</DropdownMenuLabel>
                       <DropdownMenuItem onSelect={() => handleLanguageChange('English')}>English {language === 'English' && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => handleLanguageChange('Hindi')}>Hindi {language === 'Hindi' && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleLanguageChange('Hinglish')}>Hinglish {language === 'Hinglish' && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
@@ -640,5 +645,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    

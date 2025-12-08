@@ -1,4 +1,3 @@
-
 'use server';
 
 import { tailorExplanation } from '@/ai/flows/tailor-explanations-to-student-profile';
@@ -6,8 +5,6 @@ import type { TailorExplanationInput, TailorExplanationOutput } from '@/ai/flows
 import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quizzes';
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
 import { ChatMessage, StudentProfile } from './types';
-import { getFirestore, doc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
 
 function convertToGenkitHistory(chatHistory: ChatMessage[]) {
   return chatHistory.map(message => {
@@ -189,5 +186,3 @@ export async function getQuiz(input: {
         return { error: 'An unexpected error occurred while generating the quiz. Please try again.' };
     }
 }
-
-    
