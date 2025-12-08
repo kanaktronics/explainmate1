@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation, getSpokenAudio } from '@/lib/actions';
+import { getExplanation } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,89 +34,75 @@ interface ExplanationCardProps {
   cardId: string;
   title: string;
   text: string;
-  activeAudioId: string | null;
-  setActiveAudioId: (id: string | null) => void;
 }
 
-const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId }: ExplanationCardProps) => {
+const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const [language, setLanguage] = useState<'English' | 'Hindi' | 'Hinglish'>('English');
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   const { toast } = useToast();
 
-  const isPlaying = activeAudioId === cardId;
-
-  const handleListen = async () => {
-    if (!text || text === 'N/A') return;
-    
-    // If this card's audio is already playing, pause it.
-    if (isPlaying && audioRef.current) {
-        audioRef.current.pause();
-        setActiveAudioId(null);
-        return;
-    }
-    
-    // If another card's audio is playing, stop it. The global activeAudioId change will handle UI.
-    if (activeAudioId && activeAudioId !== cardId) {
-        // This relies on the audio player in the other component stopping itself when activeAudioId changes.
-    }
-
-    // If we already have the audio URL for the current settings, just play it.
-    if (audioUrl && audioRef.current) {
-        setActiveAudioId(cardId);
-        audioRef.current.play();
+  const handleListen = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+        toast({ variant: 'destructive', title: 'Not Supported', description: 'Your browser does not support text-to-speech.' });
         return;
     }
 
-    setIsLoadingAudio(true);
-    setActiveAudioId(cardId); // Set active early to show loading state
-
-    try {
-        const result = await getSpokenAudio({ text, language });
-        if (result && 'error' in result) {
-            throw new Error(result.error);
+    if (window.speechSynthesis.speaking && utteranceRef.current) {
+        window.speechSynthesis.cancel();
+        setIsPlaying(false);
+        if (utteranceRef.current.text === text) { // If we are stopping the current card's audio
+            return;
         }
-        if (result) {
-            setAudioUrl(result.audio);
-        }
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Audio Generation Failed',
-            description: error.message || 'Could not generate audio. Please try again.',
-        });
-        setActiveAudioId(null); // Clear active status on error
-    } finally {
-        setIsLoadingAudio(false);
     }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utteranceRef.current = utterance;
+
+    const voices = window.speechSynthesis.getVoices();
+    let selectedVoice: SpeechSynthesisVoice | undefined;
+
+    if (language === 'Hindi' || language === 'Hinglish') {
+        selectedVoice = voices.find(v => v.lang.startsWith('hi'));
+    } else {
+        selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+        if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.lang.startsWith('en'));
+        }
+    }
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
+    }
+
+    utterance.rate = playbackRate;
+    utterance.onstart = () => setIsPlaying(true);
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => {
+        setIsPlaying(false);
+        toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
-
-  useEffect(() => {
-    // When a new audio URL is set, play it.
-    if (audioUrl && audioRef.current && activeAudioId === cardId) {
-        audioRef.current.play();
-    }
-  }, [audioUrl, activeAudioId, cardId]);
   
   useEffect(() => {
-      // If this card is no longer the active one, pause its audio.
-      if (activeAudioId !== cardId && audioRef.current) {
-          audioRef.current.pause();
-      }
-  }, [activeAudioId, cardId]);
-
-
-  useEffect(() => {
-    // Reset audio when language or text changes
-    setAudioUrl(null);
-    if (isPlaying) {
-      setActiveAudioId(null);
+    const handleVoicesChanged = () => {
+        // Re-check voices when they are loaded
+    };
+    if (window.speechSynthesis) {
+        window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+        return () => {
+            window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+            // Cleanup: cancel speech if component unmounts
+            if (utteranceRef.current) {
+                window.speechSynthesis.cancel();
+            }
+        };
     }
-  }, [language, text, setActiveAudioId, isPlaying]);
-
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -127,13 +113,25 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
 
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
+    if (isPlaying && utteranceRef.current) {
+        // To change speed, we must stop and start again
+        window.speechSynthesis.cancel();
+        const newUtterance = new SpeechSynthesisUtterance(utteranceRef.current.text);
+        newUtterance.voice = utteranceRef.current.voice;
+        newUtterance.rate = rate;
+        newUtterance.onstart = () => setIsPlaying(true);
+        newUtterance.onend = () => setIsPlaying(false);
+        window.speechSynthesis.speak(newUtterance);
+        utteranceRef.current = newUtterance;
     }
   };
   
   const handleLanguageChange = (lang: 'English' | 'Hindi' | 'Hinglish') => {
       setLanguage(lang);
+      if (isPlaying) {
+          window.speechSynthesis.cancel();
+          setIsPlaying(false);
+      }
   }
 
   const renderContent = (content: string) => {
@@ -145,12 +143,11 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
 
   return (
     <Card>
-        {audioUrl && <audio ref={audioRef} src={audioUrl} onEnded={() => setActiveAudioId(null)} onPlay={() => audioRef.current && (audioRef.current.playbackRate = playbackRate)}/>}
         <CardHeader className='flex-row items-center justify-between'>
             <CardTitle>{title}</CardTitle>
             <div className='flex items-center gap-2'>
               <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
-                  {isLoadingAudio ? <Loader2 className="animate-spin" /> : (isPlaying ? <Pause /> : <Volume2 />)}
+                  {isPlaying ? <Pause /> : <Volume2 />}
               </Button>
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -182,19 +179,9 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   )
 }
 
-const AssistantMessage = ({ explanation, messageId }: { explanation: Explanation, messageId: number }) => {
+const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
-  const { activeAudioId, setActiveAudioId } = useAppContext();
   
-  // When this component unmounts, if its audio is playing, stop it.
-  useEffect(() => {
-    return () => {
-        if (activeAudioId?.startsWith(`${messageId}-`)) {
-            setActiveAudioId(null);
-        }
-    }
-  }, [activeAudioId, messageId, setActiveAudioId]);
-
   return (
     <div className="flex items-start gap-4">
         <Avatar className="bg-primary flex-shrink-0">
@@ -209,20 +196,20 @@ const AssistantMessage = ({ explanation, messageId }: { explanation: Explanation
                     <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
                 </TabsList>
                 <TabsContent value="explanation">
-                  <ExplanationCard cardId={`${messageId}-explanation`} title="Explanation" text={explanation.explanation} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
+                  <ExplanationCard cardId="explanation" title="Explanation" text={explanation.explanation} />
                 </TabsContent>
                 <TabsContent value="roughWork">
-                   <ExplanationCard cardId={`${messageId}-roughWork`} title="Rough Work" text={explanation.roughWork} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
+                   <ExplanationCard cardId="roughWork" title="Rough Work" text={explanation.roughWork} />
                 </TabsContent>
                 <TabsContent value="realWorld">
-                   <ExplanationCard cardId={`${messageId}-realWorld`} title="Real-World Examples" text={explanation.realWorldExamples} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
+                   <ExplanationCard cardId="realWorld" title="Real-World Examples" text={explanation.realWorldExamples} />
                 </TabsContent>
                 <TabsContent value="fairWork">
-                   <ExplanationCard cardId={`${messageId}-fairWork`} title="Fair Work (Notebook-ready)" text={explanation.fairWork} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
+                   <ExplanationCard cardId="fairWork" title="Fair Work (Notebook-ready)" text={explanation.fairWork} />
                 </TabsContent>
             </Tabs>
         ) : (
-             <ExplanationCard cardId={`${messageId}-explanation`} title="Explanation" text={explanation.explanation} activeAudioId={activeAudioId} setActiveAudioId={setActiveAudioId} />
+             <ExplanationCard cardId="explanation" title="Explanation" text={explanation.explanation} />
         )}
     </div>
   );
@@ -478,7 +465,7 @@ export function ExplanationView() {
       return <UserMessage key={index} content={message.content} />;
     }
     if (message.role === 'assistant') {
-      return <AssistantMessage key={index} messageId={index} explanation={message.content as Explanation} />;
+      return <AssistantMessage key={index} explanation={message.content as Explanation} />;
     }
     return null;
   };
@@ -598,3 +585,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
