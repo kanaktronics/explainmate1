@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -20,7 +19,7 @@ import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import Image from 'next/image';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from './ui/dropdown-menu';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
@@ -42,7 +41,25 @@ interface ExplanationCardProps {
 const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
+  const [language, setLanguage] = useState('en-IN');
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    const getVoices = () => {
+      const availableVoices = speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+    
+    // Voices are loaded asynchronously
+    getVoices();
+    speechSynthesis.onvoiceschanged = getVoices;
+
+    return () => {
+        speechSynthesis.onvoiceschanged = null;
+    }
+  }, []);
+
 
   const isPlaying = activeAudioId === cardId;
 
@@ -51,27 +68,29 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       return;
     }
 
-    // Always cancel any speech before starting a new one or stopping.
     speechSynthesis.cancel();
     
     if (isPlaying) {
-      // If the current card was playing, just stop it and update state.
       setActiveAudioId(null);
     } else {
-      // If another card was playing, it's now stopped. Start this new one.
       const utterance = new SpeechSynthesisUtterance(text);
+      
+      const selectedVoice = voices.find(voice => voice.lang === language);
+      if (selectedVoice) {
+          utterance.voice = selectedVoice;
+      }
+      utterance.lang = language;
       utterance.rate = playbackRate;
       utteranceRef.current = utterance;
 
       utterance.onend = () => {
-        // When speech finishes naturally, update the state.
         setActiveAudioId(null);
       };
 
       speechSynthesis.speak(utterance);
       setActiveAudioId(cardId);
     }
-  }, [text, isPlaying, playbackRate, cardId, setActiveAudioId]);
+  }, [text, isPlaying, playbackRate, cardId, setActiveAudioId, language, voices]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -81,20 +100,22 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
   }
 
   const handleSpeedChange = (rate: number) => {
-    if (rate === playbackRate) return;
-    
     setPlaybackRate(rate);
-
-    // If audio is playing when speed changes, stop it and reset the UI.
-    // The user can then press play again to hear it at the new speed.
     if (isPlaying) {
         speechSynthesis.cancel();
         setActiveAudioId(null);
     }
   };
+  
+  const handleLanguageChange = (lang: string) => {
+      setLanguage(lang);
+      if (isPlaying) {
+          speechSynthesis.cancel();
+          setActiveAudioId(null);
+      }
+  }
 
   useEffect(() => {
-    // Cleanup function to cancel speech if the component unmounts while speaking
     return () => {
       if (isPlaying) {
         speechSynthesis.cancel();
@@ -123,10 +144,17 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
                       <Button variant="ghost" size="icon"><MoreVertical/></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(0.8)}>Speed: 0.8x {playbackRate === 0.8 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>Speed: 1x {playbackRate === 1 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.25)}>Speed: 1.25x {playbackRate === 1.25 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>Speed: 1.5x {playbackRate === 1.5 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(0.8)}>0.8x {playbackRate === 0.8 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>1x {playbackRate === 1 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.25)}>1.25x {playbackRate === 1.25 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>1.5x {playbackRate === 1.5 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                       <DropdownMenuLabel>Language</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={() => handleLanguageChange('en-IN')}>English {language === 'en-IN' && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleLanguageChange('hi-IN')}>Hindi {language === 'hi-IN' && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleLanguageChange('hi-IN')}>Hinglish {language === 'hi-IN' && <Check className='ml-auto'/>}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
                       </DropdownMenuItem>
@@ -559,5 +587,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
