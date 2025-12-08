@@ -52,7 +52,6 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
     }
 
     // Always cancel any speech before starting a new one or stopping.
-    // This handles the case where another card is playing.
     speechSynthesis.cancel();
     
     if (isPlaying) {
@@ -124,10 +123,10 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
                       <Button variant="ghost" size="icon"><MoreVertical/></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(0.5)}>Speed: 0.5x {playbackRate === 0.5 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(0.8)}>Speed: 0.8x {playbackRate === 0.8 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>Speed: 1x {playbackRate === 1 && <Check className='ml-2'/>}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.25)}>Speed: 1.25x {playbackRate === 1.25 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>Speed: 1.5x {playbackRate === 1.5 && <Check className='ml-2'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(2)}>Speed: 2x {playbackRate === 2 && <Check className='ml-2'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
                       </DropdownMenuItem>
@@ -560,9 +559,5 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
-
-    
 
     
