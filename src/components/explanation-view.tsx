@@ -58,6 +58,7 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       return;
     }
     
+    // Stop any other card that might be playing
     if (activeAudioId !== null) {
       speechSynthesis.cancel();
     }
@@ -66,8 +67,9 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = playbackRate;
     
+    let localCharIndex = currentCharIndex;
     utterance.onboundary = (event) => {
-        setCurrentCharIndex(currentCharIndex + event.charIndex);
+        localCharIndex = currentCharIndex + event.charIndex;
     };
 
     utterance.onend = () => {
@@ -103,18 +105,30 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       setTimeout(() => {
         if (!text || text === 'N/A') return;
 
-        const textToSpeak = text.substring(currentCharIndex);
+        const utterance = utteranceRef.current;
+        let lastKnownIndex = currentCharIndex;
+
+        if (utterance && (utterance as any)._localCharIndex) {
+            lastKnownIndex = (utterance as any)._localCharIndex;
+        }
+
+        const textToSpeak = text.substring(lastKnownIndex);
         const newUtterance = new SpeechSynthesisUtterance(textToSpeak);
         newUtterance.rate = rate;
+
+        let localCharIndex = lastKnownIndex;
         newUtterance.onboundary = (event) => {
-            setCurrentCharIndex(currentCharIndex + event.charIndex);
+             localCharIndex = lastKnownIndex + event.charIndex;
+             (newUtterance as any)._localCharIndex = localCharIndex; // Store it on the object
         };
+
         newUtterance.onend = () => {
           setActiveAudioId(null);
           setCurrentCharIndex(0);
           utteranceRef.current = null;
         };
-
+        
+        setCurrentCharIndex(lastKnownIndex);
         utteranceRef.current = newUtterance;
         speechSynthesis.speak(newUtterance);
         setActiveAudioId(cardId); // Ensure it's still the active one
@@ -129,6 +143,16 @@ const ExplanationCard = ({ cardId, title, text, activeAudioId, setActiveAudioId 
       setCurrentCharIndex(0);
     }
   }, [activeAudioId, cardId, currentCharIndex]);
+
+  useEffect(() => {
+      return () => {
+          // If this card's audio is playing when the component unmounts, stop it.
+          if (isPlaying && utteranceRef.current) {
+              speechSynthesis.cancel();
+          }
+      };
+  }, [isPlaying]);
+
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
