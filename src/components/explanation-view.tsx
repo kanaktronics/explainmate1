@@ -34,14 +34,13 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPlayer, setShowPlayer] = useState(false);
   
   const handleListen = async () => {
     if (!text || text === 'N/A') return;
     
     // If we already have the audio, just toggle the player
     if (audioSrc) {
-      setShowPlayer(!showPlayer);
+      // Logic to play/pause can be added here if needed
       return;
     }
 
@@ -53,7 +52,6 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
             throw new Error(result.error || 'Failed to generate audio.');
         }
         setAudioSrc(result.audioDataUri);
-        setShowPlayer(true);
     } catch (e: any) {
         setError(e.message || "Failed to generate audio.");
     } finally {
@@ -78,7 +76,7 @@ const ExplanationCard = ({ title, text, audioId }: { title: string, text: string
         </CardHeader>
         <CardContent>
             {error && <Alert variant="destructive" className="mt-2"><AlertCircle className="h-4 w-4"/><AlertDescription>{error}</AlertDescription></Alert>}
-            {showPlayer && audioSrc && (
+            {audioSrc && (
               <audio controls autoPlay className="w-full mb-4">
                 <source src={audioSrc} type="audio/wav" />
                 Your browser does not support the audio element.

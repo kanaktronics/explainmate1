@@ -195,7 +195,7 @@ export async function getQuiz(input: {
 export async function getAudioForText(input: TextToSpeechInput): Promise<TextToSpeechOutput> {
   try {
     const result = await textToSpeech(input);
-    if (!result || (!result.audioDataUri && !result.error)) {
+    if (!result) {
       return { error: 'An unexpected response was received from the server.' };
     }
     if (result.error && result.error.includes('blocked')) {

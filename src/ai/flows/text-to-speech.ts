@@ -66,7 +66,7 @@ export const textToSpeechFlow = ai.defineFlow(
             prompt: text,
         });
 
-        if (finishReason !== 'stop' && finishReason !== 'unknown') {
+        if (finishReason !== 'stop') {
             const blockedMessage = message?.content[0]?.text || `Audio generation was blocked due to: ${finishReason}.`;
             return { error: blockedMessage };
         }
