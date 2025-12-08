@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for converting text to high-quality speech with translation.
@@ -49,13 +50,11 @@ const translationPrompt = ai.definePrompt({
     schema: z.object({translatedText: z.string()}),
   },
   prompt: `Translate the following text into {{language}}.
-  
-  {{#ifCond language '===' 'Hinglish'}}
-  For Hinglish, use a natural mix of Hindi and English words in a conversational way, as a teacher in India would explain a concept to a student. Use the Devanagari script for Hindi words.
-  {{/ifCond}}
 
-  Text to translate:
-  "{{text}}"`,
+If the language is 'Hinglish', you must use a natural mix of Hindi and English words in a conversational way, as a teacher in India would explain a concept to a student. Use the Devanagari script for Hindi words where appropriate.
+
+Text to translate:
+"{{text}}"`,
 });
 
 async function toWav(
