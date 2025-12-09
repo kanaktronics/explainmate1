@@ -76,8 +76,16 @@ function detectLanguageLabel(text: string): "english" | "hindi" | "hinglish" {
   if (hasDevanagari) return "hindi";
 
   // Check for common Hinglish words in Latin script
-  const hindiWords = ["hai", "nahi", "kya", "kaise", "tha", "thi", "hun", "raha", "rahi", "kyun", "kab"];
+  // This list is more comprehensive to better detect Hinglish
+  const hindiWords = [
+    "kya", "hai", "kaise", "mein", "aur", "ek", "do", "teen", "char",
+    "nahi", "haan", "aap", "tum", "hum", "yeh", "woh", "yahan", "wahan",
+    "kab", "kyun", "liye", "bhi", "toh", "hi", "se", "ko", "ka", "ki", "ke",
+    "hota", "hoti", "hote", "gaya", "gayi", "gaye", "tha", "thi", "the"
+  ];
   const lower = text.toLowerCase();
+  
+  // Check if the query contains at least one common Hindi word but is not fully Hindi script
   const isHinglish = hindiWords.some(w => lower.split(/\s+/).includes(w));
 
   if (isHinglish) return "hinglish";
@@ -119,7 +127,7 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
     const langInstruction = {
         english: `For THIS message, reply ONLY in clear English. Do NOT use Hindi or Hinglish, even if previous messages were in another language.`,
         hindi: `For THIS message, reply ONLY in simple, clear Hindi (using Devanagari script). Do NOT use English sentences unless needed for technical terms.`,
-        hinglish: `For THIS message, reply ONLY in Hinglish (Hindi written in English letters). Do NOT answer in pure English or pure Devanagari Hindi.`,
+        hinglish: `For THIS message, reply ONLY in Hinglish (Hindi written in English letters). Mix English and Hindi words naturally, as a real person would. Do NOT answer in pure English or pure Devanagari Hindi.`,
     }[lang];
 
     const result = await tailorExplanation({

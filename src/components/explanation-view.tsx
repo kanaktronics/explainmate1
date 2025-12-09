@@ -39,12 +39,31 @@ interface ExplanationCardProps {
 const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
-  const [language, setLanguage] = useState<'English' | 'Hindi'>('English');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const { toast } = useToast();
+
+  const detectContentLanguage = (content: string): "english" | "hindi" | "hinglish" => {
+    if (!content) return "english";
+    const hasDevanagari = /[\u0900-\u097F]/.test(content);
+    if (hasDevanagari) return "hindi";
+    
+    // A simple check for Latin characters suggests English or Hinglish
+    const hasLatin = /[a-zA-Z]/.test(content);
+    if(hasLatin && !hasDevanagari) {
+       // A more nuanced check could be here, but for TTS voice selection,
+       // we can treat Hinglish as something a Hindi voice can often handle well.
+       // Let's assume if it's not pure Devanagari, it could be Hinglish.
+       const hindiWords = ["kya", "hai", "kaise", "mein", "aur", "hota", "hoti"];
+       const lower = content.toLowerCase();
+       if (hindiWords.some(w => lower.includes(w))) {
+           return "hinglish";
+       }
+    }
+    return "english";
+  }
   
   const handleListen = () => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
@@ -77,22 +96,28 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
 
+    const languageOfContent = detectContentLanguage(text);
+
     const voices = window.speechSynthesis.getVoices();
     let selectedVoice: SpeechSynthesisVoice | undefined;
 
-    if (language === 'Hindi') {
+    if (languageOfContent === 'hindi' || languageOfContent === 'hinglish') {
+        // Prioritize Hindi voice for both Hindi and Hinglish
         selectedVoice = voices.find(v => v.lang.startsWith('hi'));
-    } else {
-        selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+        utterance.lang = 'hi-IN';
+    } else { // 'english'
+        // Prioritize a good quality English voice
+        selectedVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural')));
         if (!selectedVoice) {
             selectedVoice = voices.find(v => v.lang.startsWith('en'));
         }
+        utterance.lang = 'en-US';
     }
+    
     if (selectedVoice) {
         utterance.voice = selectedVoice;
     }
     
-    utterance.lang = language === 'English' ? 'en-US' : 'hi-IN';
     utterance.rate = playbackRate;
     utterance.onstart = () => {
       setIsPlaying(true);
@@ -131,7 +156,11 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
         // Re-check voices when they are loaded
     };
     if (window.speechSynthesis) {
+        // Voices may load asynchronously. We need to listen for this event.
         window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+        // Ensure voices are loaded for the first time
+        window.speechSynthesis.getVoices();
+        
         return () => {
             window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
             if (utteranceRef.current) {
@@ -151,6 +180,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
     if (isPlaying && utteranceRef.current) {
+        // To change rate mid-speech, we have to stop and restart
         window.speechSynthesis.cancel();
         
         const newUtterance = new SpeechSynthesisUtterance(text);
@@ -179,15 +209,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
         utteranceRef.current = newUtterance;
     }
   };
-  
-  const handleLanguageChange = (lang: 'English' | 'Hindi') => {
-      setLanguage(lang);
-      if (isPlaying) {
-          window.speechSynthesis.cancel();
-          setIsPlaying(false);
-          setIsPaused(false);
-      }
-  }
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
@@ -220,10 +241,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
                       <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>1x {playbackRate === 1 && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => handleSpeedChange(1.25)}>1.25x {playbackRate === 1.25 && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>1.5x {playbackRate === 1.5 && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                       <DropdownMenuLabel>Language</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => handleLanguageChange('English')}>English {language === 'English' && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleLanguageChange('Hindi')}>Hindi {language === 'Hindi' && <Check className='ml-auto'/>}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={handleCopy}>
                           {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
