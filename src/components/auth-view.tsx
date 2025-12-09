@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -31,6 +31,9 @@ import { TermsConditionsView } from './terms-conditions-view';
 import { PrivacyPolicyView } from './privacy-policy-view';
 import { ScrollArea } from './ui/scroll-area';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Info } from 'lucide-react';
 
 const signUpSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -51,6 +54,14 @@ export function AuthView() {
   const { setView } = useAppContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPolicy, setShowPolicy] = useState<'terms' | 'privacy' | null>(null);
+  const [showProMessage, setShowProMessage] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('reason') === 'pro-purchase') {
+      setShowProMessage(true);
+    }
+  }, [searchParams]);
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -120,7 +131,12 @@ export function AuthView() {
         };
         const profileRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(profileRef, userProfile, { merge: true });
-        setView('welcome');
+        
+        if (showProMessage) {
+            setView('pricing');
+        } else {
+            setView('welcome');
+        }
     } catch (error) {
         handleAuthError(error);
     } finally {
@@ -137,7 +153,12 @@ export function AuthView() {
         const user = userCredential.user;
         const profileRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(profileRef, { lastSignInAt: new Date().toISOString() }, { merge: true });
-        setView('welcome');
+        
+        if (showProMessage) {
+            setView('pricing');
+        } else {
+            setView('welcome');
+        }
     } catch (error) {
         handleAuthError(error);
     } finally {
@@ -168,6 +189,15 @@ export function AuthView() {
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
+          {showProMessage && (
+              <Alert className="mt-4">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Login Required</AlertTitle>
+                  <AlertDescription>
+                    You need to log in or create an account before purchasing Pro.
+                  </AlertDescription>
+              </Alert>
+          )}
           <TabsContent value="signin">
             <Card>
               <CardHeader>

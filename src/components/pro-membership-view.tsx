@@ -16,18 +16,28 @@ import { add } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { useRouter } from 'next/navigation';
 
 
 export function ProMembershipView() {
     const { toast } = useToast();
-    const { studentProfile, setStudentProfile } = useAppContext();
+    const { studentProfile, setStudentProfile, user } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'failure'>('idle');
     const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState('');
-    const { firestore, user } = useFirebase();
+    const { firestore } = useFirebase();
+    const router = useRouter();
 
-    const handleBuyPro = async () => {
+    const handleInitiatePurchase = () => {
+        if (!user) {
+            router.push('/auth?reason=pro-purchase');
+            return;
+        }
+        setIsPhoneDialogOpen(true);
+    };
+
+    const handleRazorpayPayment = async () => {
         setIsLoading(true);
 
         if (!/^\d{10}$/.test(phoneNumber)) {
@@ -167,7 +177,7 @@ export function ProMembershipView() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleBuyPro} disabled={isLoading}>
+                        <Button onClick={handleRazorpayPayment} disabled={isLoading}>
                             {isLoading ? 'Processing...' : 'Proceed to Payment'}
                         </Button>
                     </DialogFooter>
@@ -225,7 +235,7 @@ export function ProMembershipView() {
                         </ul>
                     </CardContent>
                     <CardFooter>
-                        <Button onClick={() => setIsPhoneDialogOpen(true)} disabled={isLoading} className="w-full text-lg py-6 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90 text-primary-foreground">
+                        <Button onClick={handleInitiatePurchase} disabled={isLoading} className="w-full text-lg py-6 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90 text-primary-foreground">
                             {isLoading ? 'Processing...' : 'Buy Pro Now'}
                         </Button>
                     </CardFooter>

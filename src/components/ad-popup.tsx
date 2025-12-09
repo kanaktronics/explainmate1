@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { CheckCircle, X } from "lucide-react";
 import { Badge } from "./ui/badge";
 import Link from "next/link";
+import { useAppContext } from "@/lib/app-context";
 
 interface AdPopupProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ interface AdPopupProps {
 }
 
 export function AdPopup({ isOpen, onClose, title, description }: AdPopupProps) {
+  const { user } = useAppContext();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
@@ -59,7 +62,7 @@ export function AdPopup({ isOpen, onClose, title, description }: AdPopupProps) {
 
         <DialogFooter className="sm:justify-center">
             <Button asChild className="w-full text-lg py-6 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90 text-primary-foreground" onClick={onClose}>
-                <Link href="/pricing">Upgrade to Pro Now</Link>
+                <Link href={user ? "/pricing" : "/auth?reason=pro-purchase"}>Upgrade to Pro Now</Link>
             </Button>
         </DialogFooter>
         <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
