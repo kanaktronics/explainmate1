@@ -71,25 +71,32 @@ async function checkProFairUsage(studentProfile: StudentProfile): Promise<{ allo
 }
 
 function detectLanguageLabel(text: string): "english" | "hindi" | "hinglish" {
-  // Check for Devanagari script characters for Hindi
+  // 1. Check for Devanagari script for pure Hindi
   const hasDevanagari = /[\u0900-\u097F]/.test(text);
   if (hasDevanagari) return "hindi";
 
-  // Check for common Hinglish words in Latin script
-  // This list is more comprehensive to better detect Hinglish
+  // 2. Check for Hinglish
+  // This list avoids short, ambiguous words like "hi", "is", "so".
   const hindiWords = [
-    "kya", "hai", "kaise", "mein", "aur", "ek", "do", "teen", "char",
+    "kya", "kaise", "mein", "aur", "ek", "do", "teen",
     "nahi", "haan", "aap", "tum", "hum", "yeh", "woh", "yahan", "wahan",
-    "kab", "kyun", "liye", "bhi", "toh", "hi", "se", "ko", "ka", "ki", "ke",
-    "hota", "hoti", "hote", "gaya", "gayi", "gaye", "tha", "thi", "the"
+    "kab", "kyun", "liye", "bhi", "toh", "se", "ko", "ka", "ki", "ke",
+    "hota", "hoti", "hote", "gaya", "gayi", "gaye", "tha", "thi", "the",
+    "matlab", "kaun"
   ];
-  const lower = text.toLowerCase();
   
-  // Check if the query contains at least one common Hindi word but is not fully Hindi script
-  const isHinglish = hindiWords.some(w => lower.split(/\s+/).includes(w));
+  const lower = text.toLowerCase();
+  const words = lower.split(/\s+/);
+  
+  // A query is likely Hinglish if it contains at least one specific Hindi word.
+  // We check word count to avoid flagging single ambiguous words as Hinglish.
+  const containsHindiWord = words.some(word => hindiWords.includes(word));
+  
+  if (containsHindiWord) {
+    return "hinglish";
+  }
 
-  if (isHinglish) return "hinglish";
-
+  // 3. Default to English
   return "english";
 }
 
