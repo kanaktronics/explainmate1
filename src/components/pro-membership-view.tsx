@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, Zap, Image, Infinity, Clock, AlertCircle, Phone } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { Button } from "./ui/button";
@@ -21,13 +21,20 @@ import { useRouter } from 'next/navigation';
 
 export function ProMembershipView() {
     const { toast } = useToast();
-    const { studentProfile, setStudentProfile, user } = useAppContext();
+    const { studentProfile, setStudentProfile, user, postLoginAction, clearPostLoginAction } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'failure'>('idle');
     const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState('');
     const { firestore } = useFirebase();
     const router = useRouter();
+
+    useEffect(() => {
+        if (postLoginAction === 'upgrade' && user) {
+            setIsPhoneDialogOpen(true);
+            clearPostLoginAction();
+        }
+    }, [postLoginAction, user, clearPostLoginAction]);
 
     const handleInitiatePurchase = () => {
         if (!user) {

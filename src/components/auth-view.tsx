@@ -51,7 +51,7 @@ const signInSchema = z.object({
 export function AuthView() {
   const { toast } = useToast();
   const { auth, firestore } = useFirebase();
-  const { setView } = useAppContext();
+  const { setView, setPostLoginAction } = useAppContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPolicy, setShowPolicy] = useState<'terms' | 'privacy' | null>(null);
   const [showProMessage, setShowProMessage] = useState(false);
@@ -133,6 +133,7 @@ export function AuthView() {
         setDocumentNonBlocking(profileRef, userProfile, { merge: true });
         
         if (showProMessage) {
+            setPostLoginAction('upgrade');
             setView('pricing');
         } else {
             setView('welcome');
@@ -155,6 +156,7 @@ export function AuthView() {
         setDocumentNonBlocking(profileRef, { lastSignInAt: new Date().toISOString() }, { merge: true });
         
         if (showProMessage) {
+            setPostLoginAction('upgrade');
             setView('pricing');
         } else {
             setView('welcome');

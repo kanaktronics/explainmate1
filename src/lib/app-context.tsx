@@ -17,6 +17,7 @@ interface AdContent {
 
 type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'about' | 'contact' | 'pricing' | 'privacy-policy' | 'terms-conditions' | 'refund-policy' | 'service-delivery-policy';
 
+type PostLoginAction = 'upgrade' | null;
 
 interface AppContextType {
   studentProfile: StudentProfile;
@@ -43,6 +44,9 @@ interface AppContextType {
   isUserLoading: boolean;
   activeHistoryId: string | null;
   setActiveHistoryId: (id: string | null) => void;
+  postLoginAction: PostLoginAction;
+  setPostLoginAction: (action: PostLoginAction) => void;
+  clearPostLoginAction: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -79,8 +83,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
   const [hasShownFirstAdToday, setHasShownFirstAdToday] = useState(false);
+  const [postLoginAction, setPostLoginAction] = useState<PostLoginAction>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  const clearPostLoginAction = useCallback(() => {
+    setPostLoginAction(null);
+  }, []);
 
   const setView = (view: AppView) => {
     const mainViews: AppView[] = ['welcome', 'explanation', 'quiz'];
@@ -136,7 +145,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       if (pathname === '/auth' || pathname === '/forgot-password') {
-          router.push('/');
+          if(!postLoginAction) {
+            router.push('/');
+          }
       }
     } else {
       // Clear all data on logout
@@ -146,7 +157,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
     }
-  }, [user, isUserLoading, getHistoryKey, pathname, router]);
+  }, [user, isUserLoading, getHistoryKey, pathname, router, postLoginAction]);
 
 
   // Effect to sync Firestore profile with local state
@@ -390,6 +401,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
     quiz, setQuiz, history, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
     isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
+    postLoginAction, setPostLoginAction, clearPostLoginAction,
   };
 
   return (
@@ -406,5 +418,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
