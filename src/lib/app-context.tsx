@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -331,7 +330,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [getHistoryKey]);
 
-  const addToChat = (message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
+  const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
     setChat(prevChat => {
         const updatedChat = [...prevChat, message];
         const currentHistory = historyType === 'explanation' ? history : teacherHistory;
@@ -368,7 +367,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         return updatedChat;
     });
-  };
+  }, [activeHistoryId, history, teacherHistory, updateAndSaveHistory]);
   
   const deleteFromHistory = (id: string, historyType: 'explanation' | 'teacher-companion') => {
     const currentHistory = historyType === 'explanation' ? history : teacherHistory;
