@@ -68,18 +68,25 @@ export function TeacherCompanionView() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [initialMessageFetched, setInitialMessageFetched] = useState(false);
 
   const form = useForm<z.infer<typeof promptSchema>>({
     resolver: zodResolver(promptSchema),
     defaultValues: { prompt: '' },
   });
 
-  const promptValue = form.watch('prompt');
+  // Reset flag when chat is cleared or view changes
+  useEffect(() => {
+    if (chat.length === 0) {
+      setInitialMessageFetched(false);
+    }
+  }, [chat.length]);
 
   // Initial message from AI when chat is empty
   useEffect(() => {
-    if (chat.length === 0 && user && studentProfile.isPro) {
+    if (chat.length === 0 && user && studentProfile.isPro && !initialMessageFetched) {
         setIsLoading(true);
+        setInitialMessageFetched(true); // Set flag immediately to prevent re-runs
         getTeacherCompanionResponse({ studentProfile, chatHistory: [] })
             .then(result => {
                 if (result && 'error' in result) {
@@ -91,7 +98,7 @@ export function TeacherCompanionView() {
             })
             .finally(() => setIsLoading(false));
     }
-  }, [chat.length, user, studentProfile, addToChat]);
+  }, [chat.length, user, studentProfile, addToChat, initialMessageFetched]);
 
   
   useEffect(() => {
