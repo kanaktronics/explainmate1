@@ -5,6 +5,7 @@ import { useAppContext } from '@/lib/app-context';
 import { ExplanationView } from '@/components/explanation-view';
 import { QuizView } from '@/components/quiz-view';
 import { WelcomeScreen } from '@/components/welcome-screen';
+import { TeacherCompanionView } from '@/components/teacher-companion-view';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -17,17 +18,18 @@ export default function Home() {
         return <ExplanationView />;
       case 'quiz':
         return <QuizView />;
+      case 'teacher-companion':
+        return <TeacherCompanionView />;
       case 'welcome':
       default:
-        // Welcome is part of ExplanationView now, but we keep this for routing logic
         return <ExplanationView />;
     }
   }
 
-  if (view === 'explanation' || view === 'welcome') {
+  if (['explanation', 'welcome', 'teacher-companion'].includes(view)) {
     return (
        <div className={cn("h-full")}>
-          <ExplanationView />
+          {renderView()}
       </div>
     )
   }

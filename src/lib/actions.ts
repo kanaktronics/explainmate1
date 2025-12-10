@@ -1,13 +1,24 @@
+
 'use server';
 
 import { tailorExplanation } from '@/ai/flows/tailor-explanations-to-student-profile';
 import type { TailorExplanationInput, TailorExplanationOutput } from '@/ai/flows/tailor-explanations-to-student-profile';
 import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quizzes';
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
+import { teacherCompanion } from '@/ai/flows/teacher-companion-flow';
+import type { TeacherCompanionInput, TeacherCompanionOutput } from '@/ai/flows/teacher-companion-flow';
 import { ChatMessage, StudentProfile } from './types';
 
 function convertToGenkitHistory(chatHistory: ChatMessage[]) {
   return chatHistory.map(message => {
+    // Handle Teacher Companion mode response
+    if (message.role === 'assistant' && typeof message.content === 'object' && 'response' in message.content) {
+      return {
+        role: 'assistant',
+        content: [{ text: message.content.response }]
+      };
+    }
+    // Handle Explanation mode response
     if (message.role === 'assistant') {
       return {
         role: 'assistant',
@@ -29,7 +40,7 @@ function convertToGenkitHistory(chatHistory: ChatMessage[]) {
       };
     }
     
-    // Fallback for simple string content
+    // Fallback for simple string content from user
     return {
       role: message.role,
       content: [{ text: message.content as string }]
@@ -76,7 +87,7 @@ function detectLanguageLabel(text: string): "english" | "hindi" | "hinglish" {
   if (hasDevanagari) return "hindi";
 
   // 2. Check for Hinglish
-  // This list avoids short, ambiguous words like "hi", "is", "so".
+  // This list avoids short, ambiguous words like "is", "so".
   const hindiWords = [
     "kya", "kaise", "mein", "aur", "ek", "do", "teen",
     "nahi", "haan", "aap", "tum", "hum", "yeh", "woh", "yahan", "wahan",
@@ -92,7 +103,7 @@ function detectLanguageLabel(text: string): "english" | "hindi" | "hinglish" {
   // We check word count to avoid flagging single ambiguous words as Hinglish.
   const containsHindiWord = words.some(word => hindiWords.includes(word));
   
-  if (containsHindiWord) {
+  if (words.length > 2 && containsHindiWord) {
     return "hinglish";
   }
 
@@ -116,7 +127,7 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
             return { error: usageCheck.error || 'PRO_USAGE_LIMIT' };
         }
     } else {
-        if (studentProfile.dailyUsage >= FREE_TIER_EXPLANATION_LIMIT) {
+        if ((studentProfile.dailyUsage || 0) >= FREE_TIER_EXPLANATION_LIMIT) {
             return { error: "DAILY_LIMIT_REACHED" };
         }
     }
@@ -232,4 +243,48 @@ export async function getQuiz(input: {
         }
         return { error: 'An unexpected error occurred while generating the quiz. Please try again.' };
     }
+}
+
+export async function getTeacherCompanionResponse(input: { studentProfile: StudentProfile; chatHistory: ChatMessage[] }): Promise<TeacherCompanionOutput | { error: string }> {
+  try {
+    const { studentProfile, chatHistory } = input;
+    const userId = studentProfile.id;
+
+    if (!userId) {
+      return { error: 'User not found.' };
+    }
+
+    if (!studentProfile.isPro) {
+        return { error: 'PRO_FEATURE_ONLY' };
+    }
+
+    const usageCheck = await checkProFairUsage(studentProfile);
+    if (!usageCheck.allowed) {
+        return { error: usageCheck.error || 'PRO_USAGE_LIMIT' };
+    }
+
+    const result = await teacherCompanion({
+      chatHistory: convertToGenkitHistory(chatHistory),
+    });
+    
+    if (!result) {
+      throw new Error('AI did not return a response.');
+    }
+    
+    return result;
+
+  } catch (e: any) {
+    console.error(`An unexpected error in TeacherCompanionMode:`, e);
+    const errorMessage = e.message || '';
+
+    if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
+      return { error: 'The AI model is currently experiencing high demand and is overloaded. Please try again in a moment.' };
+    }
+    
+    if (errorMessage.includes('429')) {
+      return { error: 'The AI model is temporarily rate-limited. Please wait a few moments before sending another request.' };
+    }
+
+    return { error: 'An unexpected error occurred. Please try again.' };
+  }
 }

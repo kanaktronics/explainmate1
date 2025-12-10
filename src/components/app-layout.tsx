@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -18,7 +19,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -31,14 +32,16 @@ import { AdPopup } from '@/components/ad-popup';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
-function HistorySection() {
-  const { history, loadChatFromHistory, deleteFromHistory, clearHistory, user } = useAppContext();
+function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher-companion' }) {
+  const { history, teacherHistory, loadChatFromHistory, deleteFromHistory, clearHistory, user, view } = useAppContext();
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [itemToDelete, setItemToDelete] = useState<HistoryItem | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  const currentHistory = historyType === 'explanation' ? history : teacherHistory;
+
   const handleHistoryClick = (item: HistoryItem) => {
-    loadChatFromHistory(item);
+    loadChatFromHistory(item, historyType);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, item: HistoryItem) => {
@@ -48,19 +51,24 @@ function HistorySection() {
 
   const confirmDelete = () => {
     if (itemToDelete) {
-      deleteFromHistory(itemToDelete.id);
+      deleteFromHistory(itemToDelete.id, historyType);
       setItemToDelete(null);
     }
   };
 
   const confirmClear = () => {
-    clearHistory();
+    clearHistory(historyType);
     setShowClearConfirm(false);
   }
 
-  if (history.length === 0 || !user) {
+  if (currentHistory.length === 0 || !user) {
     return null;
   }
+  
+  const isRelevantView = (historyType === 'explanation' && (view === 'explanation' || view === 'welcome')) || (historyType === 'teacher-companion' && view === 'teacher-companion');
+
+  if (!isRelevantView) return null;
+
 
   return (
     <>
@@ -87,7 +95,7 @@ function HistorySection() {
         </div>
           <CollapsibleContent>
             <SidebarMenu>
-              {history.map(item => (
+              {currentHistory.map(item => (
                 <SidebarMenuItem key={item.id} className="group/item">
                   <SidebarMenuButton variant="ghost" onClick={() => handleHistoryClick(item)} className="h-auto items-start justify-between relative">
                     <div className="flex w-full justify-between items-center">
@@ -189,7 +197,7 @@ function UserProfileSection() {
 }
 
 export function AppLayout({children}: {children: React.ReactNode}) {
-  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId } = useAppContext();
+  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId, studentProfile } = useAppContext();
   const { toast } = useToast();
 
   const handleNewExplanation = () => {
@@ -211,6 +219,26 @@ export function AppLayout({children}: {children: React.ReactNode}) {
     }
     setQuiz(null);
     setView('quiz');
+  };
+
+  const handleNewTeacherSession = () => {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to use Teacher Companion mode.' });
+        return;
+    }
+    if (!studentProfile.isPro) {
+        toast({
+            variant: 'destructive',
+            title: 'Pro Feature',
+            description: 'Teacher Companion is a Pro feature. Please upgrade to use it.',
+            action: <Button asChild><Link href="/pricing">Upgrade</Link></Button>
+        });
+        return;
+    }
+    setChat([]);
+    setActiveHistoryId(null);
+    setView('teacher-companion');
   };
   
   return (
@@ -236,11 +264,18 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                         New Quiz
                     </SidebarMenuButton>
                     </SidebarMenuItem>
+                    <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleNewTeacherSession}>
+                        <Users />
+                        Teacher Companion
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
                 </SidebarMenu>
                 <SidebarSeparator />
                 <ProSection />
                 <SidebarSeparator />
-                <HistorySection />
+                <HistorySection historyType="explanation" />
+                <HistorySection historyType="teacher-companion" />
                 <SidebarSeparator />
                  <SidebarMenu>
                     <SidebarMenuItem>

@@ -1,5 +1,6 @@
 
 
+
 export interface StudentProfile {
   id?: string;
   name: string;
@@ -25,9 +26,13 @@ export interface Explanation {
   fairWork: string;
 }
 
+export interface TeacherCompanionResponse {
+  response: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
-  content: string | Explanation | { text: string; imageUrl?: string };
+  content: string | Explanation | TeacherCompanionResponse | { text: string; imageUrl?: string };
 }
 
 export interface HistoryItem {
@@ -48,4 +53,4 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion';

@@ -1,9 +1,10 @@
 
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { StudentProfile, ChatMessage, Quiz, HistoryItem } from '@/lib/types';
+import type { StudentProfile, ChatMessage, Quiz, HistoryItem, TeacherCompanionResponse } from '@/lib/types';
 import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -15,7 +16,7 @@ interface AdContent {
     description: string;
 }
 
-type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'about' | 'contact' | 'pricing' | 'privacy-policy' | 'terms-conditions' | 'refund-policy' | 'service-delivery-policy';
+type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion';
 
 type PostLoginAction = 'upgrade' | null;
 
@@ -23,18 +24,19 @@ interface AppContextType {
   studentProfile: StudentProfile;
   setStudentProfile: (profile: Partial<StudentProfile>) => void;
   saveProfileToFirestore: (profile: Partial<StudentProfile>) => void;
-  incrementUsage: (type?: 'explanation' | 'quiz') => void;
+  incrementUsage: (type?: 'explanation' | 'quiz' | 'teacher-companion') => void;
   view: AppView;
   setView: (view: AppView) => void;
   chat: ChatMessage[];
   setChat: (chat: ChatMessage[]) => void;
-  addToChat: (message: ChatMessage) => void;
+  addToChat: (message: ChatMessage, historyType?: 'explanation' | 'teacher-companion') => void;
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
-  loadChatFromHistory: (historyItem: HistoryItem) => void;
-  deleteFromHistory: (id: string) => void;
-  clearHistory: () => void;
+  teacherHistory: HistoryItem[];
+  loadChatFromHistory: (historyItem: HistoryItem, historyType: 'explanation' | 'teacher-companion') => void;
+  deleteFromHistory: (id: string, historyType: 'explanation' | 'teacher-companion') => void;
+  clearHistory: (historyType: 'explanation' | 'teacher-companion') => void;
   isProfileComplete: boolean;
   isAdOpen: boolean;
   showAd: (content?: Partial<AdContent>) => void;
@@ -78,6 +80,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [teacherHistory, setTeacherHistory] = useState<HistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
@@ -92,7 +95,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setView = (view: AppView) => {
-    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz'];
+    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz', 'teacher-companion'];
     if (mainViews.includes(view)) {
       if (pathname !== '/') {
         router.push('/');
@@ -104,7 +107,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
-  const getHistoryKey = useCallback(() => user ? `explanationHistory_${user.uid}` : null, [user]);
+  const getHistoryKey = useCallback((type: 'explanation' | 'teacher-companion') => {
+      if (!user) return null;
+      return type === 'explanation' ? `explanationHistory_${user.uid}` : `teacherCompanionHistory_${user.uid}`;
+  }, [user]);
+
 
   const showAd = (content: Partial<AdContent> = {}) => {
     setAdContent(content);
@@ -128,22 +135,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isUserLoading) return;
     
     if (user) {
-      // Load History from Local Storage
-      const historyKey = getHistoryKey();
-      if (historyKey) {
+      const explanationHistoryKey = getHistoryKey('explanation');
+      if (explanationHistoryKey) {
         try {
-          const storedHistory = localStorage.getItem(historyKey);
-          if (storedHistory) {
-            setHistory(sortHistory(JSON.parse(storedHistory)));
-          } else {
-            setHistory([]);
-          }
+          const stored = localStorage.getItem(explanationHistoryKey);
+          if (stored) setHistory(sortHistory(JSON.parse(stored)));
+          else setHistory([]);
         } catch (error) {
-          console.error("Failed to parse history from localStorage", error);
-          localStorage.removeItem(historyKey);
+          console.error("Failed to parse explanation history", error);
+          localStorage.removeItem(explanationHistoryKey);
           setHistory([]);
         }
       }
+
+      const teacherHistoryKey = getHistoryKey('teacher-companion');
+       if (teacherHistoryKey) {
+        try {
+          const stored = localStorage.getItem(teacherHistoryKey);
+          if (stored) setTeacherHistory(sortHistory(JSON.parse(stored)));
+          else setTeacherHistory([]);
+        } catch (error) {
+          console.error("Failed to parse teacher history", error);
+          localStorage.removeItem(teacherHistoryKey);
+          setTeacherHistory([]);
+        }
+      }
+
       if (pathname === '/auth' || pathname === '/forgot-password') {
           if(!postLoginAction) {
             router.push('/');
@@ -154,6 +171,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setChat([]);
       setQuiz(null);
       setHistory([]);
+      setTeacherHistory([]);
       setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
     }
@@ -261,13 +279,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
 
-  const incrementUsage = (type: 'explanation' | 'quiz' = 'explanation') => {
+  const incrementUsage = (type: 'explanation' | 'quiz' | 'teacher-companion' = 'explanation') => {
     if (!userProfileRef) return;
     
     const now = new Date().toISOString();
     
     if (studentProfile.isPro) {
-        // Optimistically update local state for pro user
         const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
         setStudentProfileState(prev => ({
             ...prev,
@@ -283,32 +300,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }, { merge: true });
 
     } else {
-        // Optimistically update local state for free user
+        // Free user usage tracking
         if (type === 'explanation') {
             const newUsage = (studentProfile.dailyUsage || 0) + 1;
-            setStudentProfileState(prev => ({
-                ...prev,
-                dailyUsage: newUsage,
-                lastUsageDate: now
-            }));
+            setStudentProfileState(prev => ({ ...prev, dailyUsage: newUsage, lastUsageDate: now }));
             setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: now }, { merge: true });
-        } else {
+        } else if (type === 'quiz') {
             const newQuizUsage = (studentProfile.dailyQuizUsage || 0) + 1;
-            setStudentProfileState(prev => ({
-                ...prev,
-                dailyQuizUsage: newQuizUsage,
-                lastUsageDate: now
-            }));
+            setStudentProfileState(prev => ({ ...prev, dailyQuizUsage: newQuizUsage, lastUsageDate: now }));
             setDocumentNonBlocking(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: now }, { merge: true });
         }
     }
   }
   
-  const updateAndSaveHistory = useCallback((newHistory: HistoryItem[]) => {
-    const historyKey = getHistoryKey();
+  const updateAndSaveHistory = useCallback((newHistory: HistoryItem[], historyType: 'explanation' | 'teacher-companion') => {
+    const historyKey = getHistoryKey(historyType);
     if (!historyKey) return;
+
     const sorted = sortHistory(newHistory);
-    setHistory(sorted);
+    if (historyType === 'explanation') {
+      setHistory(sorted);
+    } else {
+      setTeacherHistory(sorted);
+    }
+    
     try {
         localStorage.setItem(historyKey, JSON.stringify(sorted));
     } catch (error) {
@@ -316,20 +331,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [getHistoryKey]);
 
-  const addToChat = (message: ChatMessage) => {
+  const addToChat = (message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
     setChat(prevChat => {
         const updatedChat = [...prevChat, message];
+        const currentHistory = historyType === 'explanation' ? history : teacherHistory;
         
-        // If we are continuing an existing chat from history
         if (activeHistoryId) {
-             const newHistory = history.map(item => {
+             const newHistory = currentHistory.map(item => {
                 if (item.id === activeHistoryId) {
                     return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
                 }
                 return item;
             });
-            updateAndSaveHistory(newHistory);
-        } else if (prevChat.length === 1 && message.role === 'assistant') { // If it's a new chat, create a history item
+            updateAndSaveHistory(newHistory, historyType);
+        } else if (prevChat.length === 1 && message.role === 'assistant') { 
             const firstUserMessage = prevChat[0];
             const topicContent = firstUserMessage.content;
             let topic = '';
@@ -347,59 +362,55 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               messages: updatedChat,
             };
 
-            setActiveHistoryId(newHistoryItem.id); // Set the new chat as active
-            updateAndSaveHistory([newHistoryItem, ...history]);
+            setActiveHistoryId(newHistoryItem.id); 
+            updateAndSaveHistory([newHistoryItem, ...currentHistory], historyType);
         }
         
         return updatedChat;
     });
   };
   
-  const deleteFromHistory = (id: string) => {
-    const newHistory = history.filter(item => item.id !== id);
-    updateAndSaveHistory(newHistory);
+  const deleteFromHistory = (id: string, historyType: 'explanation' | 'teacher-companion') => {
+    const currentHistory = historyType === 'explanation' ? history : teacherHistory;
+    const newHistory = currentHistory.filter(item => item.id !== id);
+    updateAndSaveHistory(newHistory, historyType);
     if (activeHistoryId === id) {
         setChat([]);
         setActiveHistoryId(null);
     }
   };
   
-  const clearHistory = () => {
-    updateAndSaveHistory([]);
-    setChat([]);
-    setActiveHistoryId(null);
+  const clearHistory = (historyType: 'explanation' | 'teacher-companion') => {
+    updateAndSaveHistory([], historyType);
+    
+    if (historyType === 'explanation' && view === 'explanation') {
+      setChat([]);
+      setActiveHistoryId(null);
+    } else if (historyType === 'teacher-companion' && view === 'teacher-companion') {
+      setChat([]);
+      setActiveHistoryId(null);
+    }
   };
 
-  const loadChatFromHistory = (historyItem: HistoryItem) => {
+  const loadChatFromHistory = (historyItem: HistoryItem, historyType: 'explanation' | 'teacher-companion') => {
     setChat(historyItem.messages);
     setActiveHistoryId(historyItem.id);
-    setView('explanation');
+    setView(historyType);
   };
   
-  // Effect to show recurring ad for free users
   useEffect(() => {
     let adInterval: NodeJS.Timeout | undefined;
-
-    // Only set the interval if the user is logged in and not a pro member.
     if (user && !studentProfile.isPro) {
-        // Set an interval to show the ad every hour (3600000 milliseconds)
-        adInterval = setInterval(() => {
-            showAd();
-        }, 3600 * 1000);
+        adInterval = setInterval(() => { showAd(); }, 3600 * 1000);
     }
-
-    // Cleanup function: This will be called when the component unmounts
-    // or when the dependencies (user, studentProfile.isPro) change.
     return () => {
-        if (adInterval) {
-            clearInterval(adInterval);
-        }
+        if (adInterval) clearInterval(adInterval);
     };
-  }, [user, studentProfile.isPro]); // Rerun effect if user or pro status changes
+  }, [user, studentProfile.isPro]);
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
-    quiz, setQuiz, history, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
+    quiz, setQuiz, history, teacherHistory, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
     isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
     postLoginAction, setPostLoginAction, clearPostLoginAction,
   };
