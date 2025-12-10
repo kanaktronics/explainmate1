@@ -61,7 +61,7 @@ export function ProMembershipView() {
         }
 
         try {
-            const response = await createOrder({ amount: 9900, currency: 'INR' }); // Price in paise
+            const response = await createOrder({ amount: 19900, currency: 'INR' }); // Price in paise
             if (response.error || !response.orderId) {
                 throw new Error(response.error || 'Failed to create order.');
             }
@@ -204,7 +204,7 @@ export function ProMembershipView() {
                         <Badge variant="destructive" className="mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 py-1 px-4 text-sm">Best Value</Badge>
                         <CardTitle className="text-3xl font-headline">Pro Membership</CardTitle>
                         <div className="flex items-baseline gap-2">
-                        <p className="text-5xl font-bold text-primary">₹99</p>
+                        <p className="text-5xl font-bold text-primary">₹199</p>
                         <p className="text-2xl font-semibold text-muted-foreground"><del>₹359</del></p>
                         </div>
                         <CardDescription>/ 2 months (Limited Time Offer)</CardDescription>

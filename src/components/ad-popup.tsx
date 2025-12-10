@@ -33,7 +33,7 @@ export function AdPopup({ isOpen, onClose, title, description }: AdPopupProps) {
         
         <div className="py-4">
             <div className="text-center mb-6">
-                 <p className="text-4xl font-bold text-primary">₹99 <span className="text-xl font-normal text-muted-foreground">/ 2 months</span></p>
+                 <p className="text-4xl font-bold text-primary">₹199 <span className="text-xl font-normal text-muted-foreground">/ 2 months</span></p>
                  <p className="text-xl font-semibold text-muted-foreground"><del>₹359</del></p>
             </div>
             <ul className="space-y-3 text-base">
