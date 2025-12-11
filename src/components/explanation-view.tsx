@@ -20,6 +20,9 @@ import { WelcomeScreen } from './welcome-screen';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from './ui/dropdown-menu';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
@@ -214,7 +217,13 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     if (!content || content === 'N/A') {
       return <p className="text-muted-foreground">No content available for this section.</p>;
     }
-    return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />;
+    return (
+      <div className="prose dark:prose-invert max-w-none">
+        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
   };
 
   const getButtonIcon = () => {
