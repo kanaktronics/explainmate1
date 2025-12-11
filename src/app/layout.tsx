@@ -1,7 +1,7 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
-import 'react-katex/dist/katex.min.css';
+import 'katex/dist/katex.min.css';
 import { ClientLayout } from '@/components/client-layout';
 import { Alegreya, Belleza } from 'next/font/google';
 import { cn } from '@/lib/utils';
