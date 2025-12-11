@@ -265,6 +265,11 @@ export async function getTeacherCompanionResponse(input: { studentProfile: Stude
 
     const result = await teacherCompanion({
       chatHistory: convertToGenkitHistory(chatHistory),
+      studentProfile: {
+        classLevel: studentProfile.classLevel,
+        board: studentProfile.board,
+        weakSubjects: studentProfile.weakSubjects,
+      },
     });
     
     if (!result) {

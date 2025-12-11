@@ -20,8 +20,18 @@ const ChatMessageSchema = z.object({
   content: z.array(ChatContentPartSchema),
 });
 
+const StudentProfileSchema = z.object({
+  classLevel: z.string().describe("The student's class level."),
+  board: z.string().describe("The student's educational board."),
+  weakSubjects: z
+    .string()
+    .describe('A comma-separated list of subjects the student finds weak.'),
+});
+
+
 const TeacherCompanionInputSchema = z.object({
   chatHistory: z.array(ChatMessageSchema).describe('The full conversation history between the teacher and the assistant.'),
+  studentProfile: StudentProfileSchema,
 });
 export type TeacherCompanionInput = z.infer<typeof TeacherCompanionInputSchema>;
 
@@ -90,10 +100,11 @@ STEP 1: STUDENT CONTEXT SETUP
 –––––––––––––––––––––
 If the chat history is empty, start by asking the student ONLY these questions, one at a time. Ask the first question and wait.
 
-1. "Welcome to Teacher Companion Mode. Which class are you in?"
-2. (After class is given) "Thank you. And which subject is this?"
-3. (After subject is given) "Understood. Which chapter or topic are you studying?"
-4. (After topic is given) "And what exactly is confusing you right now? For example: its meaning, a formula, the logic, steps, or how to apply it."
+Your context: The student is in {{studentProfile.classLevel}} and follows the {{studentProfile.board}} board. You do not need to ask for this information.
+
+1. "Welcome to Teacher Companion Mode. Which subject are we studying today?"
+2. (After subject is given) "Understood. And which chapter or topic?"
+3. (After topic is given) "Okay. And what exactly is confusing you right now? For example: its meaning, a formula, the logic, steps, or how to apply it."
 
 WAIT for answers to each question before asking the next one. Do not ask all questions at once.
 
