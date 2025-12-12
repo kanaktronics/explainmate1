@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useAppContext } from '@/lib/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -12,18 +11,7 @@ import { WeakTopicsView } from './weak-topics-view';
 import { ScrollArea } from './ui/scroll-area';
 
 export function ProgressView() {
-  const { user, interactions, progressData, progressError, isProgressLoading, triggerProgressEngine } = useAppContext();
-
-  const stableTrigger = useCallback(() => {
-    if (user && interactions) {
-      triggerProgressEngine();
-    }
-  }, [user, interactions, triggerProgressEngine]);
-
-  useEffect(() => {
-    stableTrigger();
-  }, [stableTrigger]);
-
+  const { progressData, progressError, isProgressLoading } = useAppContext();
 
   if (isProgressLoading) {
     return (
