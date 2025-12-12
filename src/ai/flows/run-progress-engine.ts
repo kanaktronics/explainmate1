@@ -71,26 +71,26 @@ const progressPrompt = ai.definePrompt({
   {{{interactionsJson}}}
 
   Follow these rules precisely:
-  1.  **Identify True Topics**: The 'topic' field in the events can be messy (e.g., "hi", "what is this"). Your first and most important job is to look inside the 'payload.chat' array for 'explanation' events. Read the conversation to determine the *actual* academic subject (e.g., "Photosynthesis", "Newton's Laws of Motion"). Group all related events under this true topic.
+  1.  **Identify True Topics**: The 'topic' field in the events can be messy (e.g., "hi", "what is this", "Introduction"). Your first and most important job is to look inside the 'payload.chat' array for 'explanation' events. Read the conversation to determine the *actual* academic subject (e.g., "Photosynthesis", "Newton's Laws of Motion", "Circle Congruency"). Group all related events under this true topic. Ignore conversational filler.
 
   2.  **Calculate Stats**:
       -   totalMinutesAllTime and minutesLast7Days: Estimate from the timestamps. Assume each 'explanation' or 'teacher_companion_chat' is 3 minutes. For quizzes, sum the timeSpentSeconds from the payload.
-      -   overallAccuracyPercent: Calculate from 'quiz_answer' interactions. (correct answers / total answers) * 100.
+      -   overallAccuracyPercent: Calculate from 'quiz_answer' interactions. (correct answers / total answers) * 100. If no quizzes, default to 50.
       -   weakTopics: Identify topics with the lowest accuracy (below 60%) or high frequency of 'explanation' events without follow-up correct quiz answers. The suggestion must be actionable and relevant to the *true topic*.
       -   topTopics: List the 3-5 *true topics* with the most interactions.
       -   overallProgressPercent: A composite score. Roughly 60% based on accuracy, 20% on the number of unique topics studied (variety), and 20% on recent activity (minutesLast7Days).
       -   progressGrowth: Create a 7-day history of the overallProgressPercent. You will need to calculate this score for each of the past 7 days based on the interactions that occurred up to that day.
 
   3.  **Generate Meaningful 7-Day Plan**:
-      -   Create a sevenDayPlan focusing on the identified weakTopics.
-      -   The plan should be structured. For example: Day 1: review basics, Day 2: practice problems, Day 3: take a quiz.
+      -   Create a sevenDayPlan focusing on one of the identified weakTopics.
+      -   The plan must be structured logically. Day 1 should be a brief review ('explain'). Day 2 should be practice problems ('practice'). Day 3 should be a 'quiz'. Days 4-7 can build on this or introduce related concepts.
       -   Task text must be very concise (<= 150 chars) and relevant to the *true topic*. For example, "Review the formula for calculating the area of a circle."
       -   Keep estimatedMinutes for each day low (5-15 mins).
 
   4.  **Output Format**:
       -   The final output MUST be a JSON object matching the ProgressEngineOutput schema.
       -   computedAt must be the current ISO 8601 timestamp.
-      -   If interaction data is sparse, provide sensible defaults (e.g., accuracy 50%), identify 1-2 weak topics based on the chat content, and add a notes field explaining that the results are estimated due to limited data.`,
+      -   If interaction data is sparse, provide sensible defaults (e.g., accuracy 50%), identify 1-2 weak topics based on the chat content, and add a notes field explaining that the results are estimated due to limited data. Do not make up a 7-day plan if there isn't a clear weak topic.`,
 });
 
 const runProgressEngineFlow = ai.defineFlow(

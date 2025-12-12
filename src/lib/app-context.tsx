@@ -168,12 +168,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
   
   const triggerProgressEngine = useCallback(async () => {
-    if (!user || !interactions || interactions.length === 0) {
-        // If there's no data, don't show an error, just clear the old data.
+    if (!user || !interactions) {
         setProgressData(null);
         setProgressError(null);
         return;
     }
+    
+    if (interactions.length === 0) {
+        setProgressData(null);
+        setProgressError(null);
+        return;
+    }
+
     setIsProgressLoading(true);
     setProgressError(null);
     const result = await runProgressEngineAction({
@@ -182,7 +188,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       languagePreference: 'en',
     });
     if (result && 'error' in result) {
-      console.error("Adaptive engine failed:", result.error);
+      console.error("Progress engine failed:", result.error);
       setProgressError(result.error);
     } else if (result) {
       setProgressData(result as ProgressData);
@@ -191,15 +197,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [user, interactions]);
 
 
-  const memoizedTrigger = useCallback(() => {
-    triggerProgressEngine();
-  }, [triggerProgressEngine]);
-
   useEffect(() => {
-    if (pathname === '/progress' && !isUserLoading) {
-      memoizedTrigger();
+    if (pathname === '/progress' && !isUserLoading && interactions) {
+      triggerProgressEngine();
     }
-  }, [pathname, isUserLoading, memoizedTrigger]);
+  }, [pathname, isUserLoading, interactions, triggerProgressEngine]);
 
   // Effect to handle user login/logout
   useEffect(() => {
