@@ -75,6 +75,8 @@ const defaultProfile: StudentProfile = {
     proDailyRequests: 0,
     proRequestTimestamps: [],
     isBlocked: false,
+    weeklyTimeSpent: 0,
+    timeSpentLastReset: new Date().toISOString(),
 };
 
 
@@ -97,45 +99,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Client-side time tracking
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  // Firestore-based time tracking
   useEffect(() => {
-    const TIME_STORAGE_KEY = 'explainmate_time_spent';
+      if (!user || !userProfileRef) return;
 
-    const loadTime = () => {
-        try {
-            const stored = localStorage.getItem(TIME_STORAGE_KEY);
-            if (stored) {
-                const { totalSeconds, lastResetDate } = JSON.parse(stored);
-                const today = new Date();
-                const lastReset = new Date(lastResetDate);
+      const interval = setInterval(() => {
+          setStudentProfileState(prev => {
+              const newTime = (prev.weeklyTimeSpent || 0) + 5;
+              setDocumentNonBlocking(userProfileRef, { weeklyTimeSpent: newTime }, { merge: true });
+              return { ...prev, weeklyTimeSpent: newTime };
+          });
+      }, 5000); // Update every 5 seconds
 
-                if (differenceInDays(today, lastReset) >= 7) {
-                    // More than 7 days have passed, reset timer
-                    localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({ totalSeconds: 0, lastResetDate: today.toISOString() }));
-                    return 0;
-                }
-                return totalSeconds;
-            }
-        } catch (e) {
-            console.error("Failed to load time from localStorage", e);
-        }
-        // Initialize if not present
-        localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({ totalSeconds: 0, lastResetDate: new Date().toISOString() }));
-        return 0;
-    };
+      return () => clearInterval(interval);
+  }, [user, userProfileRef]);
 
-    let seconds = loadTime();
-    setWeeklyTimeSpent(seconds);
-
-    const interval = setInterval(() => {
-        seconds++;
-        const storedData = JSON.parse(localStorage.getItem(TIME_STORAGE_KEY) || '{}');
-        localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({ ...storedData, totalSeconds: seconds }));
-        setWeeklyTimeSpent(seconds);
-    }, 1000); // every second
-
-    return () => clearInterval(interval);
-  }, []);
 
   const clearPostLoginAction = useCallback(() => {
     setPostLoginAction(null);
@@ -196,11 +179,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIsAdOpen(false);
     setAdContent({});
   };
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
   
@@ -288,9 +266,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           proDailyRequests: firestoreProfile.proDailyRequests,
           proRequestTimestamps: firestoreProfile.proRequestTimestamps,
           isBlocked: firestoreProfile.isBlocked,
+          weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
+          timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
         };
         
-        let isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
+        const isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
+        const today = new Date();
+        const lastTimeReset = new Date(serverProfile.timeSpentLastReset!);
+        const isNewWeek = differenceInDays(today, lastTimeReset) >= 7;
 
         // Daily usage reset logic
         if (isNewDay) {
@@ -298,13 +281,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               dailyUsage: 0, 
               dailyQuizUsage: 0, 
               proDailyRequests: 0,
-              lastUsageDate: new Date().toISOString() 
+              lastUsageDate: today.toISOString() 
             };
           serverProfile = { ...serverProfile, ...updatedUsage };
           if (userProfileRef) {
             setDocumentNonBlocking(userProfileRef, { ...updatedUsage, proRequestTimestamps: [] }, { merge: true });
           }
           setHasShownFirstAdToday(false); // Reset ad flag for new day
+        }
+
+        // Weekly time spent reset
+        if(isNewWeek) {
+            serverProfile.weeklyTimeSpent = 0;
+            serverProfile.timeSpentLastReset = today.toISOString();
+            if (userProfileRef) {
+                setDocumentNonBlocking(userProfileRef, { weeklyTimeSpent: 0, timeSpentLastReset: today.toISOString() }, { merge: true });
+            }
         }
         
         const finalProfile: StudentProfile = {
@@ -315,6 +307,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
 
         setStudentProfileState(finalProfile);
+        setWeeklyTimeSpent(finalProfile.weeklyTimeSpent);
 
         const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
         setIsProfileComplete(isComplete);
@@ -329,6 +322,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         name: user.displayName || '',
       };
       setStudentProfileState(newProfile);
+      setWeeklyTimeSpent(0);
       setIsProfileComplete(false);
     }
   }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef]);

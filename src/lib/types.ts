@@ -18,6 +18,8 @@ export interface StudentProfile {
   proDailyRequests: number;
   proRequestTimestamps: string[];
   isBlocked: boolean;
+  weeklyTimeSpent: number;
+  timeSpentLastReset: string;
 }
 
 export interface Explanation {
