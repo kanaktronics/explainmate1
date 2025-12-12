@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -89,8 +90,8 @@ export function QuizView() {
 
     const input = {
       topic: values.topic,
-      studentProfile: studentProfile,
       numQuestions: studentProfile.isPro ? values.numQuestions : 5,
+      studentProfile: studentProfile,
       difficulty: studentProfile.isPro ? values.difficulty : 'Medium',
     };
 
@@ -111,7 +112,7 @@ export function QuizView() {
           friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support and we’ll unlock additional access for you.";
           break;
         case 'ACCOUNT_BLOCKED':
-          friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support and we will review it.";
+          friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support.";
           break;
          default:
            friendlyError = result.error;

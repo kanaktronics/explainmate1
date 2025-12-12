@@ -172,7 +172,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const triggerAdaptiveEngine = useCallback(async () => {
     if (!user || interactions.length === 0) {
-      return;
+        // If there's no data, don't show an error, just clear the old data.
+        setProgressData(null);
+        setProgressError(null);
+        return;
     }
     setIsProgressLoading(true);
     setProgressError(null);
@@ -185,7 +188,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.error("Adaptive engine failed:", result.error);
       setProgressError(result.error);
     } else if (result) {
-      setProgressData(result);
+      setProgressData(result as ProgressData);
     }
     setIsProgressLoading(false);
   }, [user, interactions]);
@@ -413,23 +416,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const currentHistory = historyType === 'explanation' ? history : teacherHistory;
         
         let topic = '';
-        if (prevChat.length > 0) {
-            const firstUserMessage = prevChat[0];
+        if (activeHistoryId) {
+          const activeItem = currentHistory.find(item => item.id === activeHistoryId);
+          if (activeItem) {
+            topic = activeItem.topic;
+          }
+        } else if (updatedChat.length > 0) {
+            const firstUserMessage = updatedChat[0];
             const topicContent = firstUserMessage.content;
-            if (typeof topicContent === 'string') {
-                topic = topicContent.substring(0, 50);
-            } else if (typeof topicContent === 'object' && 'text' in topicContent) {
-                topic = topicContent.text.substring(0, 50);
-            }
-        } else {
-            const topicContent = message.content;
             if (message.role === 'user' && typeof topicContent === 'object' && 'text' in topicContent) {
                 topic = topicContent.text.substring(0,50);
             }
         }
 
-        if (message.role === 'user' && topic) {
-            addInteraction({ type: 'explanation', topic, payload: { chat: updatedChat } });
+        if (message.role === 'assistant') {
+            addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
         }
 
         if (activeHistoryId) {
@@ -440,8 +441,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 return item;
             });
             updateAndSaveHistory(newHistory, historyType);
-        } else if (prevChat.length === 1 && message.role === 'assistant') { 
-            
+        } else if (topic) { 
             const newHistoryItem: HistoryItem = {
               id: `${Date.now()}-${Math.random()}`,
               timestamp: new Date().toISOString(),
@@ -487,18 +487,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   // Ad logic
   useEffect(() => {
-    let adInterval: NodeJS.Timeout | undefined;
     if (user && !studentProfile.isPro && !isAdOpen && !hasShownFirstAdToday) {
-        // Using a timeout to delay the initial ad just a bit
         const timer = setTimeout(() => {
             showAd();
             setHasShownFirstAdToday(true);
-        }, 5000); 
+        }, 30000); // 30 seconds
         return () => clearTimeout(timer);
     }
-    return () => {
-        if (adInterval) clearInterval(adInterval);
-    };
   }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday, showAd]);
 
 
