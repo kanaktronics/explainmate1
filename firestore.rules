@@ -93,6 +93,13 @@ service cloud.firestore {
       allow create: if isOwner(userId) && hasValidUserProfileDataOnCreate(userId);
       allow update: if isExistingOwner(userId) && isImmutableUserProfileData();
       allow delete: if isExistingOwner(userId);
+
+      // Allow users to create and read their own interactions for progress tracking
+      match /interactions/{interactionId} {
+        allow list, get: if isOwner(userId);
+        // Users can create interactions, but not update or delete them to maintain integrity.
+        allow create: if isOwner(userId);
+      }
     }
   }
 }

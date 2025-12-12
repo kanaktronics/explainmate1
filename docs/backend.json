@@ -95,6 +95,19 @@
         "gradeLevel",
         "board"
       ]
+    },
+    "Interaction": {
+      "title": "Interaction",
+      "description": "A record of a single interaction a student has with the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["explanation", "quiz_start", "quiz_answer", "teacher_companion_chat"] },
+        "topic": { "type": "string" },
+        "payload": { "type": "object" }
+      },
+      "required": ["id", "timestamp", "type", "topic"]
     }
   },
   "auth": {
@@ -116,6 +129,26 @@
             {
               "name": "userId",
               "description": "The unique identifier for the user.  This is also the document ID and is used for path-based ownership."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/interactions/{interactionId}",
+        "definition": {
+          "entityName": "Interaction",
+          "schema": {
+            "$ref": "#/backend/entities/Interaction"
+          },
+          "description": "Stores individual student interaction events for progress tracking.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The owner of the interaction log."
+            },
+            {
+              "name": "interactionId",
+              "description": "The unique ID for the interaction event."
             }
           ]
         }

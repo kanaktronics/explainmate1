@@ -5,8 +5,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast } from 'date-fns';
-import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { runProgressEngineAction } from './actions';
@@ -95,7 +95,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
   const [hasShownFirstAdToday, setHasShownFirstAdToday] = useState(false);
   const [postLoginAction, setPostLoginAction] = useState<PostLoginAction>(null);
-  const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
   const [progressError, setProgressError] = useState<string | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState<boolean>(false);
@@ -126,31 +125,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return type === 'explanation' ? `explanationHistory_${user.uid}` : `teacherCompanionHistory_${user.uid}`;
   }, [user]);
 
-  const getInteractionsKey = useCallback(() => {
-    if (!user) return null;
-    return `interactions_${user.uid}`;
-  }, [user]);
+  
+  const interactionsRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return collection(firestore, 'users', user.uid, 'interactions');
+  }, [user, firestore]);
+  
+  const { data: interactions = [] } = useCollection<Interaction>(interactionsRef);
+
 
   const addInteraction = useCallback((interaction: Omit<Interaction, 'id' | 'timestamp'>) => {
-    const interactionsKey = getInteractionsKey();
-    if (!interactionsKey) return;
+    if (!interactionsRef) return;
 
-    const newInteraction: Interaction = {
+    const newInteraction = {
       ...interaction,
-      id: `${Date.now()}-${Math.random()}`,
       timestamp: new Date().toISOString(),
     };
+    
+    // Non-blocking write to Firestore
+    addDocumentNonBlocking(interactionsRef, newInteraction);
 
-    setInteractions(prev => {
-        const updatedInteractions = [...prev, newInteraction];
-        try {
-            localStorage.setItem(interactionsKey, JSON.stringify(updatedInteractions));
-        } catch (e) {
-            console.error("Failed to save interactions to localStorage", e);
-        }
-        return updatedInteractions;
-    });
-  }, [getInteractionsKey]);
+  }, [interactionsRef]);
 
 
   const showAd = useCallback((content: Partial<AdContent> = {}) => {
@@ -170,8 +165,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
   
-  const triggerAdaptiveEngine = useCallback(async () => {
-    if (!user || interactions.length === 0) {
+  const triggerProgressEngine = useCallback(async () => {
+    if (!user || !interactions || interactions.length === 0) {
         // If there's no data, don't show an error, just clear the old data.
         setProgressData(null);
         setProgressError(null);
@@ -196,11 +191,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (pathname === '/progress') {
-        triggerAdaptiveEngine();
+        triggerProgressEngine();
     }
-  }, [pathname, user, interactions, triggerAdaptiveEngine]);
+  }, [pathname, user, interactions, triggerProgressEngine]);
 
-  // Effect to load local data (history, interactions) on user change
+  // Effect to load local data (history) on user change
   useEffect(() => {
     if (isUserLoading) return;
     
@@ -231,19 +226,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      const interactionsKey = getInteractionsKey();
-      if (interactionsKey) {
-          try {
-              const stored = localStorage.getItem(interactionsKey);
-              if (stored) setInteractions(JSON.parse(stored));
-              else setInteractions([]);
-          } catch (e) {
-              console.error("Failed to parse interactions", e);
-              localStorage.removeItem(interactionsKey);
-              setInteractions([]);
-          }
-      }
-
       if (pathname === '/auth' || pathname === '/forgot-password') {
           if(!postLoginAction) {
             router.push('/');
@@ -255,12 +237,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setQuiz(null);
       setHistory([]);
       setTeacherHistory([]);
-      setInteractions([]);
       setProgressData(null);
       setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
     }
-  }, [user, isUserLoading, getHistoryKey, pathname, router, postLoginAction, getInteractionsKey]);
+  }, [user, isUserLoading, getHistoryKey, pathname, router, postLoginAction]);
 
 
   // Effect to sync Firestore profile with local state
