@@ -100,6 +100,11 @@ service cloud.firestore {
         // Users can create interactions, but not update or delete them to maintain integrity.
         allow create: if isOwner(userId);
       }
+      
+      // Allow users to manage their own chat/quiz history for cross-device sync.
+      match /history/{historyId} {
+        allow list, get, create, update, delete: if isOwner(userId);
+      }
     }
   }
 }

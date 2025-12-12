@@ -108,6 +108,19 @@
         "payload": { "type": "object" }
       },
       "required": ["id", "timestamp", "type", "topic"]
+    },
+    "HistoryItem": {
+      "title": "HistoryItem",
+      "description": "A record of a single chat or quiz session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topic": { "type": "string" },
+        "messages": { "type": "array", "items": { "type": "object" }},
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["explanation", "teacher-companion"] }
+      },
+      "required": ["id", "topic", "messages", "timestamp", "type"]
     }
   },
   "auth": {
@@ -149,6 +162,26 @@
             {
               "name": "interactionId",
               "description": "The unique ID for the interaction event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/history/{historyId}",
+        "definition": {
+          "entityName": "HistoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/HistoryItem"
+          },
+          "description": "Stores a user's chat and quiz history sessions for cross-device syncing.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The owner of the history item."
+            },
+            {
+              "name": "historyId",
+              "description": "The unique ID for the history session."
             }
           ]
         }

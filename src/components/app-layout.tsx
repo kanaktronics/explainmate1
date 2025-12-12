@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import {
@@ -41,7 +40,7 @@ function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher
   const currentHistory = historyType === 'explanation' ? history : teacherHistory;
 
   const handleHistoryClick = (item: HistoryItem) => {
-    loadChatFromHistory(item, historyType);
+    loadChatFromHistory(item);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, item: HistoryItem) => {
@@ -51,7 +50,7 @@ function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher
 
   const confirmDelete = () => {
     if (itemToDelete) {
-      deleteFromHistory(itemToDelete.id, historyType);
+      deleteFromHistory(itemToDelete.id);
       setItemToDelete(null);
     }
   };

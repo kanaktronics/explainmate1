@@ -2,11 +2,11 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast } from 'date-fns';
-import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { runProgressEngineAction } from './actions';
@@ -34,8 +34,8 @@ interface AppContextType {
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
   teacherHistory: HistoryItem[];
-  loadChatFromHistory: (historyItem: HistoryItem, historyType: 'explanation' | 'teacher-companion') => void;
-  deleteFromHistory: (id: string, historyType: 'explanation' | 'teacher-companion') => void;
+  loadChatFromHistory: (historyItem: HistoryItem) => void;
+  deleteFromHistory: (id: string) => void;
   clearHistory: (historyType: 'explanation' | 'teacher-companion') => void;
   isProfileComplete: boolean;
   isAdOpen: boolean;
@@ -87,8 +87,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [view, setViewState] = useState<AppView>('explanation');
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [teacherHistory, setTeacherHistory] = useState<HistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
@@ -120,11 +118,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
-  const getHistoryKey = useCallback((type: 'explanation' | 'teacher-companion') => {
-      if (!user) return null;
-      return type === 'explanation' ? `explanationHistory_${user.uid}` : `teacherCompanionHistory_${user.uid}`;
-  }, [user]);
+  const historyRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'users', user.uid, 'history'), orderBy('timestamp', 'desc'), limit(100));
+  }, [user, firestore]);
+  
+  const { data: allHistoryItems = [] } = useCollection<HistoryItem>(historyRef);
 
+  const history = useMemo(() => allHistoryItems?.filter(item => item.type === 'explanation') || [], [allHistoryItems]);
+  const teacherHistory = useMemo(() => allHistoryItems?.filter(item => item.type === 'teacher-companion') || [], [allHistoryItems]);
   
   const interactionsRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -189,44 +191,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [user, interactions]);
 
 
-  useEffect(() => {
-    if (pathname === '/progress') {
-        triggerProgressEngine();
-    }
-  }, [pathname, user, interactions, triggerProgressEngine]);
+  const memoizedTrigger = useCallback(() => {
+    triggerProgressEngine();
+  }, [triggerProgressEngine]);
 
-  // Effect to load local data (history) on user change
+  useEffect(() => {
+    if (pathname === '/progress' && !isUserLoading) {
+      memoizedTrigger();
+    }
+  }, [pathname, isUserLoading, memoizedTrigger]);
+
+  // Effect to handle user login/logout
   useEffect(() => {
     if (isUserLoading) return;
     
     if (user) {
-      const explanationHistoryKey = getHistoryKey('explanation');
-      if (explanationHistoryKey) {
-        try {
-          const stored = localStorage.getItem(explanationHistoryKey);
-          if (stored) setHistory(sortHistory(JSON.parse(stored)));
-          else setHistory([]);
-        } catch (error) {
-          console.error("Failed to parse explanation history", error);
-          localStorage.removeItem(explanationHistoryKey);
-          setHistory([]);
-        }
-      }
-
-      const teacherHistoryKey = getHistoryKey('teacher-companion');
-       if (teacherHistoryKey) {
-        try {
-          const stored = localStorage.getItem(teacherHistoryKey);
-          if (stored) setTeacherHistory(sortHistory(JSON.parse(stored)));
-          else setTeacherHistory([]);
-        } catch (error) {
-          console.error("Failed to parse teacher history", error);
-          localStorage.removeItem(teacherHistoryKey);
-          setTeacherHistory([]);
-        }
-      }
-
-      if (pathname === '/auth' || pathname === '/forgot-password') {
+       if (pathname === '/auth' || pathname === '/forgot-password') {
           if(!postLoginAction) {
             router.push('/');
           }
@@ -235,13 +215,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Clear all data on logout
       setChat([]);
       setQuiz(null);
-      setHistory([]);
-      setTeacherHistory([]);
       setProgressData(null);
       setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
     }
-  }, [user, isUserLoading, getHistoryKey, pathname, router, postLoginAction]);
+  }, [user, isUserLoading, pathname, router, postLoginAction]);
 
 
   // Effect to sync Firestore profile with local state
@@ -373,109 +351,92 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }
   
-  const updateAndSaveHistory = useCallback((newHistory: HistoryItem[], historyType: 'explanation' | 'teacher-companion') => {
-    const historyKey = getHistoryKey(historyType);
-    if (!historyKey) return;
-
-    const sorted = sortHistory(newHistory);
-    if (historyType === 'explanation') {
-      setHistory(sorted);
-    } else {
-      setTeacherHistory(sorted);
-    }
-    
-    try {
-        localStorage.setItem(historyKey, JSON.stringify(sorted));
-    } catch (error) {
-        console.error("Failed to save history to localStorage", error);
-    }
-  }, [getHistoryKey]);
-
-  const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
-    setChat(prevChat => {
-        const updatedChat = [...prevChat, message];
-        const currentHistory = historyType === 'explanation' ? history : teacherHistory;
-        
-        let topic = '';
-        if (activeHistoryId) {
-          const activeItem = currentHistory.find(item => item.id === activeHistoryId);
-          if (activeItem) {
-            topic = activeItem.topic;
-          }
-        } else if (updatedChat.length > 0) {
-            const firstUserMessage = updatedChat[0];
-            const topicContent = firstUserMessage.content;
-            if (message.role === 'user' && typeof topicContent === 'object' && 'text' in topicContent) {
-                topic = topicContent.text.substring(0,50);
-            }
-        }
-
-        if (message.role === 'assistant') {
-            addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
-        }
-
-        if (activeHistoryId) {
-             const newHistory = currentHistory.map(item => {
-                if (item.id === activeHistoryId) {
-                    return { ...item, messages: updatedChat, timestamp: new Date().toISOString() };
-                }
-                return item;
-            });
-            updateAndSaveHistory(newHistory, historyType);
-        } else if (topic) { 
-            const newHistoryItem: HistoryItem = {
-              id: `${Date.now()}-${Math.random()}`,
-              timestamp: new Date().toISOString(),
-              topic,
-              messages: updatedChat,
-            };
-
-            setActiveHistoryId(newHistoryItem.id); 
-            updateAndSaveHistory([newHistoryItem, ...currentHistory], historyType);
-        }
-        
-        return updatedChat;
-    });
-  }, [activeHistoryId, history, teacherHistory, updateAndSaveHistory, addInteraction]);
   
-  const deleteFromHistory = (id: string, historyType: 'explanation' | 'teacher-companion') => {
-    const currentHistory = historyType === 'explanation' ? history : teacherHistory;
-    const newHistory = currentHistory.filter(item => item.id !== id);
-    updateAndSaveHistory(newHistory, historyType);
+  const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
+    if (!user || !firestore) return;
+
+    setChat(prevChat => {
+      const updatedChat = [...prevChat, message];
+      let topic = '';
+      
+      const firstUserMessage = updatedChat.find(m => m.role === 'user');
+      if (firstUserMessage) {
+        const content = firstUserMessage.content;
+        if (typeof content === 'string') {
+          topic = content.substring(0, 50);
+        } else if (typeof content === 'object' && 'text' in content) {
+          topic = content.text.substring(0, 50);
+        }
+      }
+
+      if (message.role === 'assistant' && topic) {
+        addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
+      }
+
+      if (activeHistoryId) {
+        const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
+        setDocumentNonBlocking(docRef, { messages: updatedChat, timestamp: new Date().toISOString() }, { merge: true });
+      } else if (topic) {
+        const newHistoryId = doc(collection(firestore, 'users', user.uid, 'history')).id;
+        const newHistoryItem: HistoryItem = {
+          id: newHistoryId,
+          timestamp: new Date().toISOString(),
+          topic,
+          messages: updatedChat,
+          type: historyType,
+        };
+        setActiveHistoryId(newHistoryId);
+        const docRef = doc(firestore, 'users', user.uid, 'history', newHistoryId);
+        setDocumentNonBlocking(docRef, newHistoryItem, {});
+      }
+      
+      return updatedChat;
+    });
+  }, [user, firestore, activeHistoryId, addInteraction]);
+
+  
+  const deleteFromHistory = (id: string) => {
+    if (!user || !firestore) return;
+    const docRef = doc(firestore, 'users', user.uid, 'history', id);
+    deleteDocumentNonBlocking(docRef);
+
     if (activeHistoryId === id) {
-        setChat([]);
-        setActiveHistoryId(null);
+      setChat([]);
+      setActiveHistoryId(null);
     }
   };
   
   const clearHistory = (historyType: 'explanation' | 'teacher-companion') => {
-    updateAndSaveHistory([], historyType);
-    
-    if (historyType === 'explanation' && view === 'explanation') {
-      setChat([]);
-      setActiveHistoryId(null);
-    } else if (historyType === 'teacher-companion' && view === 'teacher-companion') {
-      setChat([]);
-      setActiveHistoryId(null);
+     if (!user || !firestore) return;
+     const itemsToClear = historyType === 'explanation' ? history : teacherHistory;
+     itemsToClear.forEach(item => {
+        const docRef = doc(firestore, 'users', user.uid, 'history', item.id);
+        deleteDocumentNonBlocking(docRef);
+     });
+
+    if ((historyType === 'explanation' && (view === 'explanation' || view === 'welcome')) || 
+        (historyType === 'teacher-companion' && view === 'teacher-companion')) {
+        setChat([]);
+        setActiveHistoryId(null);
     }
   };
 
-  const loadChatFromHistory = (historyItem: HistoryItem, historyType: 'explanation' | 'teacher-companion') => {
+  const loadChatFromHistory = (historyItem: HistoryItem) => {
     setChat(historyItem.messages);
     setActiveHistoryId(historyItem.id);
-    setView(historyType);
+    setView(historyItem.type);
   };
   
   // Ad logic
   useEffect(() => {
-    if (user && !studentProfile.isPro && !isAdOpen && !hasShownFirstAdToday) {
+    if (user && !studentProfile.isPro && !isAdOpen && !hasShownFirstAdToday && pathname === '/') {
         const timer = setTimeout(() => {
             showAd();
             setHasShownFirstAdToday(true);
         }, 30000); // 30 seconds
         return () => clearTimeout(timer);
     }
-  }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday, showAd]);
+  }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday, showAd, pathname]);
 
 
   const value: AppContextType = { 

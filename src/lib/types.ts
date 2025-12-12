@@ -41,6 +41,7 @@ export interface HistoryItem {
   topic: string;
   messages: ChatMessage[];
   timestamp: string;
+  type: 'explanation' | 'teacher-companion';
 }
 
 export interface QuizQuestion {
