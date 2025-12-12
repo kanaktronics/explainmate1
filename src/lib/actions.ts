@@ -7,6 +7,8 @@ import { generateInteractiveQuizzes } from '@/ai/flows/generate-interactive-quiz
 import type { GenerateInteractiveQuizzesInput, GenerateInteractiveQuizzesOutput } from '@/ai/flows/generate-interactive-quizzes';
 import { teacherCompanion } from '@/ai/flows/teacher-companion-flow';
 import type { TeacherCompanionInput, TeacherCompanionOutput } from '@/ai/flows/teacher-companion-flow';
+import { runProgressEngine } from '@/ai/flows/run-progress-engine';
+import type { ProgressEngineInput, ProgressEngineOutput } from '@/ai/flows/run-progress-engine';
 import { ChatMessage, StudentProfile } from './types';
 
 function convertToGenkitHistory(chatHistory: ChatMessage[]) {
@@ -292,4 +294,17 @@ export async function getTeacherCompanionResponse(input: { studentProfile: Stude
 
     return { error: 'An unexpected error occurred. Please try again.' };
   }
+}
+
+export async function runProgressEngineAction(input: ProgressEngineInput): Promise<ProgressEngineOutput | { error: string }> {
+    try {
+        const result = await runProgressEngine(input);
+        if (!result) {
+            throw new Error("The progress engine did not return a response.");
+        }
+        return result;
+    } catch (e: any) {
+        console.error("Error running progress engine:", e);
+        return { error: "Failed to analyze progress. Please try again later." };
+    }
 }

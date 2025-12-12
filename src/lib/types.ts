@@ -1,5 +1,6 @@
 
 
+import { ProgressEngineOutput } from "@/ai/flows/run-progress-engine";
 
 export interface StudentProfile {
   id?: string;
@@ -53,4 +54,15 @@ export interface Quiz {
   quiz: QuizQuestion[];
 }
 
-export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion';
+export interface Interaction {
+  id: string;
+  timestamp: string;
+  type: 'explanation' | 'quiz_start' | 'quiz_answer' | 'teacher_companion_chat';
+  topic: string;
+  payload?: any;
+}
+
+export type ProgressData = ProgressEngineOutput;
+
+
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress';

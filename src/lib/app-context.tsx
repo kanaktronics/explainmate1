@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { StudentProfile, ChatMessage, Quiz, HistoryItem, TeacherCompanionResponse } from '@/lib/types';
+import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast } from 'date-fns';
 import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -15,7 +15,7 @@ interface AdContent {
     description: string;
 }
 
-type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion';
+type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress';
 
 type PostLoginAction = 'upgrade' | null;
 
@@ -48,6 +48,14 @@ interface AppContextType {
   postLoginAction: PostLoginAction;
   setPostLoginAction: (action: PostLoginAction) => void;
   clearPostLoginAction: () => void;
+  interactions: Interaction[];
+  addInteraction: (interaction: Omit<Interaction, 'id' | 'timestamp'>) => void;
+  progressData: ProgressData | null;
+  setProgressData: (data: ProgressData | null) => void;
+  progressError: string | null;
+  setProgressError: (error: string | null) => void;
+  isProgressLoading: boolean;
+  setIsProgressLoading: (loading: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -86,6 +94,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [adContent, setAdContent] = useState<Partial<AdContent>>({});
   const [hasShownFirstAdToday, setHasShownFirstAdToday] = useState(false);
   const [postLoginAction, setPostLoginAction] = useState<PostLoginAction>(null);
+  const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const [isProgressLoading, setIsProgressLoading] = useState<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -94,10 +106,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setView = (view: AppView) => {
-    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz', 'teacher-companion'];
+    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz', 'teacher-companion', 'progress'];
     if (mainViews.includes(view)) {
-      if (pathname !== '/') {
+      if (pathname !== '/' && view !== 'progress') {
         router.push('/');
+      } else if (view === 'progress' && pathname !== '/progress') {
+        router.push('/progress');
       }
       setViewState(view);
     } else {
@@ -110,6 +124,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (!user) return null;
       return type === 'explanation' ? `explanationHistory_${user.uid}` : `teacherCompanionHistory_${user.uid}`;
   }, [user]);
+
+  const getInteractionsKey = useCallback(() => {
+    if (!user) return null;
+    return `interactions_${user.uid}`;
+  }, [user]);
+
+  const addInteraction = useCallback((interaction: Omit<Interaction, 'id' | 'timestamp'>) => {
+    const interactionsKey = getInteractionsKey();
+    if (!interactionsKey) return;
+
+    const newInteraction: Interaction = {
+      ...interaction,
+      id: `${Date.now()}-${Math.random()}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    setInteractions(prev => {
+        const updatedInteractions = [...prev, newInteraction];
+        try {
+            localStorage.setItem(interactionsKey, JSON.stringify(updatedInteractions));
+        } catch (e) {
+            console.error("Failed to save interactions to localStorage", e);
+        }
+        return updatedInteractions;
+    });
+  }, [getInteractionsKey]);
 
 
   const showAd = (content: Partial<AdContent> = {}) => {
@@ -129,7 +169,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
 
-  // Effect to load local data (history) on user change
+  // Effect to load local data (history, interactions) on user change
   useEffect(() => {
     if (isUserLoading) return;
     
@@ -160,6 +200,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      const interactionsKey = getInteractionsKey();
+      if (interactionsKey) {
+          try {
+              const stored = localStorage.getItem(interactionsKey);
+              if (stored) setInteractions(JSON.parse(stored));
+              else setInteractions([]);
+          } catch (e) {
+              console.error("Failed to parse interactions", e);
+              localStorage.removeItem(interactionsKey);
+              setInteractions([]);
+          }
+      }
+
       if (pathname === '/auth' || pathname === '/forgot-password') {
           if(!postLoginAction) {
             router.push('/');
@@ -171,10 +224,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setQuiz(null);
       setHistory([]);
       setTeacherHistory([]);
+      setInteractions([]);
+      setProgressData(null);
       setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
     }
-  }, [user, isUserLoading, getHistoryKey, pathname, router, postLoginAction]);
+  }, [user, isUserLoading, getHistoryKey, pathname, router, postLoginAction, getInteractionsKey]);
 
 
   // Effect to sync Firestore profile with local state
@@ -335,6 +390,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const updatedChat = [...prevChat, message];
         const currentHistory = historyType === 'explanation' ? history : teacherHistory;
         
+        let topic = '';
+        if (prevChat.length > 0) {
+            const firstUserMessage = prevChat[0];
+            const topicContent = firstUserMessage.content;
+            if (typeof topicContent === 'string') {
+                topic = topicContent.substring(0, 50);
+            } else if (typeof topicContent === 'object' && 'text' in topicContent) {
+                topic = topicContent.text.substring(0, 50);
+            }
+        } else {
+            const topicContent = message.content;
+            if (message.role === 'user' && typeof topicContent === 'object' && 'text' in topicContent) {
+                topic = topicContent.text.substring(0,50);
+            }
+        }
+
+        if (message.role === 'user' && topic) {
+            addInteraction({ type: 'explanation', topic });
+        }
+
         if (activeHistoryId) {
              const newHistory = currentHistory.map(item => {
                 if (item.id === activeHistoryId) {
@@ -344,15 +419,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             });
             updateAndSaveHistory(newHistory, historyType);
         } else if (prevChat.length === 1 && message.role === 'assistant') { 
-            const firstUserMessage = prevChat[0];
-            const topicContent = firstUserMessage.content;
-            let topic = '';
-
-            if (typeof topicContent === 'string') {
-                topic = topicContent.substring(0, 50);
-            } else if (typeof topicContent === 'object' && 'text' in topicContent) {
-                topic = topicContent.text.substring(0, 50);
-            }
             
             const newHistoryItem: HistoryItem = {
               id: `${Date.now()}-${Math.random()}`,
@@ -367,7 +433,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         return updatedChat;
     });
-  }, [activeHistoryId, history, teacherHistory, updateAndSaveHistory]);
+  }, [activeHistoryId, history, teacherHistory, updateAndSaveHistory, addInteraction]);
   
   const deleteFromHistory = (id: string, historyType: 'explanation' | 'teacher-companion') => {
     const currentHistory = historyType === 'explanation' ? history : teacherHistory;
@@ -412,6 +478,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     quiz, setQuiz, history, teacherHistory, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
     isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
     postLoginAction, setPostLoginAction, clearPostLoginAction,
+    interactions, addInteraction, progressData, setProgressData, progressError, setProgressError, isProgressLoading, setIsProgressLoading,
   };
 
   return (
