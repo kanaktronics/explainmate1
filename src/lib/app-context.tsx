@@ -287,12 +287,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         setStudentProfileState(finalProfile);
 
-        // Show ad on first visit of the day for free users
-        if (!finalProfile.isPro && !hasShownFirstAdToday) {
-            showAd();
-            setHasShownFirstAdToday(true);
-        }
-
         const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
         setIsProfileComplete(isComplete);
         
@@ -308,7 +302,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setStudentProfileState(newProfile);
       setIsProfileComplete(false);
     }
-  }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef, hasShownFirstAdToday]);
+  }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef]);
 
   
   const setStudentProfile = (profile: Partial<StudentProfile>) => {
@@ -465,13 +459,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   useEffect(() => {
     let adInterval: NodeJS.Timeout | undefined;
-    if (user && !studentProfile.isPro) {
+    if (user && !studentProfile.isPro && !isAdOpen) {
+      if (!hasShownFirstAdToday) {
+        showAd();
+        setHasShownFirstAdToday(true);
+      } else {
         adInterval = setInterval(() => { showAd(); }, 3600 * 1000);
+      }
     }
     return () => {
         if (adInterval) clearInterval(adInterval);
     };
-  }, [user, studentProfile.isPro]);
+  }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday]);
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
