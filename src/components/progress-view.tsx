@@ -2,20 +2,28 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAppContext } from '@/lib/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { ProgressCircular } from './progress-circular';
 import { ProgressStats } from './progress-stats';
-import { ProgressChart } from './progress-chart';
 import { LearningPlanView } from './learning-plan-view';
 import { WeakTopicsView } from './weak-topics-view';
 import { ScrollArea } from './ui/scroll-area';
-import { Button } from './ui/button';
 
 export function ProgressView() {
-  const { user, interactions, progressData, progressError, isProgressLoading } = useAppContext();
+  const { user, interactions, progressData, progressError, isProgressLoading, triggerProgressEngine } = useAppContext();
+
+  const stableTrigger = useCallback(() => {
+    if (user && interactions) {
+      triggerProgressEngine();
+    }
+  }, [user, interactions, triggerProgressEngine]);
+
+  useEffect(() => {
+    stableTrigger();
+  }, [stableTrigger]);
+
 
   if (isProgressLoading) {
     return (
@@ -65,16 +73,7 @@ export function ProgressView() {
             </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-            <div className="lg:col-span-1 flex justify-center">
-                <ProgressCircular progress={progressData.overallProgressPercent} />
-            </div>
-            <div className="lg:col-span-2">
-                <ProgressStats stats={progressData} />
-            </div>
-        </div>
-
-        <ProgressChart data={progressData.progressGrowth} />
+        <ProgressStats stats={progressData} />
         
         <WeakTopicsView topics={progressData.weakTopics} />
 
