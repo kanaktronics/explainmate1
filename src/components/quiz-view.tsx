@@ -35,7 +35,7 @@ const quizAnswersSchema = z.object({
 const FREE_TIER_QUIZ_LIMIT = 1;
 
 export function QuizView() {
-  const { user, studentProfile, setStudentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView } = useAppContext();
+  const { user, studentProfile, setStudentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView, addInteraction } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -84,6 +84,8 @@ export function QuizView() {
     answersForm.reset({ answers: {} });
 
     incrementUsage('quiz');
+    addInteraction({ type: 'quiz_start', topic: values.topic });
+
 
     const input = {
       topic: values.topic,
@@ -142,6 +144,7 @@ export function QuizView() {
         const isCorrect = selected === q.correctAnswer;
         if(isCorrect) score++;
         evaluatedAnswers[index] = { selected, isCorrect };
+        addInteraction({ type: 'quiz_answer', topic: setupForm.getValues('topic'), payload: { correct: isCorrect } });
       }
     });
 

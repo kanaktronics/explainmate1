@@ -170,23 +170,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
   
-  const triggerProgressEngine = useCallback(async () => {
+  const triggerAdaptiveEngine = useCallback(async () => {
     if (!user || interactions.length === 0) {
-      // If there are no interactions, don't even start the loading process.
-      // This prevents the loading spinner when there's nothing to do.
       return;
     }
-
     setIsProgressLoading(true);
     setProgressError(null);
-
     const result = await runProgressEngineAction({
       studentId: user.uid,
       interactions: interactions,
       languagePreference: 'en',
     });
-
     if (result && 'error' in result) {
+      console.error("Adaptive engine failed:", result.error);
       setProgressError(result.error);
     } else if (result) {
       setProgressData(result);
@@ -194,11 +190,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIsProgressLoading(false);
   }, [user, interactions]);
 
+
   useEffect(() => {
-    if (pathname === '/progress' && !isProgressLoading && !progressData && user && interactions.length > 0) {
-      triggerProgressEngine();
+    if (pathname === '/progress') {
+        triggerAdaptiveEngine();
     }
-  }, [pathname, isProgressLoading, progressData, user, interactions.length, triggerProgressEngine]);
+  }, [pathname, user, interactions, triggerAdaptiveEngine]);
 
   // Effect to load local data (history, interactions) on user change
   useEffect(() => {
@@ -491,23 +488,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Ad logic
   useEffect(() => {
     let adInterval: NodeJS.Timeout | undefined;
-    if (user && !studentProfile.isPro && !isAdOpen) {
-      if (!hasShownFirstAdToday) {
+    if (user && !studentProfile.isPro && !isAdOpen && !hasShownFirstAdToday) {
         // Using a timeout to delay the initial ad just a bit
         const timer = setTimeout(() => {
             showAd();
             setHasShownFirstAdToday(true);
         }, 5000); 
         return () => clearTimeout(timer);
-      } else {
-        // Show subsequent ads every hour
-        adInterval = setInterval(() => { showAd(); }, 3600 * 1000);
-      }
     }
     return () => {
         if (adInterval) clearInterval(adInterval);
     };
   }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday, showAd]);
+
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
@@ -531,4 +524,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
