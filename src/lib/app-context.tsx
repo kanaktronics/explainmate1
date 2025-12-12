@@ -153,10 +153,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [getInteractionsKey]);
 
 
-  const showAd = (content: Partial<AdContent> = {}) => {
+  const showAd = useCallback((content: Partial<AdContent> = {}) => {
     setAdContent(content);
     setIsAdOpen(true);
-  };
+  }, []);
 
   const hideAd = () => {
     setIsAdOpen(false);
@@ -171,7 +171,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
   
   const triggerProgressEngine = useCallback(async () => {
-    if (!user || interactions.length === 0) return;
+    if (!user || interactions.length === 0) {
+      // If there are no interactions, don't even start the loading process.
+      // This prevents the loading spinner when there's nothing to do.
+      return;
+    }
 
     setIsProgressLoading(true);
     setProgressError(null);
@@ -188,14 +192,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setProgressData(result);
     }
     setIsProgressLoading(false);
-  }, [user, interactions, setIsProgressLoading, setProgressError, setProgressData]);
+  }, [user, interactions]);
 
-  // Automatically refresh progress data when visiting the progress page
   useEffect(() => {
-    if (pathname === '/progress' && !isProgressLoading) {
+    if (pathname === '/progress' && !isProgressLoading && !progressData && user && interactions.length > 0) {
       triggerProgressEngine();
     }
-  }, [pathname, isProgressLoading, triggerProgressEngine]);
+  }, [pathname, isProgressLoading, progressData, user, interactions.length, triggerProgressEngine]);
 
   // Effect to load local data (history, interactions) on user change
   useEffect(() => {
@@ -485,13 +488,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setView(historyType);
   };
   
+  // Ad logic
   useEffect(() => {
     let adInterval: NodeJS.Timeout | undefined;
     if (user && !studentProfile.isPro && !isAdOpen) {
       if (!hasShownFirstAdToday) {
-        showAd();
-        setHasShownFirstAdToday(true);
+        // Using a timeout to delay the initial ad just a bit
+        const timer = setTimeout(() => {
+            showAd();
+            setHasShownFirstAdToday(true);
+        }, 5000); 
+        return () => clearTimeout(timer);
       } else {
+        // Show subsequent ads every hour
         adInterval = setInterval(() => { showAd(); }, 3600 * 1000);
       }
     }
@@ -522,3 +531,4 @@ export const useAppContext = () => {
   }
   return context;
 };
+

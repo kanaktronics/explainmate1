@@ -1,11 +1,9 @@
 
+
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAppContext } from '@/lib/app-context';
-import { ProgressEngineOutput } from '@/ai/flows/run-progress-engine';
-import { runProgressEngineAction } from '@/lib/actions';
-import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { ProgressCircular } from './progress-circular';
@@ -14,36 +12,10 @@ import { ProgressChart } from './progress-chart';
 import { LearningPlanView } from './learning-plan-view';
 import { WeakTopicsView } from './weak-topics-view';
 import { ScrollArea } from './ui/scroll-area';
+import { Button } from './ui/button';
 
 export function ProgressView() {
-  const { user, interactions, progressData, setProgressData, progressError, setProgressError, isProgressLoading, setIsProgressLoading } = useAppContext();
-
-  const handleRefresh = async () => {
-    if (!user) return;
-    setIsProgressLoading(true);
-    setProgressError(null);
-
-    const result = await runProgressEngineAction({
-      studentId: user.uid,
-      interactions: interactions,
-      languagePreference: 'en',
-    });
-
-    if (result && 'error' in result) {
-      setProgressError(result.error);
-    } else if (result) {
-      setProgressData(result);
-    }
-    setIsProgressLoading(false);
-  };
-
-  useEffect(() => {
-    // Fetch initial data if it doesn't exist
-    if (!progressData && !isProgressLoading && user && interactions.length > 0) {
-      handleRefresh();
-    }
-  }, [user, interactions, progressData, isProgressLoading]);
-
+  const { user, interactions, progressData, progressError, isProgressLoading } = useAppContext();
 
   if (isProgressLoading) {
     return (
@@ -63,7 +35,6 @@ export function ProgressView() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             {progressError}
-            <Button onClick={handleRefresh} className="mt-4">Try Again</Button>
           </AlertDescription>
         </Alert>
        </div>
@@ -78,10 +49,6 @@ export function ProgressView() {
           <AlertTitle>Not Enough Data</AlertTitle>
           <AlertDescription>
             We don't have enough interaction data to generate your progress report yet. Start a chat or take a quiz to get started!
-             <Button onClick={handleRefresh} className="mt-4" disabled={isProgressLoading}>
-                {isProgressLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Refresh
-            </Button>
           </AlertDescription>
         </Alert>
        </div>
@@ -124,3 +91,4 @@ export function ProgressView() {
     </ScrollArea>
   );
 }
+
