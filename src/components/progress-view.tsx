@@ -94,12 +94,8 @@ export function ProgressView() {
         <header className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
                 <h1 className="text-4xl font-headline text-primary">Your Progress Dashboard</h1>
-                <p className="text-muted-foreground">A summary of your learning journey.</p>
+                <p className="text-muted-foreground">A summary of your learning journey, updated automatically.</p>
             </div>
-            <Button onClick={handleRefresh} disabled={isProgressLoading}>
-                {isProgressLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Refresh Progress
-            </Button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">

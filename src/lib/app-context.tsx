@@ -9,6 +9,7 @@ import { useFirebase, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/
 import { doc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
+import { runProgressEngineAction } from './actions';
 
 interface AdContent {
     title: string;
@@ -168,6 +169,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [user, firestore]);
 
   const { data: firestoreProfile, isLoading: isProfileLoading } = useDoc<any>(userProfileRef);
+  
+  const triggerProgressEngine = useCallback(async () => {
+    if (!user || interactions.length === 0) return;
+
+    setIsProgressLoading(true);
+    setProgressError(null);
+
+    const result = await runProgressEngineAction({
+      studentId: user.uid,
+      interactions: interactions,
+      languagePreference: 'en',
+    });
+
+    if (result && 'error' in result) {
+      setProgressError(result.error);
+    } else if (result) {
+      setProgressData(result);
+    }
+    setIsProgressLoading(false);
+  }, [user, interactions, setIsProgressLoading, setProgressError, setProgressData]);
+
+  // Automatically refresh progress data when visiting the progress page
+  useEffect(() => {
+    if (pathname === '/progress' && !isProgressLoading) {
+      triggerProgressEngine();
+    }
+  }, [pathname, isProgressLoading, triggerProgressEngine]);
 
   // Effect to load local data (history, interactions) on user change
   useEffect(() => {
@@ -401,7 +429,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (message.role === 'user' && topic) {
-            addInteraction({ type: 'explanation', topic });
+            addInteraction({ type: 'explanation', topic, payload: { chat: updatedChat } });
         }
 
         if (activeHistoryId) {
@@ -470,7 +498,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => {
         if (adInterval) clearInterval(adInterval);
     };
-  }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday]);
+  }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday, showAd]);
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
