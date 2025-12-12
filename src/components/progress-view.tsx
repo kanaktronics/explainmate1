@@ -61,7 +61,7 @@ export function ProgressView() {
             </div>
         </header>
 
-        <ProgressStats stats={progressData} />
+        <ProgressStats />
         
         <WeakTopicsView topics={progressData.weakTopics} />
 

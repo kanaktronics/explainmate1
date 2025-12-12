@@ -4,7 +4,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
-import { isToday, isPast } from 'date-fns';
+import { isToday, isPast, differenceInDays } from 'date-fns';
 import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -57,13 +57,10 @@ interface AppContextType {
   setProgressError: (error: string | null) => void;
   isProgressLoading: boolean;
   setIsProgressLoading: (loading: boolean) => void;
+  weeklyTimeSpent: number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const sortHistory = (history: HistoryItem[]) => {
-  return history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-};
 
 const defaultProfile: StudentProfile = {
     name: '',
@@ -96,8 +93,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
   const [progressError, setProgressError] = useState<string | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState<boolean>(false);
+  const [weeklyTimeSpent, setWeeklyTimeSpent] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Client-side time tracking
+  useEffect(() => {
+    const TIME_STORAGE_KEY = 'explainmate_time_spent';
+
+    const loadTime = () => {
+        try {
+            const stored = localStorage.getItem(TIME_STORAGE_KEY);
+            if (stored) {
+                const { totalSeconds, lastResetDate } = JSON.parse(stored);
+                const today = new Date();
+                const lastReset = new Date(lastResetDate);
+
+                if (differenceInDays(today, lastReset) >= 7) {
+                    // More than 7 days have passed, reset timer
+                    localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({ totalSeconds: 0, lastResetDate: today.toISOString() }));
+                    return 0;
+                }
+                return totalSeconds;
+            }
+        } catch (e) {
+            console.error("Failed to load time from localStorage", e);
+        }
+        // Initialize if not present
+        localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({ totalSeconds: 0, lastResetDate: new Date().toISOString() }));
+        return 0;
+    };
+
+    let seconds = loadTime();
+    setWeeklyTimeSpent(seconds);
+
+    const interval = setInterval(() => {
+        seconds++;
+        const storedData = JSON.parse(localStorage.getItem(TIME_STORAGE_KEY) || '{}');
+        localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({ ...storedData, totalSeconds: seconds }));
+        setWeeklyTimeSpent(seconds);
+    }, 1000); // every second
+
+    return () => clearInterval(interval);
+  }, []);
 
   const clearPostLoginAction = useCallback(() => {
     setPostLoginAction(null);
@@ -144,7 +182,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       timestamp: new Date().toISOString(),
     };
     
-    // Non-blocking write to Firestore
     addDocumentNonBlocking(interactionsRef, newInteraction);
 
   }, [interactionsRef]);
@@ -447,6 +484,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
     postLoginAction, setPostLoginAction, clearPostLoginAction,
     interactions, addInteraction, progressData, setProgressData, progressError, setProgressError, isProgressLoading, setIsProgressLoading,
+    weeklyTimeSpent,
   };
 
   return (

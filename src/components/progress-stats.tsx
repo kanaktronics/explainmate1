@@ -1,20 +1,18 @@
 
 'use client';
 
-import { ProgressEngineOutput } from '@/ai/flows/run-progress-engine';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { CheckCircle, Clock, Target } from 'lucide-react';
+import { useAppContext } from '@/lib/app-context';
 
-interface ProgressStatsProps {
-  stats: Omit<ProgressEngineOutput, 'progressGrowth' | 'weakTopics' | 'sevenDayPlan' | 'topTopics' | 'computedAt' | 'notes'>;
-}
+export function ProgressStats() {
+  const { weeklyTimeSpent, progressData } = useAppContext();
 
-export function ProgressStats({ stats }: ProgressStatsProps) {
-  const timeData = [
-    { name: 'Last 7 Days', minutes: stats.minutesLast7Days },
-    { name: 'All Time', minutes: stats.totalMinutesAllTime },
-  ];
+  const formatTime = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -24,9 +22,9 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{Math.round(stats.minutesLast7Days)} min</div>
+          <div className="text-2xl font-bold">{formatTime(weeklyTimeSpent)}</div>
           <p className="text-xs text-muted-foreground">
-            vs {Math.round(stats.totalMinutesAllTime)} min all time
+            Total time app has been open.
           </p>
         </CardContent>
       </Card>
@@ -36,7 +34,7 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
           <Target className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.overallAccuracyPercent.toFixed(1)}%</div>
+          <div className="text-2xl font-bold">{progressData?.overallAccuracyPercent.toFixed(1) ?? '...'}%</div>
            <p className="text-xs text-muted-foreground">Based on quiz attempts</p>
         </CardContent>
       </Card>
@@ -46,9 +44,13 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
           <CheckCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
+          {progressData?.topTopics && progressData.topTopics.length > 0 ? (
             <ul className='text-sm text-muted-foreground list-disc pl-4'>
-                {stats.topTopics.map((topic, i) => <li key={i} className='font-bold'>{topic}</li>)}
+                {progressData.topTopics.map((topic, i) => <li key={i} className='font-bold'>{topic}</li>)}
             </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No topics studied yet.</p>
+          )}
         </CardContent>
       </Card>
     </div>

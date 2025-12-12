@@ -63,7 +63,7 @@ export interface Interaction {
   payload?: any;
 }
 
-export type ProgressData = ProgressEngineOutput;
+export type ProgressData = Omit<ProgressEngineOutput, 'totalMinutesAllTime' | 'minutesLast7Days' | 'progressGrowth' | 'overallProgressPercent'>;
 
 
 export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress';

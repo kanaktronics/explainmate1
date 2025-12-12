@@ -9,7 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const InteractionSchema = z.object({
   id: z.string(),
@@ -28,14 +28,7 @@ export type ProgressEngineInput = z.infer<typeof ProgressEngineInputSchema>;
 
 const ProgressEngineOutputSchema = z.object({
     computedAt: z.string().describe('ISO 8601 timestamp of when the analysis was computed.'),
-    totalMinutesAllTime: z.number().describe('Estimated total minutes spent learning on the platform.'),
-    minutesLast7Days: z.number().describe('Total minutes spent in the last 7 days.'),
     overallAccuracyPercent: z.number().describe('Overall percentage of correct quiz answers.'),
-    overallProgressPercent: z.number().describe('A composite score representing overall progress.'),
-    progressGrowth: z.array(z.object({
-        date: z.string().describe('Date in YYYY-MM-DD format.'),
-        progress: z.number().describe('Overall progress percentage for that day.'),
-    })).describe('A list of progress snapshots for the last 7 days.'),
     topTopics: z.array(z.string()).describe('A list of the most frequently interacted with topics.'),
     weakTopics: z.array(z.object({
         topic: z.string(),
@@ -74,12 +67,9 @@ const progressPrompt = ai.definePrompt({
   1.  **Identify True Topics**: The 'topic' field in the events can be messy (e.g., "hi", "what is this", "Introduction"). Your first and most important job is to look inside the 'payload.chat' array for 'explanation' events. Read the conversation to determine the *actual* academic subject (e.g., "Photosynthesis", "Newton's Laws of Motion", "Circle Congruency"). Group all related events under this true topic. Ignore conversational filler.
 
   2.  **Calculate Stats**:
-      -   totalMinutesAllTime and minutesLast7Days: Estimate from the timestamps. Assume each 'explanation' or 'teacher_companion_chat' is 3 minutes. For quizzes, sum the timeSpentSeconds from the payload.
-      -   overallAccuracyPercent: Calculate from 'quiz_answer' interactions. (correct answers / total answers) * 100. If no quizzes, default to 50.
-      -   weakTopics: Identify topics with the lowest accuracy (below 60%) or high frequency of 'explanation' events without follow-up correct quiz answers. The suggestion must be actionable and relevant to the *true topic*.
-      -   topTopics: List the 3-5 *true topics* with the most interactions.
-      -   overallProgressPercent: A composite score. Roughly 60% based on accuracy, 20% on the number of unique topics studied (variety), and 20% on recent activity (minutesLast7Days).
-      -   progressGrowth: Create a 7-day history of the overallProgressPercent. You will need to calculate this score for each of the past 7 days based on the interactions that occurred up to that day.
+      -   For 'overallAccuracyPercent': Calculate from 'quiz_answer' interactions. (correct answers / total answers) * 100. If no quizzes, default to 50.
+      -   For 'weakTopics': Identify topics with the lowest accuracy (below 60%) or high frequency of 'explanation' events without follow-up correct quiz answers. The suggestion must be actionable and relevant to the *true topic*.
+      -   For 'topTopics': List the 3-5 *true topics* with the most interactions.
 
   3.  **Generate Meaningful 7-Day Plan**:
       -   Create a sevenDayPlan focusing on one of the identified weakTopics.
