@@ -196,7 +196,7 @@ function UserProfileSection() {
 }
 
 export function AppLayout({children}: {children: React.ReactNode}) {
-  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId, studentProfile } = useAppContext();
+  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId, studentProfile, showAd } = useAppContext();
   const { toast } = useToast();
 
   const handleNewExplanation = () => {
@@ -227,11 +227,9 @@ export function AppLayout({children}: {children: React.ReactNode}) {
         return;
     }
     if (!studentProfile.isPro) {
-        toast({
-            variant: 'destructive',
-            title: 'Pro Feature',
-            description: 'Teacher Companion is a Pro feature. Please upgrade to use it.',
-            action: <Button asChild><Link href="/pricing">Upgrade</Link></Button>
+        showAd({
+            title: 'Unlock Teacher Companion',
+            description: 'Teacher Companion is a Pro feature. Please upgrade to use it.'
         });
         return;
     }
