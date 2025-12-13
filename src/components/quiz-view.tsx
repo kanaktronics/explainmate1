@@ -143,9 +143,22 @@ export function QuizView() {
       const selected = answered[index];
       if (selected) {
         const isCorrect = selected === q.correctAnswer;
-        if(isCorrect) score++;
+        if (isCorrect) score++;
+        
         evaluatedAnswers[index] = { selected, isCorrect };
-        addInteraction({ type: 'quiz_answer', topic: setupForm.getValues('topic'), payload: { correct: isCorrect } });
+
+        const interactionPayload = {
+            correct: isCorrect,
+            question: q.question,
+            userAnswer: selected,
+            correctAnswer: q.correctAnswer,
+        };
+
+        addInteraction({ 
+            type: 'quiz_answer', 
+            topic: setupForm.getValues('topic'), 
+            payload: interactionPayload 
+        });
       }
     });
 
@@ -358,3 +371,5 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
+
+    

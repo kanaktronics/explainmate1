@@ -16,7 +16,7 @@ const InteractionSchema = z.object({
   timestamp: z.string().describe('ISO 8601 timestamp of the event'),
   type: z.enum(['explanation', 'quiz_start', 'quiz_answer', 'teacher_companion_chat']),
   topic: z.string().describe('The topic of the interaction'),
-  payload: z.any().optional().describe('Event-specific data, e.g., { correct: boolean, timeSpentSeconds: number } for a quiz answer, or { chat: ChatMessage[] } for an explanation'),
+  payload: z.any().optional().describe('Event-specific data, e.g., { correct: boolean, question: string, userAnswer: string, correctAnswer: string } for a quiz answer, or { chat: ChatMessage[] } for an explanation'),
 });
 
 const ProgressEngineInputSchema = z.object({
@@ -33,8 +33,8 @@ const ProgressEngineOutputSchema = z.object({
     weakTopics: z.array(z.object({
         topic: z.string(),
         accuracy: z.number(),
-        suggestion: z.string().describe('A short, actionable suggestion for improvement.'),
-    })).describe('A list of topics where the student is weakest.'),
+        suggestion: z.string().describe('A short, actionable suggestion for improvement based on specific incorrect answers.'),
+    })).describe('A list of topics where the student is weakest, with suggestions based on incorrect quiz answers.'),
     sevenDayPlan: z.array(z.object({
         day: z.number(),
         estimatedMinutes: z.number(),
@@ -68,19 +68,19 @@ const progressPrompt = ai.definePrompt({
 
   2.  **Calculate Stats**:
       -   For 'overallAccuracyPercent': Calculate from 'quiz_answer' interactions. (correct answers / total answers) * 100. If no quizzes, default to 50.
-      -   For 'weakTopics': Identify topics with the lowest accuracy (below 60%) or high frequency of 'explanation' events without follow-up correct quiz answers. The suggestion must be actionable and relevant to the *true topic*.
+      -   For 'weakTopics': This is the most important part. You must analyze the 'quiz_answer' interactions where 'payload.correct' is false. Look for patterns in the *incorrect* answers. For example, if the student consistently gets questions wrong about 'calculating the area of a sector' within the broader topic of 'Circles', then the weak topic is 'Area of a Sector', not just 'Circles'. The suggestion must be highly specific and actionable, e.g., "Focus on reviewing the formula for the area of a sector and practice with 2-3 examples." Do NOT give a generic suggestion like "Review Circles".
       -   For 'topTopics': List the 3-5 *true topics* with the most interactions.
 
   3.  **Generate Meaningful 7-Day Plan**:
       -   Create a sevenDayPlan focusing on one of the identified weakTopics.
-      -   The plan must be structured logically. Day 1 should be a brief review ('explain'). Day 2 should be practice problems ('practice'). Day 3 should be a 'quiz'. Days 4-7 can build on this or introduce related concepts.
+      -   The plan must be structured logically. Day 1 should be a brief review ('explain') of the specific weakness. Day 2 should be practice problems ('practice'). Day 3 should be a 'quiz' on that specific sub-topic. Days 4-7 can build on this or introduce related concepts.
       -   Task text must be very concise (<= 150 chars) and relevant to the *true topic*. For example, "Review the formula for calculating the area of a circle."
       -   Keep estimatedMinutes for each day low (5-15 mins).
 
   4.  **Output Format**:
       -   The final output MUST be a JSON object matching the ProgressEngineOutput schema.
       -   computedAt must be the current ISO 8601 timestamp.
-      -   If interaction data is sparse, provide sensible defaults (e.g., accuracy 50%), identify 1-2 weak topics based on the chat content, and add a notes field explaining that the results are estimated due to limited data. Do not make up a 7-day plan if there isn't a clear weak topic.`,
+      -   If interaction data is sparse, provide sensible defaults (e.g., accuracy 50%), identify 1-2 weak topics based on chat content if no quizzes exist, and add a notes field explaining that the results are estimated due to limited data. Do not make up a 7-day plan if there isn't a clear weak topic.`,
 });
 
 const runProgressEngineFlow = ai.defineFlow(
@@ -95,3 +95,5 @@ const runProgressEngineFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
