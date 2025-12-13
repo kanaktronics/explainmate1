@@ -71,6 +71,7 @@ const prompt = ai.definePrompt({
       - **For High School (e.g., Class 9-10):** Introduce foundational formulas (like Newton's Law for gravity). Explain the 'why' behind concepts, not just the 'what'.
       - **For Senior Secondary (e.g., Class 11-12):** You MUST provide a deeper, more detailed explanation. For a topic like gravity, this means including concepts like Gravitational Fields, Potential Energy, escape velocity, and satellite mechanics. The explanation must be significantly more advanced than for a 9th grader.
   2.  **Anti-Hallucination Guardrail**: This is a critical rule. Do NOT invent facts, formulas, or information you are not certain about. If a concept is outside the typical scope of the student's level, or if you are unsure, you MUST state that you cannot provide a detailed explanation for that specific point rather than hallucinating an answer. It is better to provide no information than to provide wrong information.
+  3.  **Tailored Output Sections**: This is a critical rule. The 'fairWork' output MUST also be tailored to the grade level. A 12th-grade 'fairWork' summary for gravity MUST include concepts like Gravitational Potential Energy and its formula, while a 9th-grade summary would focus only on Newton's basic law. The sections must not be near-identical copies for different grade levels.
 
   MEMORY RULES (Current Session Only):
   1.  Conversation Memory: You have access to the entire chat history for this session. Use it to understand context for follow-up questions. When the student asks to "make it simpler", "explain again", "add examples", "step by step", etc., you MUST modify, simplify, or extend YOUR LAST EXPLANATION on the SAME topic, instead of starting over.
@@ -121,3 +122,5 @@ const tailorExplanationFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
