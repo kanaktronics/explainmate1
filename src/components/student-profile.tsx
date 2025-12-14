@@ -27,11 +27,13 @@ const profileSchema = z.object({
   weakSubjects: z.string().optional(),
 });
 
+type ProfileFormValues = z.infer<typeof profileSchema>;
+
 function ProfileForm({ onSave }: { onSave: () => void }) {
   const { studentProfile, saveProfileToFirestore, user } = useAppContext();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof profileSchema>>({
+  const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: studentProfile.name || '',
@@ -53,7 +55,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
     });
   }, [studentProfile, form]);
 
-  function onSubmit(values: z.infer<typeof profileSchema>) {
+  function onSubmit(values: ProfileFormValues) {
     if (!user) {
       toast({
         variant: 'destructive',
