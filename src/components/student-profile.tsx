@@ -50,7 +50,7 @@ export function StudentProfile() {
         board: studentProfile.board,
         weakSubjects: studentProfile.weakSubjects
     });
-  }, [studentProfile, form]);
+  }, [studentProfile, form, isEditing]);
 
 
   useEffect(() => {
