@@ -29,7 +29,7 @@ const profileSchema = z.object({
 });
 
 export function StudentProfile() {
-  const { studentProfile, setStudentProfile, saveProfileToFirestore, isProfileComplete, user } = useAppContext();
+  const { studentProfile, saveProfileToFirestore, isProfileComplete, user } = useAppContext();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -60,11 +60,6 @@ export function StudentProfile() {
         setIsEditing(false);
     }
   }, [user, isProfileComplete]);
-
-  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setStudentProfile({ [name]: value });
-  }
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     if (!user) {
@@ -136,7 +131,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Your Name" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }} />
+                  <Input placeholder="Your Name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -149,7 +144,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Class</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., 10th Grade" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }}/>
+                  <Input placeholder="e.g., 10th Grade" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -162,7 +157,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Board</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., CBSE, ICSE" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }}/>
+                  <Input placeholder="e.g., CBSE, ICSE" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -175,7 +170,7 @@ export function StudentProfile() {
               <FormItem>
                 <FormLabel>Weak Subjects</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Physics, Algebra" {...field} onChange={(e) => { field.onChange(e); handleFieldChange(e); }}/>
+                  <Input placeholder="e.g., Physics, Algebra" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
