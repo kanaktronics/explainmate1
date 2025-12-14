@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,38 +27,28 @@ const profileSchema = z.object({
   weakSubjects: z.string().optional(),
 });
 
-export function StudentProfile() {
-  const { studentProfile, saveProfileToFirestore, isProfileComplete, user } = useAppContext();
+function ProfileForm({ onSave }: { onSave: () => void }) {
+  const { studentProfile, saveProfileToFirestore, user } = useAppContext();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    values: {
-      name: studentProfile.name,
-      classLevel: studentProfile.classLevel,
-      board: studentProfile.board,
-      weakSubjects: studentProfile.weakSubjects,
+    defaultValues: {
+      name: studentProfile.name || '',
+      classLevel: studentProfile.classLevel || '',
+      board: studentProfile.board || '',
+      weakSubjects: studentProfile.weakSubjects || '',
     },
   });
   
   useEffect(() => {
     form.reset({
-        name: studentProfile.name,
-        classLevel: studentProfile.classLevel,
-        board: studentProfile.board,
-        weakSubjects: studentProfile.weakSubjects
+      name: studentProfile.name || '',
+      classLevel: studentProfile.classLevel || '',
+      board: studentProfile.board || '',
+      weakSubjects: studentProfile.weakSubjects || '',
     });
-  }, [studentProfile, form, isEditing]);
-
-
-  useEffect(() => {
-    if (user && !isProfileComplete) {
-        setIsEditing(true);
-    } else {
-        setIsEditing(false);
-    }
-  }, [user, isProfileComplete]);
+  }, [studentProfile, form]);
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     if (!user) {
@@ -77,9 +66,86 @@ export function StudentProfile() {
       title: 'Profile Saved!',
       description: 'Your information has been updated.',
     });
-    setIsEditing(false);
+    onSave();
   }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Your Name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="classLevel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Class</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., 10th Grade" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="board"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Board</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., CBSE, ICSE" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="weakSubjects"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Weak Subjects</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Physics, Algebra" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">
+          <Save />
+          Save Profile
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+
+export function StudentProfile() {
+  const { studentProfile, isProfileComplete, user } = useAppContext();
+  const [isEditing, setIsEditing] = useState(false);
   
+  useEffect(() => {
+    if (user && !isProfileComplete) {
+        setIsEditing(true);
+    } else {
+        setIsEditing(false);
+    }
+  }, [user, isProfileComplete]);
+
   if (!isEditing) {
     return (
       <div className="space-y-3 p-2">
@@ -113,76 +179,18 @@ export function StudentProfile() {
 
   return (
     <div className='p-2'>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {!isProfileComplete && (
-              <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Complete Your Profile</AlertTitle>
-                  <AlertDescription>
-                    Please fill out your details to get personalized results.
-                  </AlertDescription>
-              </Alert>
-          )}
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Your Name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="classLevel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Class</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., 10th Grade" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="board"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Board</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., CBSE, ICSE" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="weakSubjects"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Weak Subjects</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Physics, Algebra" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button type="submit" className="w-full">
-            <Save />
-            Save Profile
-          </Button>
-        </form>
-      </Form>
+      {!isProfileComplete && (
+          <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Complete Your Profile</AlertTitle>
+              <AlertDescription>
+                Please fill out your details to get personalized results.
+              </AlertDescription>
+          </Alert>
+      )}
+      <div className="mt-4">
+        <ProfileForm onSave={() => setIsEditing(false)} />
+      </div>
     </div>
   );
 }
