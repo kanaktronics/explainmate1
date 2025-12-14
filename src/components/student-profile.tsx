@@ -42,6 +42,9 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
   });
   
   useEffect(() => {
+    // This effect runs when the studentProfile data changes from the context.
+    // It resets the form with the new data, ensuring it's up-to-date
+    // when the component loads or the user logs in.
     form.reset({
       name: studentProfile.name || '',
       classLevel: studentProfile.classLevel || '',
@@ -125,7 +128,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
           )}
         />
         <Button type="submit" className="w-full">
-          <Save />
+          <Save className="mr-2 h-4 w-4" />
           Save Profile
         </Button>
       </form>
@@ -145,6 +148,10 @@ export function StudentProfile() {
         setIsEditing(false);
     }
   }, [user, isProfileComplete]);
+
+  if (!user) {
+    return null;
+  }
 
   if (!isEditing) {
     return (
@@ -170,7 +177,7 @@ export function StudentProfile() {
             </CardContent>
           </Card>
         <Button onClick={() => setIsEditing(true)} className="w-full" variant="outline">
-          <Edit />
+          <Edit className="mr-2 h-4 w-4" />
           Edit Profile
         </Button>
       </div>
