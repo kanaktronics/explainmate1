@@ -244,14 +244,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isUserLoading || isProfileLoading || !user) return;
 
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
-        let isPro = firestoreProfile.proExpiresAt && !isPast(new Date(firestoreProfile.proExpiresAt));
+        let isPro = firestoreProfile.proExpiresAt ? !isPast(new Date(firestoreProfile.proExpiresAt)) : false;
         
-        // This check ensures that if the 'proExpiresAt' date has passed, we update the `isPro` field in Firestore to false.
         const isProInDb = firestoreProfile.isPro === true;
-        if (isPro !== isProInDb) {
-            if (userProfileRef) {
-                setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
-            }
+        if (isPro !== isProInDb && userProfileRef) {
+          setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
         }
         
         let serverProfile: Partial<StudentProfile> = {
@@ -349,6 +346,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         const updatedProfile = { ...studentProfile, ...values };
         setStudentProfileState(updatedProfile);
+        
         const isComplete = !!updatedProfile.name && !!updatedProfile.classLevel && !!updatedProfile.board;
         setIsProfileComplete(isComplete);
 
