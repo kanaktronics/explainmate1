@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast, differenceInDays } from 'date-fns';
 import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, setDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { runProgressEngineAction } from './actions';
@@ -98,7 +98,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [weeklyTimeSpent, setWeeklyTimeSpent] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
-  const recentlySaved = useRef(false);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -243,18 +242,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Effect to sync Firestore profile with local state
   useEffect(() => {
     if (isUserLoading || isProfileLoading || !user) return;
-    
-    if (recentlySaved.current) {
-        recentlySaved.current = false;
-        return;
-    }
 
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.proExpiresAt && !isPast(new Date(firestoreProfile.proExpiresAt));
         
         const isProInDb = firestoreProfile.isPro === true; 
-        if (isPro !== isProInDb) {
-            if (userProfileRef && typeof isPro === 'boolean') {
+        if (isPro !== isProInDb && typeof isPro === 'boolean') {
+            if (userProfileRef) {
                 setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
             }
         }
@@ -339,7 +333,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setStudentProfileState(prev => ({...prev, ...profile}));
   };
 
-  const saveProfileToFirestore = (values: Partial<StudentProfile>) => {
+  const saveProfileToFirestore = async (values: Partial<StudentProfile>) => {
     if (!user || !firestore) return;
     const profileRef = doc(firestore, 'users', user.uid);
     const dataToSave = {
@@ -348,13 +342,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         board: values.board,
         weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
     };
-    setDocumentNonBlocking(profileRef, dataToSave, { merge: true });
 
-    const finalProfile = { ...studentProfile, ...values };
-    setStudentProfileState(finalProfile);
-    const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
-    setIsProfileComplete(isComplete);
-    recentlySaved.current = true;
+    try {
+        await setDoc(profileRef, dataToSave, { merge: true });
+
+        // Now, update the local state AFTER successful save
+        const finalProfile = { ...studentProfile, ...values };
+        setStudentProfileState(finalProfile);
+
+        const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+        setIsProfileComplete(isComplete);
+
+    } catch (error) {
+        console.error("Failed to save profile:", error);
+        // Optionally show an error toast to the user
+    }
   }
 
 
@@ -503,3 +505,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
