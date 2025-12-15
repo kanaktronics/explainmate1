@@ -245,8 +245,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.proExpiresAt && !isPast(new Date(firestoreProfile.proExpiresAt));
-        if (isPro !== firestoreProfile.isPro) {
-            if (userProfileRef) {
+        
+        // This is the fix: ensure firestoreProfile.isPro is not undefined before comparing
+        const isProInDb = firestoreProfile.isPro === true; 
+        if (isPro !== isProInDb) {
+            if (userProfileRef && typeof isPro === 'boolean') {
                 setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
             }
         }
@@ -301,6 +304,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             ...serverProfile,
             email: user.email!, 
             id: user.uid,
+            isPro, // Make sure we use the calculated value
         };
 
         setStudentProfileState(finalProfile);
@@ -317,6 +321,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         id: user.uid,
         email: user.email!,
         name: user.displayName || '',
+        isPro: false, // Explicitly set default value here
       };
       setStudentProfileState(newProfile);
       setWeeklyTimeSpent(0);
