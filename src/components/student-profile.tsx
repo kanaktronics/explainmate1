@@ -14,9 +14,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Save, AlertTriangle, Loader2 } from 'lucide-react';
+import { Edit, Save, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
@@ -30,10 +30,8 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 function ProfileForm({ onSave }: { onSave: () => void }) {
-  const { studentProfile, saveProfileToFirestore, user } = useAppContext();
+  const { studentProfile, saveProfileToFirestore } = useAppContext();
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -45,21 +43,9 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
     },
   });
 
-  const formValues = form.watch();
-
-  const handleAutoSave = useCallback((values: ProfileFormValues) => {
-    if (!user) return;
-    setIsSaving(true);
-    saveProfileToFirestore(values);
-    // Give feedback that it's saved.
-    setTimeout(() => {
-        setIsSaving(false);
-        toast({ title: 'Profile Saved!', description: 'Your information has been updated automatically.' });
-    }, 500);
-  }, [user, saveProfileToFirestore, toast]);
-  
+  // This effect syncs the form with the profile data from the context
+  // It runs when the profile data loads or changes from an external source
   useEffect(() => {
-    // Reset form when the source profile changes (e.g., on login)
     form.reset({
       name: studentProfile.name || '',
       classLevel: studentProfile.classLevel || '',
@@ -67,36 +53,15 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
       weakSubjects: studentProfile.weakSubjects || '',
     });
   }, [studentProfile, form]);
-  
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-      debounceTimeout.current = setTimeout(() => {
-        // Zod validation before saving
-        const result = profileSchema.safeParse(values);
-        if(result.success) {
-            handleAutoSave(result.data);
-        }
-      }, 1500); // Auto-save after 1.5 seconds of inactivity
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-    };
-  }, [form, handleAutoSave]);
 
   function onSubmit(values: ProfileFormValues) {
-    // This is now primarily for pressing Enter, but auto-save is the main method
-    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-    handleAutoSave(values);
+    saveProfileToFirestore(values);
+    toast({
+      title: 'Profile Saved!',
+      description: 'Your information has been updated.',
+    });
     onSave();
   }
-
 
   return (
     <Form {...form}>
@@ -156,15 +121,11 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
             </FormItem>
           )}
         />
-        
-        <div className="h-6 flex items-center text-sm text-muted-foreground">
-            {isSaving && (
-                <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                </>
-            )}
-        </div>
+
+        <Button type="submit" className="w-full">
+          <Save className="mr-2 h-4 w-4" />
+          Save Profile
+        </Button>
       </form>
     </Form>
   );
