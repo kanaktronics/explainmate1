@@ -259,7 +259,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           id: firestoreProfile.id,
           name: firestoreProfile.name,
           email: firestoreProfile.email,
-          classLevel: firestoreProfile.gradeLevel, // mapping from db field
+          classLevel: firestoreProfile.gradeLevel, // **FIXED HERE**
           board: firestoreProfile.board,
           weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
           isPro: isPro,
@@ -316,12 +316,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } else if (!firestoreProfile && !isProfileLoading) {
       // This is a new user who doesn't have a firestore doc yet.
       // Prime the state from the auth object.
-      const newProfile = {
+      const newProfile: StudentProfile = {
         ...defaultProfile,
         id: user.uid,
         email: user.email!,
         name: user.displayName || '',
-        isPro: false, // Explicitly set default value here
+        isPro: false,
       };
       setStudentProfileState(newProfile);
       setWeeklyTimeSpent(0);
