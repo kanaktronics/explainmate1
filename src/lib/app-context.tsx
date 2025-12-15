@@ -246,8 +246,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.proExpiresAt && !isPast(new Date(firestoreProfile.proExpiresAt));
         
-        const isProInDb = firestoreProfile.isPro === true; 
-        if (isPro !== isProInDb && typeof isPro === 'boolean') {
+        // This check ensures that if the 'proExpiresAt' date has passed, we update the `isPro` field in Firestore to false.
+        const isProInDb = firestoreProfile.isPro === true;
+        if (typeof isPro === 'boolean' && isPro !== isProInDb) {
             if (userProfileRef) {
                 setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
             }
@@ -258,7 +259,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           id: firestoreProfile.id,
           name: firestoreProfile.name,
           email: firestoreProfile.email,
-          classLevel: firestoreProfile.gradeLevel,
+          classLevel: firestoreProfile.gradeLevel, // CORRECT MAPPING
           board: firestoreProfile.board,
           weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
           isPro: isPro,
@@ -345,17 +346,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     try {
         await setDoc(profileRef, dataToSave, { merge: true });
-
-        // Now, update the local state AFTER successful save
-        const finalProfile = { ...studentProfile, ...values };
-        setStudentProfileState(finalProfile);
-
-        const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+        
+        const updatedProfile = { ...studentProfile, ...values };
+        setStudentProfileState(updatedProfile);
+        const isComplete = !!updatedProfile.name && !!updatedProfile.classLevel && !!updatedProfile.board;
         setIsProfileComplete(isComplete);
 
     } catch (error) {
         console.error("Failed to save profile:", error);
-        // Optionally show an error toast to the user
     }
   }
 
