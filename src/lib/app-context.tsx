@@ -248,7 +248,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
         // This check ensures that if the 'proExpiresAt' date has passed, we update the `isPro` field in Firestore to false.
         const isProInDb = firestoreProfile.isPro === true;
-        if (typeof isPro === 'boolean' && isPro !== isProInDb) {
+        if (isPro !== isProInDb) {
             if (userProfileRef) {
                 setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
             }
