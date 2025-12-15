@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Save, AlertTriangle } from 'lucide-react';
+import { Edit, Save, AlertTriangle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
@@ -32,6 +33,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 function ProfileForm({ onSave }: { onSave: () => void }) {
   const { studentProfile, saveProfileToFirestore } = useAppContext();
   const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -43,8 +45,6 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
     },
   });
 
-  // This effect syncs the form with the profile data from the context
-  // It runs when the profile data loads or changes from an external source
   useEffect(() => {
     form.reset({
       name: studentProfile.name || '',
@@ -54,12 +54,14 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
     });
   }, [studentProfile, form]);
 
-  function onSubmit(values: ProfileFormValues) {
-    saveProfileToFirestore(values);
+  async function onSubmit(values: ProfileFormValues) {
+    setIsSaving(true);
+    await saveProfileToFirestore(values);
     toast({
       title: 'Profile Saved!',
       description: 'Your information has been updated.',
     });
+    setIsSaving(false);
     onSave();
   }
 
@@ -122,9 +124,9 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
           )}
         />
 
-        <Button type="submit" className="w-full">
-          <Save className="mr-2 h-4 w-4" />
-          Save Profile
+        <Button type="submit" className="w-full" disabled={isSaving}>
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {isSaving ? 'Saving...' : 'Save Profile'}
         </Button>
       </form>
     </Form>
@@ -138,6 +140,8 @@ export function StudentProfile() {
   useEffect(() => {
     if (user && !isProfileComplete) {
       setIsEditing(true);
+    } else if (user && isProfileComplete) {
+      setIsEditing(false);
     } else if (!user) {
       setIsEditing(false);
     }
@@ -195,3 +199,5 @@ export function StudentProfile() {
     </div>
   );
 }
+
+    

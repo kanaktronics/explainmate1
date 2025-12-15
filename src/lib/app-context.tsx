@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast, differenceInDays } from 'date-fns';
 import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -22,7 +23,7 @@ type PostLoginAction = 'upgrade' | null;
 interface AppContextType {
   studentProfile: StudentProfile;
   setStudentProfile: (profile: Partial<StudentProfile>) => void;
-  saveProfileToFirestore: (profile: Partial<StudentProfile>) => void;
+  saveProfileToFirestore: (profile: Partial<StudentProfile>) => Promise<void>;
   incrementUsage: (type?: 'explanation' | 'quiz' | 'teacher-companion') => void;
   view: AppView;
   setView: (view: AppView) => void;
@@ -242,47 +243,54 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isUserLoading || isProfileLoading || !user) return;
 
-    if (firestoreProfile) {
-        let isPro = firestoreProfile.proExpiresAt ? !isPast(new Date(firestoreProfile.proExpiresAt)) : false;
-        
-        if (typeof firestoreProfile.isPro === 'boolean' && isPro !== firestoreProfile.isPro) {
-            if (userProfileRef) {
-                setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
-            }
-        } else if (firestoreProfile.isPro === undefined) {
-             isPro = false;
+    if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
+        let isPro = firestoreProfile.isPro || false;
+        // Check for expired pro status
+        if (isPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
+          isPro = false; // Downgrade locally
+          if (userProfileRef) {
+            // And update firestore in the background
+            setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
+          }
         }
 
         let serverProfile: Partial<StudentProfile> = {
-            ...firestoreProfile,
-            id: firestoreProfile.id,
-            name: firestoreProfile.name,
-            email: firestoreProfile.email,
-            classLevel: firestoreProfile.gradeLevel,
-            board: firestoreProfile.board,
-            weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
-            isPro: isPro,
-            proDailyRequests: firestoreProfile.proDailyRequests || 0,
-            proRequestTimestamps: firestoreProfile.proRequestTimestamps || [],
-            isBlocked: firestoreProfile.isBlocked || false,
-            weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
-            timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
+          ...firestoreProfile,
+          id: firestoreProfile.id,
+          name: firestoreProfile.name,
+          email: firestoreProfile.email,
+          classLevel: firestoreProfile.gradeLevel, // mapping from db field
+          board: firestoreProfile.board,
+          weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
+          isPro: isPro,
+          proDailyRequests: firestoreProfile.proDailyRequests,
+          proRequestTimestamps: firestoreProfile.proRequestTimestamps,
+          isBlocked: firestoreProfile.isBlocked,
+          weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
+          timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
         };
-
+        
         const isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
         const today = new Date();
         const lastTimeReset = new Date(serverProfile.timeSpentLastReset!);
         const isNewWeek = differenceInDays(today, lastTimeReset) >= 7;
 
+        // Daily usage reset logic
         if (isNewDay) {
-            const updatedUsage = { dailyUsage: 0, dailyQuizUsage: 0, proDailyRequests: 0, lastUsageDate: today.toISOString() };
-            serverProfile = { ...serverProfile, ...updatedUsage };
-            if (userProfileRef) {
-                setDocumentNonBlocking(userProfileRef, { ...updatedUsage, proRequestTimestamps: [] }, { merge: true });
-            }
-            setHasShownFirstAdToday(false);
+          const updatedUsage = { 
+              dailyUsage: 0, 
+              dailyQuizUsage: 0, 
+              proDailyRequests: 0,
+              lastUsageDate: today.toISOString() 
+            };
+          serverProfile = { ...serverProfile, ...updatedUsage };
+          if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, { ...updatedUsage, proRequestTimestamps: [] }, { merge: true });
+          }
+          setHasShownFirstAdToday(false); // Reset ad flag for new day
         }
 
+        // Weekly time spent reset
         if(isNewWeek) {
             serverProfile.weeklyTimeSpent = 0;
             serverProfile.timeSpentLastReset = today.toISOString();
@@ -290,25 +298,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 setDocumentNonBlocking(userProfileRef, { weeklyTimeSpent: 0, timeSpentLastReset: today.toISOString() }, { merge: true });
             }
         }
+        
+        const finalProfile: StudentProfile = {
+            ...defaultProfile,
+            ...serverProfile,
+            email: user.email!, 
+            id: user.uid,
+        };
 
-        const finalProfile: StudentProfile = { ...defaultProfile, ...serverProfile, email: user.email!, id: user.uid };
         setStudentProfileState(finalProfile);
         setWeeklyTimeSpent(finalProfile.weeklyTimeSpent);
 
         const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
         setIsProfileComplete(isComplete);
-
+        
     } else if (!firestoreProfile && !isProfileLoading) {
-        const newProfile: StudentProfile = {
-            ...defaultProfile,
-            id: user.uid,
-            email: user.email!,
-            name: user.displayName || '',
-            isPro: false,
-        };
-        setStudentProfileState(newProfile);
-        setWeeklyTimeSpent(0);
-        setIsProfileComplete(false);
+      // This is a new user who doesn't have a firestore doc yet.
+      // Prime the state from the auth object.
+      const newProfile = {
+        ...defaultProfile,
+        id: user.uid,
+        email: user.email!,
+        name: user.displayName || '',
+        isPro: false, // Ensure isPro is set
+      };
+      setStudentProfileState(newProfile);
+      setWeeklyTimeSpent(0);
+      setIsProfileComplete(false);
     }
   }, [firestoreProfile, user, isUserLoading, isProfileLoading, userProfileRef]);
 
@@ -327,23 +343,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
     };
 
-    try {
-        await setDoc(profileRef, dataToSave, { merge: true });
-        
-        const updatedProfile = { 
-          ...studentProfile, 
-          ...values, 
-          classLevel: values.classLevel || studentProfile.classLevel,
-          gradeLevel: values.classLevel || studentProfile.classLevel
-        };
-        setStudentProfileState(updatedProfile);
-        
-        const isComplete = !!updatedProfile.name && !!updatedProfile.classLevel && !!updatedProfile.board;
-        setIsProfileComplete(isComplete);
+    await setDoc(profileRef, dataToSave, { merge: true });
 
-    } catch (error) {
-        console.error("Failed to save profile:", error);
-    }
+    const finalProfile = { ...studentProfile, ...values };
+    setStudentProfileState(finalProfile);
+    const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+    setIsProfileComplete(isComplete);
   }
 
 
@@ -492,3 +497,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
