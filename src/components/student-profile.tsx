@@ -46,7 +46,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
   useEffect(() => {
     // This effect runs when the studentProfile data changes from the context.
     // It resets the form with the new data, ensuring it's up-to-date
-    // when the component loads or the user logs in.
+    // when the component loads or the user logs in. This will not run on every keystroke.
     form.reset({
       name: studentProfile.name || '',
       classLevel: studentProfile.classLevel || '',
