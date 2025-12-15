@@ -244,9 +244,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isUserLoading || isProfileLoading || !user) return;
 
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
-        let isPro = firestoreProfile.isPro || false;
+        let isPro = firestoreProfile.isPro;
         // Check for expired pro status
-        if (isPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
+        if (firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
           isPro = false; // Downgrade locally
           if (userProfileRef) {
             // And update firestore in the background

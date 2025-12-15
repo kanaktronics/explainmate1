@@ -32,7 +32,6 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 function ProfileForm({ onSave }: { onSave: () => void }) {
   const { studentProfile, saveProfileToFirestore, user } = useAppContext();
   const { toast } = useToast();
-  const hasInitialized = useRef(false); // ✅ added
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -45,15 +44,12 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
   });
 
   useEffect(() => {
-    if (!hasInitialized.current) {
-      form.reset({
-        name: studentProfile.name || '',
-        classLevel: studentProfile.classLevel || '',
-        board: studentProfile.board || '',
-        weakSubjects: studentProfile.weakSubjects || '',
-      });
-      hasInitialized.current = true; // ✅ stop future resets
-    }
+    form.reset({
+      name: studentProfile.name || '',
+      classLevel: studentProfile.classLevel || '',
+      board: studentProfile.board || '',
+      weakSubjects: studentProfile.weakSubjects || '',
+    });
   }, [studentProfile, form]);
 
   function onSubmit(values: ProfileFormValues) {
