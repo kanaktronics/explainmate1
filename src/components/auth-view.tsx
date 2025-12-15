@@ -26,7 +26,7 @@ import { setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useAppContext } from '@/lib/app-context';
 import { Checkbox } from './ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
 import { TermsConditionsView } from './terms-conditions-view';
 import { PrivacyPolicyView } from './privacy-policy-view';
 import { ScrollArea } from './ui/scroll-area';
@@ -172,7 +172,10 @@ export function AuthView() {
     <Dialog open={!!showPolicy} onOpenChange={(open) => !open && setShowPolicy(null)}>
       <DialogContent className="max-w-3xl h-3/4">
           <DialogHeader>
-              <DialogTitle>{showPolicy === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}</DialogTitle>
+            <DialogTitle>{showPolicy === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}</DialogTitle>
+            <DialogDescription>
+                Review our {showPolicy === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}. Scroll to view the full document.
+            </DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-full">
                <div className="p-6">
@@ -325,3 +328,5 @@ export function AuthView() {
     </Dialog>
   );
 }
+
+    
