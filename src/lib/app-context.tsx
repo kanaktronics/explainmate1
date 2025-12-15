@@ -246,7 +246,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.proExpiresAt && !isPast(new Date(firestoreProfile.proExpiresAt));
         
-        // This is the fix: ensure firestoreProfile.isPro is not undefined before comparing
         const isProInDb = firestoreProfile.isPro === true; 
         if (isPro !== isProInDb) {
             if (userProfileRef && typeof isPro === 'boolean') {
@@ -259,7 +258,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           id: firestoreProfile.id,
           name: firestoreProfile.name,
           email: firestoreProfile.email,
-          classLevel: firestoreProfile.gradeLevel, // **FIXED HERE**
+          classLevel: firestoreProfile.gradeLevel,
           board: firestoreProfile.board,
           weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
           isPro: isPro,
