@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast, differenceInDays } from 'date-fns';
 import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -98,6 +98,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [weeklyTimeSpent, setWeeklyTimeSpent] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
+  const recentlySaved = useRef(false);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -242,6 +243,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Effect to sync Firestore profile with local state
   useEffect(() => {
     if (isUserLoading || isProfileLoading || !user) return;
+    
+    if (recentlySaved.current) {
+        recentlySaved.current = false;
+        return;
+    }
 
     if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
         let isPro = firestoreProfile.proExpiresAt && !isPast(new Date(firestoreProfile.proExpiresAt));
@@ -348,6 +354,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setStudentProfileState(finalProfile);
     const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
     setIsProfileComplete(isComplete);
+    recentlySaved.current = true;
   }
 
 
