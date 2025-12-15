@@ -2,10 +2,10 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
 import { isToday, isPast, differenceInDays } from 'date-fns';
-import { useFirebase, useDoc, useCollection, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useFirebase, useDoc, useCollection, setDocument, addDocument, deleteDocument, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit, setDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
@@ -35,8 +35,8 @@ interface AppContextType {
   history: HistoryItem[];
   teacherHistory: HistoryItem[];
   loadChatFromHistory: (historyItem: HistoryItem) => void;
-  deleteFromHistory: (id: string) => void;
-  clearHistory: (historyType: 'explanation' | 'teacher-companion') => void;
+  deleteFromHistory: (id: string) => Promise<void>;
+  clearHistory: (historyType: 'explanation' | 'teacher-companion') => Promise<void>;
   isProfileComplete: boolean;
   isAdOpen: boolean;
   showAd: (content?: Partial<AdContent>) => void;
@@ -108,16 +108,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
       if (!user || !userProfileRef) return;
 
-      const interval = setInterval(() => {
-          setStudentProfileState(prev => {
-              const newTime = (prev.weeklyTimeSpent || 0) + 5;
-              setDocumentNonBlocking(userProfileRef, { weeklyTimeSpent: newTime }, { merge: true });
-              return { ...prev, weeklyTimeSpent: newTime };
-          });
+      const interval = setInterval(async () => {
+          const newTime = (studentProfile.weeklyTimeSpent || 0) + 5;
+          await setDocument(userProfileRef, { weeklyTimeSpent: newTime }, { merge: true });
+          setStudentProfileState(prev => ({ ...prev, weeklyTimeSpent: newTime }));
       }, 5000); // Update every 5 seconds
 
       return () => clearInterval(interval);
-  }, [user, userProfileRef]);
+  }, [user, userProfileRef, studentProfile.weeklyTimeSpent]);
 
 
   const clearPostLoginAction = useCallback(() => {
@@ -157,7 +155,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { data: interactions = [] } = useCollection<Interaction>(interactionsRef);
 
 
-  const addInteraction = useCallback((interaction: Omit<Interaction, 'id' | 'timestamp'>) => {
+  const addInteraction = useCallback(async (interaction: Omit<Interaction, 'id' | 'timestamp'>) => {
     if (!interactionsRef) return;
 
     const newInteraction = {
@@ -165,7 +163,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       timestamp: new Date().toISOString(),
     };
     
-    addDocumentNonBlocking(interactionsRef, newInteraction);
+    await addDocument(interactionsRef, newInteraction);
 
   }, [interactionsRef]);
 
@@ -243,84 +241,78 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isUserLoading || isProfileLoading || !user) return;
 
-    if (firestoreProfile) { // Only run if we have a user and their profile from Firestore
-        let isPro = firestoreProfile.isPro || false;
-        // Check for expired pro status
-        if (isPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
-          isPro = false; // Downgrade locally
+    if (firestoreProfile) {
+      let currentProfileIsPro = firestoreProfile.isPro || false;
+      
+      if (currentProfileIsPro && firestoreProfile.proExpiresAt && isPast(new Date(firestoreProfile.proExpiresAt))) {
+        currentProfileIsPro = false;
+        if (userProfileRef) {
+          setDoc(userProfileRef, { isPro: false }, { merge: true });
+        }
+      }
+  
+      let serverProfile: Partial<StudentProfile> = {
+        ...firestoreProfile,
+        id: firestoreProfile.id,
+        name: firestoreProfile.name,
+        email: firestoreProfile.email,
+        classLevel: firestoreProfile.gradeLevel, 
+        board: firestoreProfile.board,
+        weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
+        isPro: currentProfileIsPro,
+        proDailyRequests: firestoreProfile.proDailyRequests,
+        proRequestTimestamps: firestoreProfile.proRequestTimestamps,
+        isBlocked: firestoreProfile.isBlocked,
+        weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
+        timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
+      };
+      
+      const isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
+      const today = new Date();
+      const lastTimeReset = new Date(serverProfile.timeSpentLastReset!);
+      const isNewWeek = differenceInDays(today, lastTimeReset) >= 7;
+
+      if (isNewDay) {
+        const updatedUsage = { 
+            dailyUsage: 0, 
+            dailyQuizUsage: 0, 
+            proDailyRequests: 0,
+            lastUsageDate: today.toISOString() 
+          };
+        serverProfile = { ...serverProfile, ...updatedUsage };
+        if (userProfileRef) {
+          setDoc(userProfileRef, { ...updatedUsage, proRequestTimestamps: [] }, { merge: true });
+        }
+        setHasShownFirstAdToday(false);
+      }
+
+      if(isNewWeek) {
+          serverProfile.weeklyTimeSpent = 0;
+          serverProfile.timeSpentLastReset = today.toISOString();
           if (userProfileRef) {
-            // And update firestore in the background
-            setDocumentNonBlocking(userProfileRef, { isPro: false }, { merge: true });
+              setDoc(userProfileRef, { weeklyTimeSpent: 0, timeSpentLastReset: today.toISOString() }, { merge: true });
           }
-        }
+      }
+      
+      const finalProfile: StudentProfile = {
+          ...defaultProfile,
+          ...serverProfile,
+          email: user.email!, 
+          id: user.uid,
+      };
 
-        let serverProfile: Partial<StudentProfile> = {
-          ...firestoreProfile,
-          id: firestoreProfile.id,
-          name: firestoreProfile.name,
-          email: firestoreProfile.email,
-          classLevel: firestoreProfile.gradeLevel, // mapping from db field
-          board: firestoreProfile.board,
-          weakSubjects: (firestoreProfile.weakSubjects || []).join(', '),
-          isPro: isPro,
-          proDailyRequests: firestoreProfile.proDailyRequests,
-          proRequestTimestamps: firestoreProfile.proRequestTimestamps,
-          isBlocked: firestoreProfile.isBlocked,
-          weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
-          timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
-        };
-        
-        const isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
-        const today = new Date();
-        const lastTimeReset = new Date(serverProfile.timeSpentLastReset!);
-        const isNewWeek = differenceInDays(today, lastTimeReset) >= 7;
+      setStudentProfileState(finalProfile);
+      setWeeklyTimeSpent(finalProfile.weeklyTimeSpent);
 
-        // Daily usage reset logic
-        if (isNewDay) {
-          const updatedUsage = { 
-              dailyUsage: 0, 
-              dailyQuizUsage: 0, 
-              proDailyRequests: 0,
-              lastUsageDate: today.toISOString() 
-            };
-          serverProfile = { ...serverProfile, ...updatedUsage };
-          if (userProfileRef) {
-            setDocumentNonBlocking(userProfileRef, { ...updatedUsage, proRequestTimestamps: [] }, { merge: true });
-          }
-          setHasShownFirstAdToday(false); // Reset ad flag for new day
-        }
-
-        // Weekly time spent reset
-        if(isNewWeek) {
-            serverProfile.weeklyTimeSpent = 0;
-            serverProfile.timeSpentLastReset = today.toISOString();
-            if (userProfileRef) {
-                setDocumentNonBlocking(userProfileRef, { weeklyTimeSpent: 0, timeSpentLastReset: today.toISOString() }, { merge: true });
-            }
-        }
-        
-        const finalProfile: StudentProfile = {
-            ...defaultProfile,
-            ...serverProfile,
-            email: user.email!, 
-            id: user.uid,
-        };
-
-        setStudentProfileState(finalProfile);
-        setWeeklyTimeSpent(finalProfile.weeklyTimeSpent);
-
-        const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
-        setIsProfileComplete(isComplete);
-        
+      const isComplete = !!finalProfile.name && !!finalProfile.classLevel && !!finalProfile.board;
+      setIsProfileComplete(isComplete);
+      
     } else if (!firestoreProfile && !isProfileLoading) {
-      // This is a new user who doesn't have a firestore doc yet.
-      // Prime the state from the auth object.
       const newProfile = {
         ...defaultProfile,
         id: user.uid,
         email: user.email!,
         name: user.displayName || '',
-        isPro: false, // Ensure isPro is set
       };
       setStudentProfileState(newProfile);
       setWeeklyTimeSpent(0);
@@ -352,88 +344,87 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
 
-  const incrementUsage = (type: 'explanation' | 'quiz' | 'teacher-companion' = 'explanation') => {
+  const incrementUsage = async (type: 'explanation' | 'quiz' | 'teacher-companion' = 'explanation') => {
     if (!userProfileRef) return;
     
     const now = new Date().toISOString();
     
     if (studentProfile.isPro) {
         const newTimestamps = [...(studentProfile.proRequestTimestamps || []), now].slice(-100);
+        const newDailyRequests = (studentProfile.proDailyRequests || 0) + 1;
         setStudentProfileState(prev => ({
             ...prev,
-            proDailyRequests: (prev.proDailyRequests || 0) + 1,
+            proDailyRequests: newDailyRequests,
             proRequestTimestamps: newTimestamps,
             lastUsageDate: now
         }));
-
-        setDocumentNonBlocking(userProfileRef, { 
-            proDailyRequests: (studentProfile.proDailyRequests || 0) + 1,
+        await setDocument(userProfileRef, { 
+            proDailyRequests: newDailyRequests,
             proRequestTimestamps: newTimestamps,
             lastUsageDate: now
         }, { merge: true });
 
     } else {
-        // Free user usage tracking
         if (type === 'explanation') {
             const newUsage = (studentProfile.dailyUsage || 0) + 1;
             setStudentProfileState(prev => ({ ...prev, dailyUsage: newUsage, lastUsageDate: now }));
-            setDocumentNonBlocking(userProfileRef, { dailyUsage: newUsage, lastUsageDate: now }, { merge: true });
+            await setDocument(userProfileRef, { dailyUsage: newUsage, lastUsageDate: now }, { merge: true });
         } else if (type === 'quiz') {
             const newQuizUsage = (studentProfile.dailyQuizUsage || 0) + 1;
             setStudentProfileState(prev => ({ ...prev, dailyQuizUsage: newQuizUsage, lastUsageDate: now }));
-            setDocumentNonBlocking(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: now }, { merge: true });
+            await setDocument(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: now }, { merge: true });
         }
     }
   }
   
   
-  const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
+  const addToChat = useCallback(async (message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
     if (!user || !firestore) return;
-
-    setChat(prevChat => {
-      const updatedChat = [...prevChat, message];
-      let topic = '';
-      
-      const firstUserMessage = updatedChat.find(m => m.role === 'user');
-      if (firstUserMessage) {
-        const content = firstUserMessage.content;
-        if (typeof content === 'string') {
-          topic = content.substring(0, 50);
-        } else if (typeof content === 'object' && 'text' in content) {
-          topic = content.text.substring(0, 50);
-        }
+  
+    const updatedChat = [...chat, message];
+    setChat(updatedChat);
+  
+    let topic = '';
+    const firstUserMessage = updatedChat.find(m => m.role === 'user');
+    if (firstUserMessage) {
+      const content = firstUserMessage.content;
+      if (typeof content === 'string') {
+        topic = content.substring(0, 50);
+      } else if (typeof content === 'object' && 'text' in content) {
+        topic = content.text.substring(0, 50);
       }
-
-      if (message.role === 'assistant' && topic) {
-        addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
-      }
-
+    }
+  
+    if (message.role === 'assistant' && topic) {
+      await addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
+    }
+  
+    try {
       if (activeHistoryId) {
         const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
-        setDocumentNonBlocking(docRef, { messages: updatedChat, timestamp: new Date().toISOString() }, { merge: true });
+        await setDocument(docRef, { messages: updatedChat, timestamp: new Date().toISOString() }, { merge: true });
       } else if (topic) {
-        const newHistoryId = doc(collection(firestore, 'users', user.uid, 'history')).id;
-        const newHistoryItem: HistoryItem = {
-          id: newHistoryId,
-          timestamp: new Date().toISOString(),
+        const historyCollection = collection(firestore, 'users', user.uid, 'history');
+        const newHistoryItem: Omit<HistoryItem, 'id'> = {
           topic,
           messages: updatedChat,
+          timestamp: new Date().toISOString(),
           type: historyType,
         };
-        setActiveHistoryId(newHistoryId);
-        const docRef = doc(firestore, 'users', user.uid, 'history', newHistoryId);
-        setDocumentNonBlocking(docRef, newHistoryItem, {});
+        const newDocRef = await addDocument(historyCollection, newHistoryItem);
+        setActiveHistoryId(newDocRef.id);
       }
-      
-      return updatedChat;
-    });
-  }, [user, firestore, activeHistoryId, addInteraction]);
+    } catch (error) {
+      console.error("Failed to save chat history:", error);
+      // Optionally revert chat state or show a toast
+    }
+  }, [user, firestore, chat, activeHistoryId, addInteraction]);
 
   
-  const deleteFromHistory = (id: string) => {
+  const deleteFromHistory = async (id: string) => {
     if (!user || !firestore) return;
     const docRef = doc(firestore, 'users', user.uid, 'history', id);
-    deleteDocumentNonBlocking(docRef);
+    await deleteDocument(docRef);
 
     if (activeHistoryId === id) {
       setChat([]);
@@ -441,13 +432,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const clearHistory = (historyType: 'explanation' | 'teacher-companion') => {
+  const clearHistory = async (historyType: 'explanation' | 'teacher-companion') => {
      if (!user || !firestore) return;
      const itemsToClear = historyType === 'explanation' ? history : teacherHistory;
-     itemsToClear.forEach(item => {
+     
+     const deletePromises = itemsToClear.map(item => {
         const docRef = doc(firestore, 'users', user.uid, 'history', item.id);
-        deleteDocumentNonBlocking(docRef);
+        return deleteDocument(docRef);
      });
+     await Promise.all(deletePromises);
 
     if ((historyType === 'explanation' && (view === 'explanation' || view === 'welcome')) || 
         (historyType === 'teacher-companion' && view === 'teacher-companion')) {
