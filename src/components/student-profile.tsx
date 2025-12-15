@@ -146,7 +146,7 @@ export function StudentProfile() {
   useEffect(() => {
     if (user && !isProfileComplete) {
         setIsEditing(true);
-    } else {
+    } else if (!user) {
         setIsEditing(false);
     }
   }, [user, isProfileComplete]);
