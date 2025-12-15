@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Save, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
@@ -32,6 +32,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 function ProfileForm({ onSave }: { onSave: () => void }) {
   const { studentProfile, saveProfileToFirestore, user } = useAppContext();
   const { toast } = useToast();
+  const hasInitialized = useRef(false); // ✅ added
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -42,17 +43,17 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
       weakSubjects: studentProfile.weakSubjects || '',
     },
   });
-  
+
   useEffect(() => {
-    // This effect runs when the studentProfile data changes from the context.
-    // It resets the form with the new data, ensuring it's up-to-date
-    // when the component loads or the user logs in. This will not run on every keystroke.
-    form.reset({
-      name: studentProfile.name || '',
-      classLevel: studentProfile.classLevel || '',
-      board: studentProfile.board || '',
-      weakSubjects: studentProfile.weakSubjects || '',
-    });
+    if (!hasInitialized.current) {
+      form.reset({
+        name: studentProfile.name || '',
+        classLevel: studentProfile.classLevel || '',
+        board: studentProfile.board || '',
+        weakSubjects: studentProfile.weakSubjects || '',
+      });
+      hasInitialized.current = true; // ✅ stop future resets
+    }
   }, [studentProfile, form]);
 
   function onSubmit(values: ProfileFormValues) {
@@ -64,7 +65,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
       });
       return;
     }
-    
+
     saveProfileToFirestore(values);
 
     toast({
@@ -90,6 +91,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="classLevel"
@@ -103,6 +105,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="board"
@@ -116,6 +119,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="weakSubjects"
@@ -129,6 +133,7 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
             </FormItem>
           )}
         />
+
         <Button type="submit" className="w-full">
           <Save className="mr-2 h-4 w-4" />
           Save Profile
@@ -138,46 +143,44 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
   );
 }
 
-
 export function StudentProfile() {
   const { studentProfile, isProfileComplete, user } = useAppContext();
   const [isEditing, setIsEditing] = useState(false);
-  
+
   useEffect(() => {
     if (user && !isProfileComplete) {
-        setIsEditing(true);
+      setIsEditing(true);
     } else if (!user) {
-        setIsEditing(false);
+      setIsEditing(false);
     }
   }, [user, isProfileComplete]);
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   if (!isEditing) {
     return (
       <div className="space-y-3 p-2">
-          <Card>
-            <CardContent className="p-3 text-sm space-y-2">
-                <div>
-                    <p className="font-semibold">Name</p>
-                    <p className="text-muted-foreground">{studentProfile.name || 'Not set'}</p>
-                </div>
-                 <div>
-                    <p className="font-semibold">Class</p>
-                    <p className="text-muted-foreground">{studentProfile.classLevel || 'Not set'}</p>
-                </div>
-                 <div>
-                    <p className="font-semibold">Board</p>
-                    <p className="text-muted-foreground">{studentProfile.board || 'Not set'}</p>
-                </div>
-                 <div>
-                    <p className="font-semibold">Weak Subjects</p>
-                    <p className="text-muted-foreground">{studentProfile.weakSubjects || 'None'}</p>
-                </div>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardContent className="p-3 text-sm space-y-2">
+            <div>
+              <p className="font-semibold">Name</p>
+              <p className="text-muted-foreground">{studentProfile.name || 'Not set'}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Class</p>
+              <p className="text-muted-foreground">{studentProfile.classLevel || 'Not set'}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Board</p>
+              <p className="text-muted-foreground">{studentProfile.board || 'Not set'}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Weak Subjects</p>
+              <p className="text-muted-foreground">{studentProfile.weakSubjects || 'None'}</p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Button onClick={() => setIsEditing(true)} className="w-full" variant="outline">
           <Edit className="mr-2 h-4 w-4" />
           Edit Profile
@@ -187,16 +190,17 @@ export function StudentProfile() {
   }
 
   return (
-    <div className='p-2'>
+    <div className="p-2">
       {!isProfileComplete && (
-          <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Complete Your Profile</AlertTitle>
-              <AlertDescription>
-                Please fill out your details to get personalized results.
-              </AlertDescription>
-          </Alert>
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Complete Your Profile</AlertTitle>
+          <AlertDescription>
+            Please fill out your details to get personalized results.
+          </AlertDescription>
+        </Alert>
       )}
+
       <div className="mt-4">
         <ProfileForm onSave={() => setIsEditing(false)} />
       </div>
