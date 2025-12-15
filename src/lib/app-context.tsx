@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -244,10 +243,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (isUserLoading || isProfileLoading || !user) return;
 
     if (firestoreProfile) {
-        const isPro = firestoreProfile.proExpiresAt ? !isPast(new Date(firestoreProfile.proExpiresAt)) : false;
-
-        if (isPro !== firestoreProfile.isPro && userProfileRef) {
-            setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
+        let isPro = firestoreProfile.proExpiresAt ? !isPast(new Date(firestoreProfile.proExpiresAt)) : false;
+        
+        if (typeof firestoreProfile.isPro === 'boolean' && isPro !== firestoreProfile.isPro) {
+            if (userProfileRef) {
+                setDocumentNonBlocking(userProfileRef, { isPro: isPro }, { merge: true });
+            }
+        } else if (firestoreProfile.isPro === undefined) {
+             isPro = false;
         }
 
         let serverProfile: Partial<StudentProfile> = {
@@ -327,7 +330,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
         await setDoc(profileRef, dataToSave, { merge: true });
         
-        const updatedProfile = { ...studentProfile, ...values, gradeLevel: values.classLevel };
+        const updatedProfile = { 
+          ...studentProfile, 
+          ...values, 
+          classLevel: values.classLevel || studentProfile.classLevel,
+          gradeLevel: values.classLevel || studentProfile.classLevel
+        };
         setStudentProfileState(updatedProfile);
         
         const isComplete = !!updatedProfile.name && !!updatedProfile.classLevel && !!updatedProfile.board;
@@ -484,7 +492,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
-
-    
