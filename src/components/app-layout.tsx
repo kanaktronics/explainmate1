@@ -18,7 +18,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users, TrendingUp, GraduationCap } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users, TrendingUp, GraduationCap, ClipboardCheck } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -31,16 +31,29 @@ import { AdPopup } from '@/components/ad-popup';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
-function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher-companion' }) {
-  const { history, teacherHistory, loadChatFromHistory, deleteFromHistory, clearHistory, user, view } = useAppContext();
+function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher-companion' | 'exam-prep' }) {
+  const { history, teacherHistory, examPrepHistory, loadChatFromHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory, user, view } = useAppContext();
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [itemToDelete, setItemToDelete] = useState<HistoryItem | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const currentHistory = historyType === 'explanation' ? history : teacherHistory;
+  const getHistoryForType = () => {
+    switch (historyType) {
+      case 'explanation': return history;
+      case 'teacher-companion': return teacherHistory;
+      case 'exam-prep': return examPrepHistory;
+      default: return [];
+    }
+  };
+
+  const currentHistory = getHistoryForType();
 
   const handleHistoryClick = (item: HistoryItem) => {
-    loadChatFromHistory(item);
+    if (item.type === 'exam-prep') {
+        loadExamPlanFromHistory(item);
+    } else {
+        loadChatFromHistory(item);
+    }
   };
 
   const handleDeleteClick = (e: React.MouseEvent, item: HistoryItem) => {
@@ -64,7 +77,10 @@ function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher
     return null;
   }
   
-  const isRelevantView = (historyType === 'explanation' && (view === 'explanation' || view === 'welcome')) || (historyType === 'teacher-companion' && view === 'teacher-companion');
+  const isRelevantView = 
+    (historyType === 'explanation' && (view === 'explanation' || view === 'welcome')) || 
+    (historyType === 'teacher-companion' && view === 'teacher-companion') ||
+    (historyType === 'exam-prep' && view === 'exam-prep');
 
   if (!isRelevantView) return null;
 
@@ -196,7 +212,7 @@ function UserProfileSection() {
 }
 
 export function AppLayout({children}: {children: React.ReactNode}) {
-  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId, studentProfile, showAd } = useAppContext();
+  const { setChat, setQuiz, isAdOpen, hideAd, adContent, user, setView, setActiveHistoryId, studentProfile, showAd, setExamPlan } = useAppContext();
   const { toast } = useToast();
 
   const handleNewExplanation = () => {
@@ -244,13 +260,8 @@ export function AppLayout({children}: {children: React.ReactNode}) {
         toast({ title: 'Login Required', description: 'Please sign in to use Exam Prep mode.' });
         return;
     }
-    if (!studentProfile.isPro) {
-        showAd({
-            title: 'Unlock Exam Prep Mode',
-            description: 'Exam Prep is a Pro feature. Please upgrade to use it.'
-        });
-        return;
-    }
+    setExamPlan(null);
+    setActiveHistoryId(null);
     setView('exam-prep');
   };
   
@@ -301,6 +312,7 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                 <SidebarSeparator />
                 <HistorySection historyType="explanation" />
                 <HistorySection historyType="teacher-companion" />
+                <HistorySection historyType="exam-prep" />
                 <SidebarSeparator />
                  <SidebarMenu>
                     <SidebarMenuItem>

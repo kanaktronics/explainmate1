@@ -120,16 +120,17 @@
     },
     "HistoryItem": {
       "title": "HistoryItem",
-      "description": "A record of a single chat or quiz session.",
+      "description": "A record of a single chat, quiz, or exam prep session.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "topic": { "type": "string" },
-        "messages": { "type": "array", "items": { "type": "object" }},
+        "messages": { "type": "array", "items": { "type": "object" }, "description": "Used for chat-based history (explanation, teacher-companion)." },
+        "examPlan": { "type": "object", "description": "Used for exam prep history." },
         "timestamp": { "type": "string", "format": "date-time" },
-        "type": { "enum": ["explanation", "teacher-companion"] }
+        "type": { "enum": ["explanation", "teacher-companion", "exam-prep"] }
       },
-      "required": ["id", "topic", "messages", "timestamp", "type"]
+      "required": ["id", "topic", "timestamp", "type"]
     }
   },
   "auth": {
@@ -182,7 +183,7 @@
           "schema": {
             "$ref": "#/backend/entities/HistoryItem"
           },
-          "description": "Stores a user's chat and quiz history sessions for cross-device syncing.",
+          "description": "Stores a user's chat, quiz, and exam prep history sessions for cross-device syncing.",
           "params": [
             {
               "name": "userId",

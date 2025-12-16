@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData } from '@/lib/types';
+import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData, ExamPlan } from '@/lib/types';
 import { isToday, isPast, differenceInDays } from 'date-fns';
 import { useFirebase, useDoc, useCollection, setDocument, addDocument, deleteDocument, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit, setDoc } from 'firebase/firestore';
@@ -34,9 +34,14 @@ interface AppContextType {
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
   teacherHistory: HistoryItem[];
+  examPrepHistory: HistoryItem[];
   loadChatFromHistory: (historyItem: HistoryItem) => void;
+  loadExamPlanFromHistory: (historyItem: HistoryItem) => void;
   deleteFromHistory: (id: string) => Promise<void>;
-  clearHistory: (historyType: 'explanation' | 'teacher-companion') => Promise<void>;
+  clearHistory: (historyType: 'explanation' | 'teacher-companion' | 'exam-prep') => Promise<void>;
+  examPlan: ExamPlan | null;
+  setExamPlan: (plan: ExamPlan | null) => void;
+  saveExamPlanToHistory: (plan: ExamPlan, topic: string) => Promise<void>;
   isProfileComplete: boolean;
   isAdOpen: boolean;
   showAd: (content?: Partial<AdContent>) => void;
@@ -86,6 +91,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [view, setViewState] = useState<AppView>('explanation');
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [examPlan, setExamPlan] = useState<ExamPlan | null>(null);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
@@ -146,6 +152,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const history = useMemo(() => allHistoryItems?.filter(item => item.type === 'explanation') || [], [allHistoryItems]);
   const teacherHistory = useMemo(() => allHistoryItems?.filter(item => item.type === 'teacher-companion') || [], [allHistoryItems]);
+  const examPrepHistory = useMemo(() => allHistoryItems?.filter(item => item.type === 'exam-prep') || [], [allHistoryItems]);
   
   const interactionsRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -230,6 +237,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Clear all data on logout
       setChat([]);
       setQuiz(null);
+      setExamPlan(null);
       setProgressData(null);
       setActiveHistoryId(null);
       setStudentProfileState(defaultProfile);
@@ -416,9 +424,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to save chat history:", error);
-      // Optionally revert chat state or show a toast
     }
   }, [user, firestore, chat, activeHistoryId, addInteraction]);
+
+  const saveExamPlanToHistory = async (plan: ExamPlan, topic: string) => {
+    if (!user || !firestore) return;
+
+    let planToSave = plan;
+    // For free users, only save the roadmap
+    if (!studentProfile.isPro) {
+        planToSave = { roadmap: plan.roadmap };
+    }
+
+    try {
+        const historyCollection = collection(firestore, 'users', user.uid, 'history');
+        const newHistoryItem: Omit<HistoryItem, 'id'> = {
+            topic,
+            examPlan: planToSave,
+            timestamp: new Date().toISOString(),
+            type: 'exam-prep',
+        };
+        const newDocRef = await addDocument(historyCollection, newHistoryItem);
+        setActiveHistoryId(newDocRef.id); // Set the active ID for this new plan
+    } catch (error) {
+        console.error("Failed to save exam plan history:", error);
+    }
+  };
 
   
   const deleteFromHistory = async (id: string) => {
@@ -428,13 +459,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     if (activeHistoryId === id) {
       setChat([]);
+      setExamPlan(null);
       setActiveHistoryId(null);
     }
   };
   
-  const clearHistory = async (historyType: 'explanation' | 'teacher-companion') => {
+  const clearHistory = async (historyType: 'explanation' | 'teacher-companion' | 'exam-prep') => {
      if (!user || !firestore) return;
-     const itemsToClear = historyType === 'explanation' ? history : teacherHistory;
+
+     const itemsToClear = {
+       'explanation': history,
+       'teacher-companion': teacherHistory,
+       'exam-prep': examPrepHistory,
+     }[historyType];
      
      const deletePromises = itemsToClear.map(item => {
         const docRef = doc(firestore, 'users', user.uid, 'history', item.id);
@@ -443,16 +480,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
      await Promise.all(deletePromises);
 
     if ((historyType === 'explanation' && (view === 'explanation' || view === 'welcome')) || 
-        (historyType === 'teacher-companion' && view === 'teacher-companion')) {
+        (historyType === 'teacher-companion' && view === 'teacher-companion') ||
+        (historyType === 'exam-prep' && view === 'exam-prep')) {
         setChat([]);
+        setExamPlan(null);
         setActiveHistoryId(null);
     }
   };
 
   const loadChatFromHistory = (historyItem: HistoryItem) => {
-    setChat(historyItem.messages);
+    setChat(historyItem.messages || []);
+    setExamPlan(null);
     setActiveHistoryId(historyItem.id);
     setView(historyItem.type);
+  };
+
+  const loadExamPlanFromHistory = (historyItem: HistoryItem) => {
+    if (historyItem.examPlan) {
+        setExamPlan(historyItem.examPlan);
+        setChat([]);
+        setActiveHistoryId(historyItem.id);
+        setView('exam-prep');
+    }
   };
   
   // Ad logic
@@ -469,7 +518,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
-    quiz, setQuiz, history, teacherHistory, loadChatFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
+    quiz, setQuiz, history, teacherHistory, examPrepHistory, loadChatFromHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
+    examPlan, setExamPlan, saveExamPlanToHistory,
     isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
     postLoginAction, setPostLoginAction, clearPostLoginAction,
     interactions, addInteraction, progressData, setProgressData, progressError, setProgressError, isProgressLoading, setIsProgressLoading,
@@ -490,5 +540,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    

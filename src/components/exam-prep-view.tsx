@@ -31,7 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-import { SubjectTopics } from '@/lib/types';
+import { SubjectTopics, ExamPlan } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import Link from 'next/link';
 
@@ -158,7 +158,7 @@ function Step1_SelectSubjectAndDate({ onNext, form }: { onNext: () => void, form
     );
 }
 
-function Step2_SelectTopics({ onBack, form, setStep }: { onBack: () => void, form: any, setStep: any }) {
+function Step2_SelectTopics({ onBack, form }: { onBack: () => void, form: any }) {
     const [topicsData, setTopicsData] = useState<SubjectTopics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -184,7 +184,9 @@ function Step2_SelectTopics({ onBack, form, setStep }: { onBack: () => void, for
             }
             setIsLoading(false);
         };
-        fetchTopics();
+        if (selectedSubject) {
+            fetchTopics();
+        }
     }, [selectedSubject, studentProfile.classLevel, studentProfile.board, toast]);
 
     const isAllSelected = (groupTopics: string[]) => {
@@ -287,10 +289,9 @@ const TopicSkeleton = () => (
 
 
 export function ExamPrepView() {
-  const { studentProfile } = useAppContext();
+  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView } = useAppContext();
   const [step, setStep] = useState(1);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
-  const [examPlan, setExamPlan] = useState<GenerateExamPlanOutput | null>(null);
 
   const form = useForm<z.infer<typeof examPrepSchema>>({
     resolver: zodResolver(examPrepSchema),
@@ -301,6 +302,22 @@ export function ExamPrepView() {
       examDate: undefined,
     },
   });
+
+  useEffect(() => {
+    // When a plan is loaded from history, jump to step 3
+    if (examPlan) {
+      setStep(3);
+    } else {
+      setStep(1);
+      form.reset({
+        subject: '',
+        otherSubject: '',
+        topics: [],
+        examDate: undefined,
+      });
+    }
+  }, [examPlan, form]);
+
 
   const handleNext = async () => {
     const isValid = await form.trigger(['subject', 'otherSubject', 'examDate']);
@@ -329,6 +346,7 @@ export function ExamPrepView() {
         form.setError('root', { type: 'manual', message: result.error });
     } else {
       setExamPlan(result);
+      await saveExamPlanToHistory(result, values.subject === 'Other' ? values.otherSubject! : values.subject);
       setStep(3);
     }
 
@@ -441,6 +459,18 @@ export function ExamPrepView() {
     </Card>
   );
 
+  const handleCreateAnother = () => {
+    setExamPlan(null);
+    setActiveHistoryId(null);
+    setStep(1);
+    form.reset({
+      subject: '',
+      otherSubject: '',
+      topics: [],
+      examDate: undefined,
+    });
+  }
+
 
   const renderContent = () => {
     if (isLoadingPlan) {
@@ -537,7 +567,7 @@ export function ExamPrepView() {
                         <SamplePaperProAd />
                     )}
                     <div className="text-center">
-                        <Button onClick={() => { setStep(1); setExamPlan(null); }}>Create Another Plan</Button>
+                        <Button onClick={handleCreateAnother}>Create Another Plan</Button>
                     </div>
                 </div>
             </ScrollArea>
@@ -548,7 +578,7 @@ export function ExamPrepView() {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col items-center justify-center h-full">
                 {step === 1 && <Step1_SelectSubjectAndDate onNext={handleNext} form={form} />}
-                {step === 2 && <Step2_SelectTopics onBack={() => setStep(1)} form={form} setStep={setStep} />}
+                {step === 2 && <Step2_SelectTopics onBack={() => setStep(1)} form={form} />}
             </form>
         </Form>
     );
@@ -556,7 +586,7 @@ export function ExamPrepView() {
 
   return (
       <>
-        {!studentProfile.isPro ? (
+        {!studentProfile.isPro && step === 1 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
                 <Card className="max-w-lg">
                     <CardContent className="p-8">

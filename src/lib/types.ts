@@ -40,12 +40,15 @@ export interface ChatMessage {
   content: string | Explanation | TeacherCompanionResponse | { text: string; imageUrl?: string };
 }
 
+export type ExamPlan = GenerateExamPlanOutput;
+
 export interface HistoryItem {
   id: string;
   topic: string;
-  messages: ChatMessage[];
+  messages?: ChatMessage[];
+  examPlan?: ExamPlan;
   timestamp: string;
-  type: 'explanation' | 'teacher-companion';
+  type: 'explanation' | 'teacher-companion' | 'exam-prep';
 }
 
 export interface QuizQuestion {
@@ -68,8 +71,6 @@ export interface Interaction {
 }
 
 export type ProgressData = Omit<ProgressEngineOutput, 'totalMinutesAllTime' | 'minutesLast7Days' | 'progressGrowth' | 'overallProgressPercent'>;
-
-export type ExamPlan = GenerateExamPlanOutput;
 
 export type SubjectTopics = GenerateSubjectTopicsOutput;
 
