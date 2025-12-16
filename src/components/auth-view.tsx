@@ -22,7 +22,7 @@ import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { useFirebase } from '@/firebase';
 import { FirebaseError } from 'firebase/app';
 import { AppLogo } from './app-logo';
-import { setDocumentNonBlocking } from '@/firebase';
+import { setDocument } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useAppContext } from '@/lib/app-context';
 import { Checkbox } from './ui/checkbox';
@@ -130,7 +130,7 @@ export function AuthView() {
             lastSignInAt: now
         };
         const profileRef = doc(firestore, 'users', user.uid);
-        setDocumentNonBlocking(profileRef, userProfile, { merge: true });
+        await setDocument(profileRef, userProfile, { merge: true });
         
         if (showProMessage) {
             setPostLoginAction('upgrade');
@@ -153,7 +153,7 @@ export function AuthView() {
         const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         const profileRef = doc(firestore, 'users', user.uid);
-        setDocumentNonBlocking(profileRef, { lastSignInAt: new Date().toISOString() }, { merge: true });
+        await setDocument(profileRef, { lastSignInAt: new Date().toISOString() }, { merge: true });
         
         if (showProMessage) {
             setPostLoginAction('upgrade');

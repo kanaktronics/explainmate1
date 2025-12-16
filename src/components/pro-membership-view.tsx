@@ -10,7 +10,7 @@ import { useAppContext } from '@/lib/app-context';
 import { createOrder } from '@/lib/payments/razorpay/actions';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocument } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { add } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
@@ -85,7 +85,7 @@ export function ProMembershipView() {
                     setStudentProfile(updatedProfile);
                     
                     const profileRef = doc(firestore, 'users', user.uid);
-                    setDocumentNonBlocking(profileRef, { isPro: true, proExpiresAt: expirationDate.toISOString() }, { merge: true });
+                    await setDocument(profileRef, { isPro: true, proExpiresAt: expirationDate.toISOString() }, { merge: true });
 
                     setPaymentStatus('success');
                     toast({
@@ -251,3 +251,5 @@ export function ProMembershipView() {
         </>
     );
 }
+
+    
