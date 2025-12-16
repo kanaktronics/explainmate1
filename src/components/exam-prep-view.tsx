@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,10 +18,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Loader2, BookOpen, CheckSquare, Dumbbell, Clock, Download, ChevronLeft, Sparkles, AlertCircle, GraduationCap } from 'lucide-react';
+import { CalendarIcon, Loader2, BookOpen, CheckSquare, Dumbbell, Clock, Download, ChevronLeft, Sparkles, AlertCircle, GraduationCap, History, Trash2, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Calendar } from './ui/calendar';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/lib/app-context';
 import { generateExamPlan, getSubjectTopics } from '@/lib/actions';
@@ -31,9 +32,10 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import ReactMarkdown from 'react-markdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-import { SubjectTopics, ExamPlan } from '@/lib/types';
+import { SubjectTopics, ExamPlan, HistoryItem } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import Link from 'next/link';
+import { DeleteHistoryDialog } from './delete-history-dialog';
 
 const examPrepSchema = z.object({
   subject: z.string().min(1, { message: 'Please select a subject.' }),
@@ -287,9 +289,79 @@ const TopicSkeleton = () => (
     </div>
 )
 
+function ExamPrepHistory() {
+    const { examPrepHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory } = useAppContext();
+    const [itemToDelete, setItemToDelete] = useState<HistoryItem | null>(null);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+    const handleDeleteClick = (e: React.MouseEvent, item: HistoryItem) => {
+        e.stopPropagation();
+        setItemToDelete(item);
+    };
+
+    const confirmDelete = () => {
+        if (itemToDelete) {
+            deleteFromHistory(itemToDelete.id);
+            setItemToDelete(null);
+        }
+    };
+    
+    const confirmClear = () => {
+        clearHistory('exam-prep');
+        setShowClearConfirm(false);
+    };
+
+    return (
+        <Card className="w-full md:w-1/3">
+            <DeleteHistoryDialog
+                isOpen={!!itemToDelete || showClearConfirm}
+                onClose={() => { setItemToDelete(null); setShowClearConfirm(false); }}
+                onConfirm={itemToDelete ? confirmDelete : confirmClear}
+                isClearingAll={showClearConfirm}
+            />
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <CardTitle className="flex items-center gap-2"><History /> Past Generations</CardTitle>
+                    {examPrepHistory.length > 0 && (
+                        <Button variant="ghost" size="icon" onClick={() => setShowClearConfirm(true)}>
+                            <X className="h-4 w-4"/>
+                        </Button>
+                    )}
+                </div>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-96">
+                    {examPrepHistory.length === 0 ? (
+                        <p className="text-muted-foreground text-sm text-center">Your generated exam plans will appear here.</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {examPrepHistory.map(item => (
+                                <Card key={item.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => loadExamPlanFromHistory(item)}>
+                                    <CardContent className="p-3 relative">
+                                        <p className="font-semibold truncate">{item.topic}</p>
+                                        <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</p>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => handleDeleteClick(e, item)}
+                                        >
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export function ExamPrepView() {
-  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView } = useAppContext();
+  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView, examPrepHistory, loadExamPlanFromHistory } = useAppContext();
   const [step, setStep] = useState(1);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
 
@@ -329,6 +401,7 @@ export function ExamPrepView() {
   async function onSubmit(values: z.infer<typeof examPrepSchema>) {
     setIsLoadingPlan(true);
     setExamPlan(null);
+    setActiveHistoryId(null);
 
     const result = await generateExamPlan({
       subject: values.subject === 'Other' ? values.otherSubject! : values.subject,
@@ -345,8 +418,8 @@ export function ExamPrepView() {
     if ('error' in result) {
         form.setError('root', { type: 'manual', message: result.error });
     } else {
-      setExamPlan(result);
       await saveExamPlanToHistory(result, values.subject === 'Other' ? values.otherSubject! : values.subject);
+      setExamPlan(result);
       setStep(3);
     }
 
@@ -489,7 +562,7 @@ export function ExamPrepView() {
                 <div className="container mx-auto p-4 space-y-8">
                     <header className="text-center">
                         <h1 className="text-4xl font-headline text-primary">Your Exam Prep Roadmap</h1>
-                        <p className="text-muted-foreground">Follow this plan to ace your {form.getValues('subject')} exam.</p>
+                        <p className="text-muted-foreground">Follow this plan to ace your {examPlan.roadmap.length > 0 && examPrepHistory.find(h => h.id === useAppContext().activeHistoryId)?.topic || 'exam'}.</p>
                     </header>
                     <Card>
                         <CardHeader>
@@ -567,41 +640,47 @@ export function ExamPrepView() {
                         <SamplePaperProAd />
                     )}
                     <div className="text-center">
-                        <Button onClick={handleCreateAnother}>Create Another Plan</Button>
+                        <Button onClick={handleCreateAnother}><Plus className="mr-2 h-4 w-4"/>Create New Plan</Button>
                     </div>
                 </div>
             </ScrollArea>
         );
     }
+    
+    if (studentProfile.isPro) {
+        return (
+            <div className="flex flex-col md:flex-row gap-8 h-full p-4">
+                <div className="flex-grow flex flex-col items-center justify-center">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+                            {step === 1 && <Step1_SelectSubjectAndDate onNext={handleNext} form={form} />}
+                            {step === 2 && <Step2_SelectTopics onBack={() => setStep(1)} form={form} />}
+                        </form>
+                    </Form>
+                </div>
+                <ExamPrepHistory />
+            </div>
+        );
+    }
 
+    // Fallback for free users
     return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col items-center justify-center h-full">
-                {step === 1 && <Step1_SelectSubjectAndDate onNext={handleNext} form={form} />}
-                {step === 2 && <Step2_SelectTopics onBack={() => setStep(1)} form={form} />}
-            </form>
-        </Form>
-    );
+        <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <Card className="max-w-lg">
+                <CardContent className="p-8">
+                    <GraduationCap className="h-16 w-16 text-primary mx-auto mb-4" />
+                    <h2 className="text-3xl font-headline mb-4">Pro Feature Locked</h2>
+                    <p className="text-muted-foreground mb-6">
+                       Exam Prep Mode is an exclusive feature for our Pro members. Upgrade your plan to generate personalized study roadmaps and sample papers.
+                    </p>
+                    <Button asChild>
+                        <Link href="/pricing">Upgrade to Pro</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    )
   }
 
-  return (
-      <>
-        {!studentProfile.isPro && step === 1 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                <Card className="max-w-lg">
-                    <CardContent className="p-8">
-                        <GraduationCap className="h-16 w-16 text-primary mx-auto mb-4" />
-                        <h2 className="text-3xl font-headline mb-4">Pro Feature Locked</h2>
-                        <p className="text-muted-foreground mb-6">
-                           Exam Prep Mode is an exclusive feature for our Pro members. Upgrade your plan to generate personalized study roadmaps and sample papers.
-                        </p>
-                        <Button asChild>
-                            <Link href="/pricing">Upgrade to Pro</Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        ) : renderContent()}
-      </>
-  )
+  return renderContent();
 }

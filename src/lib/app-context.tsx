@@ -437,6 +437,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+      if (activeHistoryId) {
+        const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
+        await setDocument(docRef, { examPlan: planToSave, timestamp: new Date().toISOString() }, { merge: true });
+      } else {
         const historyCollection = collection(firestore, 'users', user.uid, 'history');
         const newHistoryItem: Omit<HistoryItem, 'id'> = {
             topic,
@@ -445,7 +449,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             type: 'exam-prep',
         };
         const newDocRef = await addDocument(historyCollection, newHistoryItem);
-        setActiveHistoryId(newDocRef.id); // Set the active ID for this new plan
+        setActiveHistoryId(newDocRef.id);
+      }
     } catch (error) {
         console.error("Failed to save exam plan history:", error);
     }

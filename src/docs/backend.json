@@ -1,0 +1,210 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile within the ExplainMate AI Tutor application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name.",
+          "format": "string"
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "gradeLevel": {
+          "type": "string",
+          "description": "The user's grade level."
+        },
+        "board": {
+          "type": "string",
+          "description": "The user's educational board (e.g., CBSE, ICSE)."
+        },
+        "weakSubjects": {
+          "type": "array",
+          "description": "An array of subjects the user finds difficult.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isPro": {
+          "type": "boolean",
+          "description": "Indicates if the user has a pro subscription."
+        },
+        "proExpiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO 8601 timestamp when the user's Pro subscription expires."
+        },
+        "dailyUsage": {
+          "type": "number",
+          "description": "The number of times a free user has used a feature on the current day."
+        },
+        "dailyQuizUsage": {
+          "type": "number",
+          "description": "The number of times a free user has taken a quiz on the current day."
+        },
+        "lastUsageDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO 8601 timestamp of the last usage."
+        },
+        "termsAcceptedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO 8601 timestamp when the user accepted the terms and conditions."
+        },
+        "termsVersion": {
+          "type": "string",
+          "description": "The version number of the terms and conditions the user accepted."
+        },
+        "lastSignInAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO 8601 timestamp of the user's last sign-in."
+        },
+        "proDailyRequests": {
+          "type": "number",
+          "description": "A daily counter for Pro user requests, used for fair usage monitoring."
+        },
+        "proRequestTimestamps": {
+          "type": "array",
+          "description": "An array of ISO 8601 timestamps for recent Pro user requests, to monitor for burst activity.",
+          "items": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "isBlocked": {
+          "type": "boolean",
+          "description": "A flag to manually block a user account in cases of clear abuse."
+        },
+        "weeklyTimeSpent": {
+            "type": "number",
+            "description": "Total seconds spent in the app for the current 7-day period."
+        },
+        "timeSpentLastReset": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The ISO 8601 timestamp when the weekly time spent was last reset."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "gradeLevel",
+        "board"
+      ]
+    },
+    "Interaction": {
+      "title": "Interaction",
+      "description": "A record of a single interaction a student has with the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["explanation", "quiz_start", "quiz_answer", "teacher_companion_chat"] },
+        "topic": { "type": "string" },
+        "payload": { "type": "object" }
+      },
+      "required": ["id", "timestamp", "type", "topic"]
+    },
+    "HistoryItem": {
+      "title": "HistoryItem",
+      "description": "A record of a single chat, quiz, or exam prep session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topic": { "type": "string" },
+        "messages": { 
+          "type": "array", 
+          "items": { "type": "object" }, 
+          "description": "Used for chat-based history (explanation, teacher-companion)." 
+        },
+        "examPlan": { 
+          "type": "object", 
+          "description": "Used for exam prep history."
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["explanation", "teacher-companion", "exam-prep"] }
+      },
+      "required": ["id", "topic", "timestamp", "type"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. Includes the 'isPro' field to determine if the user has a pro subscription. This is critical for authorization and is directly available in the document for Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  This is also the document ID and is used for path-based ownership."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/interactions/{interactionId}",
+        "definition": {
+          "entityName": "Interaction",
+          "schema": {
+            "$ref": "#/backend/entities/Interaction"
+          },
+          "description": "Stores individual student interaction events for progress tracking.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The owner of the interaction log."
+            },
+            {
+              "name": "interactionId",
+              "description": "The unique ID for the interaction event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/history/{historyId}",
+        "definition": {
+          "entityName": "HistoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/HistoryItem"
+          },
+          "description": "Stores a user's chat, quiz, and exam prep history sessions for cross-device syncing.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The owner of the history item."
+            },
+            {
+              "name": "historyId",
+              "description": "The unique ID for the history session."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "Based on the application requirements, specifically the need to determine if a user has a pro version and the desire to store chat history locally, the primary focus of the Firestore structure is to manage user profiles and their pro status. Since chat history is local-only, it does not need to be stored on the database. The key is to securely store the user's `isPro` status. We avoid hierarchical authorization dependencies, so no `get()` calls are needed in security rules. The structure also supports QAPs (Rules are not Filters) by segregating the user profiles into a collection where access is based on user ID. Authorization independence is achieved by ensuring all authorization information (specifically, `isPro` and `proExpiresAt`) is directly accessible within the user's profile document."
+  }
+}
