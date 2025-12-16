@@ -100,7 +100,12 @@ Second, because this is a Pro user, you MUST generate a high-quality sample pape
 - Long Answer Questions
 - Case-Based or Assertion-Reason questions if applicable for the board and subject.
 
-The sample paper must have clear sections, marks for each question, a total marks count, and the exam duration. Provide concise model answers for each question where applicable.
+The sample paper must have clear sections, marks for each question, a total marks count, and the exam duration.
+
+CRITICAL RULE FOR ANSWERS: You MUST provide concise model answers for each question, and the length and detail of the answer MUST be appropriate for the marks allocated.
+- For 1-mark questions, the answer should be very brief and to the point.
+- For 2 or 3-mark questions, provide a more detailed answer with 2-3 key points.
+- For 5-mark questions, you MUST provide a comprehensive, well-structured answer with multiple paragraphs, key points, and diagrams or formulas where applicable, as expected in an exam.
 {{/if}}
 
 Generate the output as a single JSON object matching the defined output schema. If the user is not a pro member, the 'samplePaper' field should be omitted from the JSON output.
