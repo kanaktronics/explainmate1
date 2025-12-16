@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -166,7 +166,7 @@ function Step2_SelectTopics({ onBack, form, setStep }: { onBack: () => void, for
 
     const selectedSubject = form.watch('subject') === 'Other' ? form.watch('otherSubject') : form.watch('subject');
 
-    useState(() => {
+    useEffect(() => {
         const fetchTopics = async () => {
             setIsLoading(true);
             setError(null);
@@ -184,7 +184,7 @@ function Step2_SelectTopics({ onBack, form, setStep }: { onBack: () => void, for
             setIsLoading(false);
         };
         fetchTopics();
-    });
+    }, [selectedSubject, studentProfile.classLevel, studentProfile.board, toast]);
 
     const isAllSelected = (groupTopics: string[]) => {
         const selected = form.watch('topics') || [];
@@ -334,8 +334,94 @@ export function ExamPrepView() {
   }
   
   const handleDownload = () => {
-    // This functionality will be implemented later
+    if (!examPlan) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const paperHtml = `
+      <html>
+        <head>
+          <title>${examPlan.samplePaper.title}</title>
+          <style>
+            body { font-family: sans-serif; }
+            .paper-container { max-width: 800px; margin: 0 auto; padding: 2rem; position: relative; }
+            .watermark-container {
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              z-index: -1;
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: center;
+              align-items: center;
+              overflow: hidden;
+            }
+            .watermark {
+              color: rgba(0, 0, 0, 0.08);
+              font-size: 2rem;
+              font-weight: bold;
+              transform: rotate(-45deg);
+              white-space: nowrap;
+              padding: 5rem;
+              opacity: 0.5;
+            }
+             @media print {
+              .no-print { display: none; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .watermark-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+                z-index: 9999;
+              }
+            }
+            h1, h2, h3 { color: #333; }
+            .question { margin-bottom: 1.5rem; }
+            .question-text { font-weight: bold; }
+            .answer { 
+              margin-top: 0.5rem; 
+              padding-left: 1rem;
+              border-left: 2px solid #eee;
+              color: #555;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="watermark-container">
+             ${Array(20).fill('<div class="watermark">ExplainMate</div>').join('')}
+          </div>
+          <div class="paper-container">
+            <h1>${examPlan.samplePaper.title}</h1>
+            <p>Total Marks: ${examPlan.samplePaper.totalMarks} | Duration: ${examPlan.samplePaper.duration} minutes</p>
+            <hr />
+            ${examPlan.samplePaper.sections.map(section => `
+              <h2>${section.title}</h2>
+              ${section.questions.map((q, i) => `
+                <div class="question">
+                  <p class="question-text">Q${i+1}. ${q.question} (${q.marks} Marks)</p>
+                  ${q.answer ? `<div class="answer"><p><b>Answer:</b> ${q.answer}</p></div>` : ''}
+                </div>
+              `).join('')}
+            `).join('')}
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(paperHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+    }, 500);
   };
+
 
   const renderContent = () => {
     if (isLoadingPlan) {
@@ -394,8 +480,8 @@ export function ExamPrepView() {
                                 <Button variant="outline" size="sm" onClick={handleDownload}><Download className="mr-2 h-4 w-4"/>Download</Button>
                             </div>
                             <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>Total Marks: {examPlan.samplePaper.totalMarks}</span>
-                                <span>Duration: {examPlan.samplePaper.duration} minutes</span>
+                                <span>Total Marks: ${examPlan.samplePaper.totalMarks}</span>
+                                <span>Duration: ${examPlan.samplePaper.duration} minutes</span>
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -427,7 +513,7 @@ export function ExamPrepView() {
                         </CardContent>
                     </Card>
                     <div className="text-center">
-                        <Button onClick={() => setStep(1)}>Create Another Plan</Button>
+                        <Button onClick={() => { setStep(1); setExamPlan(null); }}>Create Another Plan</Button>
                     </div>
                 </div>
             </ScrollArea>
