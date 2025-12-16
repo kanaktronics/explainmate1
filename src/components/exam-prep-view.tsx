@@ -54,6 +54,10 @@ export function ExamPrepView() {
 
   const form = useForm<z.infer<typeof examPrepSchema>>({
     resolver: zodResolver(examPrepSchema),
+    defaultValues: {
+      subject: '',
+      examDate: undefined,
+    },
   });
 
   async function onSubmit(values: z.infer<typeof examPrepSchema>) {
