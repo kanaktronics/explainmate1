@@ -18,7 +18,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users, TrendingUp } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users, TrendingUp, GraduationCap } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -237,6 +237,22 @@ export function AppLayout({children}: {children: React.ReactNode}) {
     setActiveHistoryId(null);
     setView('teacher-companion');
   };
+
+  const handleExamPrep = () => {
+    if (!user) {
+        setView('auth');
+        toast({ title: 'Login Required', description: 'Please sign in to use Exam Prep mode.' });
+        return;
+    }
+    if (!studentProfile.isPro) {
+        showAd({
+            title: 'Unlock Exam Prep Mode',
+            description: 'Exam Prep is a Pro feature. Please upgrade to use it.'
+        });
+        return;
+    }
+    setView('exam-prep');
+  };
   
   return (
       <>
@@ -259,6 +275,12 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                     <SidebarMenuButton onClick={handleNewQuiz}>
                         <HelpCircle />
                         New Quiz
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                     <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleExamPrep}>
+                        <GraduationCap />
+                        Exam Prep
                     </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>

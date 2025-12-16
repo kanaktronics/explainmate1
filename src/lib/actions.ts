@@ -9,6 +9,8 @@ import { teacherCompanion } from '@/ai/flows/teacher-companion-flow';
 import type { TeacherCompanionInput, TeacherCompanionOutput } from '@/ai/flows/teacher-companion-flow';
 import { runProgressEngine } from '@/ai/flows/run-progress-engine';
 import type { ProgressEngineInput, ProgressEngineOutput } from '@/ai/flows/run-progress-engine';
+import { generateExamPlan } from '@/ai/flows/generate-exam-plan';
+import type { GenerateExamPlanInput, GenerateExamPlanOutput } from '@/ai/flows/generate-exam-plan';
 import { ChatMessage, StudentProfile } from './types';
 
 function convertToGenkitHistory(chatHistory: ChatMessage[]) {
@@ -308,3 +310,5 @@ export async function runProgressEngineAction(input: ProgressEngineInput): Promi
         return { error: "Failed to analyze progress. Please try again later." };
     }
 }
+
+export { generateExamPlan };

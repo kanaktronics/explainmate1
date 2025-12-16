@@ -16,7 +16,7 @@ interface AdContent {
     description: string;
 }
 
-type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress';
+type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress' | 'exam-prep';
 
 type PostLoginAction = 'upgrade' | null;
 
@@ -123,7 +123,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setView = (view: AppView) => {
-    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz', 'teacher-companion', 'progress'];
+    const mainViews: AppView[] = ['welcome', 'explanation', 'quiz', 'teacher-companion', 'progress', 'exam-prep'];
     if (mainViews.includes(view)) {
       if (pathname !== '/' && view !== 'progress') {
         router.push('/');

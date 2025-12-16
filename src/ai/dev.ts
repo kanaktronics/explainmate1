@@ -8,3 +8,4 @@ import '@/ai/flows/generate-rough-work-derivations.ts';
 import '@/ai/flows/generate-interactive-quizzes.ts';
 import '@/ai/flows/teacher-companion-flow.ts';
 import '@/ai/flows/run-progress-engine.ts';
+import '@/ai/flows/generate-exam-plan.ts';

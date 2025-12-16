@@ -1,6 +1,7 @@
 
 
 import { ProgressEngineOutput } from "@/ai/flows/run-progress-engine";
+import { GenerateExamPlanOutput } from "@/ai/flows/generate-exam-plan";
 
 export interface StudentProfile {
   id?: string;
@@ -67,5 +68,6 @@ export interface Interaction {
 
 export type ProgressData = Omit<ProgressEngineOutput, 'totalMinutesAllTime' | 'minutesLast7Days' | 'progressGrowth' | 'overallProgressPercent'>;
 
+export type ExamPlan = GenerateExamPlanOutput;
 
-export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress';
+export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress' | 'exam-prep';
