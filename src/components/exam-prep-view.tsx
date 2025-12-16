@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Loader2, BookOpen, CheckSquare, Dumbbell, Clock } from 'lucide-react';
+import { CalendarIcon, Loader2, BookOpen, CheckSquare, Dumbbell, Clock, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
@@ -67,6 +67,7 @@ export function ExamPrepView() {
     const result = await generateExamPlan({
       subject: values.subject,
       examDate: values.examDate.toISOString(),
+      currentDate: new Date().toISOString(),
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,
@@ -85,6 +86,97 @@ export function ExamPrepView() {
 
     setIsLoading(false);
   }
+
+  const handleDownload = () => {
+    if (!examPlan) return;
+
+    const { title, totalMarks, duration, sections } = examPlan.samplePaper;
+
+    const sectionsHtml = sections.map(section => `
+        <div style="margin-bottom: 24px; page-break-inside: avoid;">
+            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">${section.title}</h3>
+            <div style="space-y: 24px;">
+                ${section.questions.map((q, qIndex) => `
+                    <div style="margin-bottom: 24px; page-break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <p style="font-weight: 500; flex: 1;">Q${qIndex + 1}. ${q.question}</p>
+                            <span style="margin-left: 16px; font-size: 0.875rem; font-weight: 600; color: #6b7280;">(${q.marks} Marks)</span>
+                        </div>
+                        ${q.answer ? `
+                            <div style="margin-top: 8px; font-size: 0.875rem; border: 1px solid #e5e7eb; padding: 12px; border-radius: 6px; background-color: #f9fafb;">
+                                <strong style="display: block; margin-bottom: 4px;">Model Answer:</strong>
+                                <div>${q.answer.replace(/\n/g, '<br/>')}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+    
+    const printContent = `
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              line-height: 1.6;
+              color: #1f2937;
+            }
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                position: relative;
+              }
+              body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: url('/favicon.ico');
+                background-repeat: repeat;
+                opacity: 0.08;
+                z-index: -1;
+              }
+            }
+            .prose { max-width: none; }
+            .prose-sm { font-size: 0.875rem; line-height: 1.625; }
+            /* Basic markdown styles */
+            h1, h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; }
+            p { margin-top: 0; margin-bottom: 1em; }
+            ul, ol { margin-top: 1em; margin-bottom: 1em; padding-left: 1.5em; }
+            li > ul, li > ol { margin-top: 0.5em; margin-bottom: 0.5em; }
+            code { background-color: #f3f4f6; padding: 0.2em 0.4em; margin: 0; font-size: 85%; border-radius: 3px; }
+            pre { background-color: #f3f4f6; padding: 1em; border-radius: 6px; overflow-x: auto; }
+            strong, b { font-weight: 600; }
+          </style>
+        </head>
+        <body>
+          <header style="text-align: center; margin-bottom: 32px;">
+            <h1 style="font-size: 2.25rem; font-weight: 700; color: #F97316;">${title}</h1>
+            <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: #4b5563;">
+              <span>Total Marks: ${totalMarks}</span>
+              <span>Duration: ${duration} minutes</span>
+            </div>
+          </header>
+          <main>${sectionsHtml}</main>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -141,7 +233,10 @@ export function ExamPrepView() {
             {/* Sample Paper Section */}
             <Card>
                 <CardHeader>
-                    <CardTitle>{examPlan.samplePaper.title}</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle>{examPlan.samplePaper.title}</CardTitle>
+                        <Button variant="outline" size="sm" onClick={handleDownload}><Download className="mr-2 h-4 w-4"/>Download</Button>
+                    </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Total Marks: {examPlan.samplePaper.totalMarks}</span>
                         <span>Duration: {examPlan.samplePaper.duration} minutes</span>
