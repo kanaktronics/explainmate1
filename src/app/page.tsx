@@ -9,9 +9,29 @@ import { TeacherCompanionView } from '@/components/teacher-companion-view';
 import { ExamPrepView } from '@/components/exam-prep-view';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { BrainCircuit } from 'lucide-react';
+
+function MainLoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-center">
+        <div className="relative mb-4">
+            <div className="bg-primary p-4 rounded-lg animate-pulse">
+                <BrainCircuit className="text-primary-foreground h-12 w-12" />
+            </div>
+        </div>
+        <h2 className="text-2xl font-headline text-primary">Loading Your Learning Space...</h2>
+        <p className="text-muted-foreground">Please wait a moment.</p>
+    </div>
+  );
+}
+
 
 export default function Home() {
-  const { view } = useAppContext();
+  const { view, isUserLoading } = useAppContext();
+  
+  if (isUserLoading) {
+    return <MainLoadingSkeleton />;
+  }
   
   const renderView = () => {
     switch(view) {
