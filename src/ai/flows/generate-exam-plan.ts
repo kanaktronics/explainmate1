@@ -82,6 +82,8 @@ Exam Details:
 
 First, calculate the number of days from **today's date ({{currentDate}})** until the exam date to create a roadmap. The roadmap should be practical and cover all important topics. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. Break down larger topics into smaller, manageable sub-topics. The final day should be for light revision only. Ensure the number of days in the roadmap accurately reflects the time between the current date and the exam date.
 
+**IMPORTANT:** If the subject is a broad one like 'Science', you MUST create a balanced plan covering its main branches (e.g., Physics, Chemistry, and Biology for Science). Do not focus on just one branch. Distribute topics from all branches logically throughout the study plan.
+
 Second, generate a high-quality sample paper that strictly follows the pattern, syllabus, and difficulty level for the specified class and board. The paper must include a variety of question types:
 - Multiple Choice Questions (MCQs)
 - Very Short Answer Questions
