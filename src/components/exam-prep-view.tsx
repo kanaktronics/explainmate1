@@ -35,7 +35,7 @@ import { Checkbox } from './ui/checkbox';
 import { SubjectTopics, ExamPlan, HistoryItem } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import Link from 'next/link';
-import { DeleteHistoryDialog } from './delete-history-dialog';
+import { DeleteHistoryDialog } from '@/components/delete-history-dialog';
 
 const examPrepSchema = z.object({
   subject: z.string().min(1, { message: 'Please select a subject.' }),
@@ -361,7 +361,7 @@ function ExamPrepHistory() {
 
 
 export function ExamPrepView() {
-  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView, examPrepHistory, loadExamPlanFromHistory } = useAppContext();
+  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView, examPrepHistory, loadExamPlanFromHistory, activeHistoryId } = useAppContext();
   const [step, setStep] = useState(1);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
 
@@ -557,12 +557,15 @@ export function ExamPrepView() {
     }
 
     if (step === 3 && examPlan) {
+        const activeHistoryItem = examPrepHistory.find(h => h.id === activeHistoryId);
+        const subjectTopic = activeHistoryItem?.topic || 'exam';
+
         return (
             <ScrollArea className="h-full">
                 <div className="container mx-auto p-4 space-y-8">
                     <header className="text-center">
                         <h1 className="text-4xl font-headline text-primary">Your Exam Prep Roadmap</h1>
-                        <p className="text-muted-foreground">Follow this plan to ace your {examPlan.roadmap.length > 0 && examPrepHistory.find(h => h.id === useAppContext().activeHistoryId)?.topic || 'exam'}.</p>
+                        <p className="text-muted-foreground">Follow this plan to ace your {subjectTopic}.</p>
                     </header>
                     <Card>
                         <CardHeader>
