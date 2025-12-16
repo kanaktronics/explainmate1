@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Loader2, BookOpen, CheckSquare, Dumbbell, Clock, Download, ChevronLeft, Sparkles, AlertCircle } from 'lucide-react';
+import { CalendarIcon, Loader2, BookOpen, CheckSquare, Dumbbell, Clock, Download, ChevronLeft, Sparkles, AlertCircle, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { SubjectTopics } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import Link from 'next/link';
 
 const examPrepSchema = z.object({
   subject: z.string().min(1, { message: 'Please select a subject.' }),
@@ -320,6 +321,7 @@ export function ExamPrepView() {
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,
+        isPro: studentProfile.isPro,
       },
     });
 
@@ -334,7 +336,7 @@ export function ExamPrepView() {
   }
   
   const handleDownload = () => {
-    if (!examPlan) return;
+    if (!examPlan || !examPlan.samplePaper) return;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -422,6 +424,23 @@ export function ExamPrepView() {
     }, 500);
   };
 
+  const SamplePaperProAd = () => (
+    <Card className="bg-muted">
+      <CardHeader className="items-center text-center">
+        <Sparkles className="h-12 w-12 text-primary" />
+        <CardTitle>Unlock Full Sample Papers</CardTitle>
+        <CardDescription>
+          Upgrade to ExplainMate Pro to generate and download a complete sample paper for your selected topics.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="text-center">
+        <Button asChild>
+          <Link href="/pricing">Upgrade to Pro</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
 
   const renderContent = () => {
     if (isLoadingPlan) {
@@ -440,7 +459,7 @@ export function ExamPrepView() {
                 <div className="container mx-auto p-4 space-y-8">
                     <header className="text-center">
                         <h1 className="text-4xl font-headline text-primary">Your Exam Prep Roadmap</h1>
-                        <p className="text-muted-foreground">Follow this plan to ace your {examPlan.samplePaper.title.replace('Sample Paper', 'Exam')}.</p>
+                        <p className="text-muted-foreground">Follow this plan to ace your {form.getValues('subject')} exam.</p>
                     </header>
                     <Card>
                         <CardHeader>
@@ -473,45 +492,50 @@ export function ExamPrepView() {
                             </Accordion>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle>{examPlan.samplePaper.title}</CardTitle>
-                                <Button variant="outline" size="sm" onClick={handleDownload}><Download className="mr-2 h-4 w-4"/>Download</Button>
-                            </div>
-                            <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>Total Marks: ${examPlan.samplePaper.totalMarks}</span>
-                                <span>Duration: ${examPlan.samplePaper.duration} minutes</span>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {examPlan.samplePaper.sections.map((section, index) => (
-                                <div key={index}>
-                                    <h3 className="text-xl font-semibold mb-4 border-b pb-2">{section.title}</h3>
-                                    <div className="space-y-6">
-                                        {section.questions.map((q, qIndex) => (
-                                            <div key={qIndex}>
-                                                <div className="flex justify-between items-start">
-                                                    <p className="font-medium flex-1">Q{qIndex + 1}. {q.question}</p>
-                                                    <span className="ml-4 text-sm font-semibold text-muted-foreground">({q.marks} Marks)</span>
-                                                </div>
-                                                {q.answer && (
-                                                    <Alert className="mt-2 text-sm">
-                                                        <AlertTitle>Model Answer</AlertTitle>
-                                                        <AlertDescription>
-                                                            <ReactMarkdown className="prose dark:prose-invert prose-sm max-w-none">
-                                                                {q.answer}
-                                                            </ReactMarkdown>
-                                                        </AlertDescription>
-                                                    </Alert>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                    
+                    {studentProfile.isPro && examPlan.samplePaper ? (
+                        <Card>
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle>{examPlan.samplePaper.title}</CardTitle>
+                                    <Button variant="outline" size="sm" onClick={handleDownload}><Download className="mr-2 h-4 w-4"/>Download</Button>
                                 </div>
-                            ))}
-                        </CardContent>
-                    </Card>
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                    <span>Total Marks: {examPlan.samplePaper.totalMarks}</span>
+                                    <span>Duration: {examPlan.samplePaper.duration} minutes</span>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {examPlan.samplePaper.sections.map((section, index) => (
+                                    <div key={index}>
+                                        <h3 className="text-xl font-semibold mb-4 border-b pb-2">{section.title}</h3>
+                                        <div className="space-y-6">
+                                            {section.questions.map((q, qIndex) => (
+                                                <div key={qIndex}>
+                                                    <div className="flex justify-between items-start">
+                                                        <p className="font-medium flex-1">Q{qIndex + 1}. {q.question}</p>
+                                                        <span className="ml-4 text-sm font-semibold text-muted-foreground">({q.marks} Marks)</span>
+                                                    </div>
+                                                    {q.answer && (
+                                                        <Alert className="mt-2 text-sm">
+                                                            <AlertTitle>Model Answer</AlertTitle>
+                                                            <AlertDescription>
+                                                                <ReactMarkdown className="prose dark:prose-invert prose-sm max-w-none">
+                                                                    {q.answer}
+                                                                </ReactMarkdown>
+                                                            </AlertDescription>
+                                                        </Alert>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <SamplePaperProAd />
+                    )}
                     <div className="text-center">
                         <Button onClick={() => { setStep(1); setExamPlan(null); }}>Create Another Plan</Button>
                     </div>
@@ -533,16 +557,16 @@ export function ExamPrepView() {
   return (
       <>
         {!studentProfile.isPro ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
                 <Card className="max-w-lg">
                     <CardContent className="p-8">
-                        <Sparkles className="h-16 w-16 text-primary mx-auto mb-4" />
+                        <GraduationCap className="h-16 w-16 text-primary mx-auto mb-4" />
                         <h2 className="text-3xl font-headline mb-4">Pro Feature Locked</h2>
                         <p className="text-muted-foreground mb-6">
                            Exam Prep Mode is an exclusive feature for our Pro members. Upgrade your plan to generate personalized study roadmaps and sample papers.
                         </p>
                         <Button asChild>
-                            <a href="/pricing">Upgrade to Pro</a>
+                            <Link href="/pricing">Upgrade to Pro</Link>
                         </Button>
                     </CardContent>
                 </Card>

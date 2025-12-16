@@ -314,6 +314,19 @@ export async function runProgressEngineAction(input: ProgressEngineInput): Promi
     }
 }
 
+export async function generateExamPlanAction(input: GenerateExamPlanInput): Promise<GenerateExamPlanOutput | { error: string }> {
+    try {
+        const result = await generateExamPlan(input);
+        if (!result) {
+            throw new Error("The exam plan generator did not return a response.");
+        }
+        return result;
+    } catch (e: any) {
+        console.error("Error generating exam plan:", e);
+        return { error: "Failed to generate the exam plan. Please check the inputs and try again." };
+    }
+}
+
 export async function getSubjectTopics(input: GenerateSubjectTopicsInput): Promise<GenerateSubjectTopicsOutput | { error: string }> {
     try {
         const result = await getTopicsForSubject(input);

@@ -14,6 +14,7 @@ import {z} from 'genkit';
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe("The student's class level."),
   board: z.string().describe("The student's educational board (e.g., CBSE, ICSE)."),
+  isPro: z.boolean().describe('Whether the student is a Pro user.'),
 });
 
 const GenerateExamPlanInputSchema = z.object({
@@ -55,7 +56,7 @@ const SamplePaperSchema = z.object({
 
 const GenerateExamPlanOutputSchema = z.object({
   roadmap: z.array(RoadmapDaySchema).describe('A day-by-day study roadmap leading up to the exam.'),
-  samplePaper: SamplePaperSchema.describe('A full-length sample paper based on the curriculum.'),
+  samplePaper: SamplePaperSchema.optional().describe('A full-length sample paper based on the curriculum. This is ONLY generated if the user is a pro member.'),
 });
 export type GenerateExamPlanOutput = z.infer<typeof GenerateExamPlanOutputSchema>;
 
@@ -70,11 +71,12 @@ const examPlanPrompt = ai.definePrompt({
   name: 'examPlanPrompt',
   input: {schema: GenerateExamPlanInputSchema},
   output: {schema: GenerateExamPlanOutputSchema},
-  prompt: `You are an expert academic planner for Indian students. Your task is to create a detailed, day-by-day study roadmap and a full-length sample question paper for a student preparing for an exam.
+  prompt: `You are an expert academic planner for Indian students. Your task is to create a detailed, day-by-day study roadmap and, if requested, a full-length sample question paper.
 
 Student Profile:
 - Class: {{studentProfile.classLevel}}
 - Board: {{studentProfile.board}}
+- Pro User: {{studentProfile.isPro}}
 
 Exam Details:
 - Subject: {{subject}}
@@ -82,13 +84,16 @@ Exam Details:
 - Today's Date: {{currentDate}}
 - Exam Date: {{examDate}}
 
+PART 1: ROADMAP GENERATION (MANDATORY)
 CRITICAL INSTRUCTION: First, you MUST calculate the exact number of days available from "Today's Date" ({{currentDate}}) to the "Exam Date" ({{examDate}}). The roadmap you generate MUST have exactly that many days. For example, if the exam is tomorrow, create a 1-day plan. If it's in 10 days, create a 10-day plan.
 
 The roadmap should ONLY cover the **selected topics**: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Be practical and cover all these topics within the available days. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. The final day should be for light revision only.
 
 For subjects like 'Science', the plan must be balanced, covering topics from Physics, Chemistry, and Biology, based on the selected topics.
 
-Second, generate a high-quality sample paper that strictly follows the pattern, syllabus, and difficulty level for the specified class and board, but ONLY includes questions from the **selected topics**. The paper must include a variety of question types:
+PART 2: SAMPLE PAPER GENERATION (PRO USERS ONLY)
+{{#if studentProfile.isPro}}
+Second, because this is a Pro user, you MUST generate a high-quality sample paper. The paper must strictly follow the pattern, syllabus, and difficulty level for the specified class and board, but ONLY include questions from the **selected topics**. The paper must include a variety of question types:
 - Multiple Choice Questions (MCQs)
 - Very Short Answer Questions
 - Short Answer Questions
@@ -96,8 +101,9 @@ Second, generate a high-quality sample paper that strictly follows the pattern, 
 - Case-Based or Assertion-Reason questions if applicable for the board and subject.
 
 The sample paper must have clear sections, marks for each question, a total marks count, and the exam duration. Provide concise model answers for each question where applicable.
+{{/if}}
 
-Generate the output as a single JSON object matching the defined output schema.
+Generate the output as a single JSON object matching the defined output schema. If the user is not a pro member, the 'samplePaper' field should be omitted from the JSON output.
 `,
 });
 
