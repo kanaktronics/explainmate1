@@ -18,6 +18,7 @@ const StudentProfileSchema = z.object({
 
 const GenerateExamPlanInputSchema = z.object({
   subject: z.string().describe('The subject for the exam.'),
+  topics: z.array(z.string()).describe('A list of specific topics selected by the user to focus on.'),
   examDate: z.string().describe('The date of the exam in ISO 8601 format.'),
   currentDate: z.string().describe('The current date in ISO 8601 format, to calculate the number of days until the exam.'),
   studentProfile: StudentProfileSchema.describe('The profile of the student.'),
@@ -77,14 +78,13 @@ Student Profile:
 
 Exam Details:
 - Subject: {{subject}}
+- Selected Topics: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 - Today's Date: {{currentDate}}
 - Exam Date: {{examDate}}
 
-First, calculate the number of days from **today's date ({{currentDate}})** until the exam date to create a roadmap. The roadmap should be practical and cover all important topics. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. Break down larger topics into smaller, manageable sub-topics. The final day should be for light revision only. Ensure the number of days in the roadmap accurately reflects the time between the current date and the exam date.
+First, calculate the number of days from **today's date ({{currentDate}})** until the exam date to create a roadmap. The roadmap should ONLY cover the **selected topics**: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Be practical and cover all these topics. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. The final day should be for light revision only.
 
-**IMPORTANT:** If the subject is a broad one like 'Science', you MUST create a balanced plan covering its main branches (e.g., Physics, Chemistry, and Biology for Science). Do not focus on just one branch. Distribute topics from all branches logically throughout the study plan.
-
-Second, generate a high-quality sample paper that strictly follows the pattern, syllabus, and difficulty level for the specified class and board. The paper must include a variety of question types:
+Second, generate a high-quality sample paper that strictly follows the pattern, syllabus, and difficulty level for the specified class and board, but ONLY includes questions from the **selected topics**. The paper must include a variety of question types:
 - Multiple Choice Questions (MCQs)
 - Very Short Answer Questions
 - Short Answer Questions

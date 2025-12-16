@@ -11,7 +11,10 @@ import { runProgressEngine } from '@/ai/flows/run-progress-engine';
 import type { ProgressEngineInput, ProgressEngineOutput } from '@/ai/flows/run-progress-engine';
 import { generateExamPlan } from '@/ai/flows/generate-exam-plan';
 import type { GenerateExamPlanInput, GenerateExamPlanOutput } from '@/ai/flows/generate-exam-plan';
-import { ChatMessage, StudentProfile } from './types';
+import { getTopicsForSubject } from '@/ai/flows/generate-subject-topics';
+import type { GenerateSubjectTopicsInput, GenerateSubjectTopicsOutput } from '@/ai/flows/generate-subject-topics';
+
+import { ChatMessage, StudentProfile, SubjectTopics } from './types';
 
 function convertToGenkitHistory(chatHistory: ChatMessage[]) {
   return chatHistory.map(message => {
@@ -308,6 +311,19 @@ export async function runProgressEngineAction(input: ProgressEngineInput): Promi
     } catch (e: any) {
         console.error("Error running progress engine:", e);
         return { error: "Failed to analyze progress. Please try again later." };
+    }
+}
+
+export async function getSubjectTopics(input: GenerateSubjectTopicsInput): Promise<GenerateSubjectTopicsOutput | { error: string }> {
+    try {
+        const result = await getTopicsForSubject(input);
+        if (!result) {
+            throw new Error("The AI did not return any topics.");
+        }
+        return result;
+    } catch (e: any) {
+        console.error("Error getting subject topics:", e);
+        return { error: "Failed to fetch topics for the selected subject. Please try again." };
     }
 }
 
