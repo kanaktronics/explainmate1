@@ -36,6 +36,7 @@ import { SubjectTopics, ExamPlan, HistoryItem } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import Link from 'next/link';
 import { DeleteHistoryDialog } from '@/components/delete-history-dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 
 const examPrepSchema = z.object({
   subject: z.string().min(1, { message: 'Please select a subject.' }),
@@ -289,7 +290,7 @@ const TopicSkeleton = () => (
     </div>
 )
 
-function ExamPrepHistory() {
+function ExamPrepHistory({ onSelect }: { onSelect: () => void }) {
     const { examPrepHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory } = useAppContext();
     const [itemToDelete, setItemToDelete] = useState<HistoryItem | null>(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -311,8 +312,13 @@ function ExamPrepHistory() {
         setShowClearConfirm(false);
     };
 
+    const handleItemClick = (item: HistoryItem) => {
+        loadExamPlanFromHistory(item);
+        onSelect();
+    }
+
     return (
-        <Card className="w-full md:w-1/3">
+        <>
             <DeleteHistoryDialog
                 isOpen={!!itemToDelete || showClearConfirm}
                 onClose={() => { setItemToDelete(null); setShowClearConfirm(false); }}
@@ -336,7 +342,7 @@ function ExamPrepHistory() {
                     ) : (
                         <div className="space-y-2">
                             {examPrepHistory.map(item => (
-                                <Card key={item.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => loadExamPlanFromHistory(item)}>
+                                <Card key={item.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => handleItemClick(item)}>
                                     <CardContent className="p-3 relative">
                                         <p className="font-semibold truncate">{item.topic}</p>
                                         <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</p>
@@ -355,15 +361,16 @@ function ExamPrepHistory() {
                     )}
                 </ScrollArea>
             </CardContent>
-        </Card>
+        </>
     );
 }
 
 
 export function ExamPrepView() {
-  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView, examPrepHistory, loadExamPlanFromHistory, activeHistoryId } = useAppContext();
+  const { studentProfile, examPlan, setExamPlan, saveExamPlanToHistory, setActiveHistoryId, setView, examPrepHistory, activeHistoryId } = useAppContext();
   const [step, setStep] = useState(1);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
+  const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
 
   const form = useForm<z.infer<typeof examPrepSchema>>({
     resolver: zodResolver(examPrepSchema),
@@ -374,6 +381,8 @@ export function ExamPrepView() {
       examDate: undefined,
     },
   });
+
+  const appContext = useAppContext();
 
   useEffect(() => {
     // When a plan is loaded from history, jump to step 3
@@ -544,7 +553,6 @@ export function ExamPrepView() {
     });
   }
 
-
   const renderContent = () => {
     if (isLoadingPlan) {
         return (
@@ -563,9 +571,21 @@ export function ExamPrepView() {
         return (
             <ScrollArea className="h-full">
                 <div className="container mx-auto p-4 space-y-8">
-                    <header className="text-center">
-                        <h1 className="text-4xl font-headline text-primary">Your Exam Prep Roadmap</h1>
-                        <p className="text-muted-foreground">Follow this plan to ace your {subjectTopic}.</p>
+                    <header className="flex justify-between items-center">
+                        <div className="text-center flex-1">
+                            <h1 className="text-4xl font-headline text-primary">Your Exam Prep Roadmap</h1>
+                            <p className="text-muted-foreground">Follow this plan to ace your {subjectTopic}.</p>
+                        </div>
+                        <div className="md:hidden">
+                            <Sheet open={isHistorySheetOpen} onOpenChange={setIsHistorySheetOpen}>
+                                <SheetTrigger asChild>
+                                    <Button variant="outline"><History className="mr-2 h-4 w-4" />History</Button>
+                                </SheetTrigger>
+                                <SheetContent>
+                                    <ExamPrepHistory onSelect={() => setIsHistorySheetOpen(false)} />
+                                </SheetContent>
+                            </Sheet>
+                        </div>
                     </header>
                     <Card>
                         <CardHeader>
@@ -654,6 +674,16 @@ export function ExamPrepView() {
         return (
             <div className="flex flex-col md:flex-row gap-8 h-full p-4">
                 <div className="flex-grow flex flex-col items-center justify-center">
+                     <div className="md:hidden w-full flex justify-end mb-4">
+                        <Sheet open={isHistorySheetOpen} onOpenChange={setIsHistorySheetOpen}>
+                            <SheetTrigger asChild>
+                                <Button variant="outline"><History className="mr-2 h-4 w-4" /> Past Generations</Button>
+                            </SheetTrigger>
+                            <SheetContent>
+                               <ExamPrepHistory onSelect={() => setIsHistorySheetOpen(false)} />
+                            </SheetContent>
+                        </Sheet>
+                    </div>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
                             {step === 1 && <Step1_SelectSubjectAndDate onNext={handleNext} form={form} />}
@@ -661,7 +691,9 @@ export function ExamPrepView() {
                         </form>
                     </Form>
                 </div>
-                <ExamPrepHistory />
+                <div className="hidden md:block w-full md:w-1/3 border-l pl-4">
+                    <ExamPrepHistory onSelect={() => {}} />
+                </div>
             </div>
         );
     }
