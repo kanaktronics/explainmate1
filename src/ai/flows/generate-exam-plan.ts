@@ -82,7 +82,11 @@ Exam Details:
 - Today's Date: {{currentDate}}
 - Exam Date: {{examDate}}
 
-First, calculate the number of days from **today's date ({{currentDate}})** until the exam date to create a roadmap. The roadmap should ONLY cover the **selected topics**: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Be practical and cover all these topics. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. The final day should be for light revision only.
+CRITICAL INSTRUCTION: First, you MUST calculate the exact number of days available from "Today's Date" ({{currentDate}}) to the "Exam Date" ({{examDate}}). The roadmap you generate MUST have exactly that many days. For example, if the exam is tomorrow, create a 1-day plan. If it's in 10 days, create a 10-day plan.
+
+The roadmap should ONLY cover the **selected topics**: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Be practical and cover all these topics within the available days. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. The final day should be for light revision only.
+
+For subjects like 'Science', the plan must be balanced, covering topics from Physics, Chemistry, and Biology, based on the selected topics.
 
 Second, generate a high-quality sample paper that strictly follows the pattern, syllabus, and difficulty level for the specified class and board, but ONLY includes questions from the **selected topics**. The paper must include a variety of question types:
 - Multiple Choice Questions (MCQs)
