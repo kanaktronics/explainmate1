@@ -141,13 +141,13 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   }, [text, isPlaying, isPaused, playbackRate, toast]);
   
    useEffect(() => {
-    // Cleanup function to stop speech when the component unmounts or re-renders
+    // Cleanup function to stop speech when the component unmounts or text changes
     return () => {
       if (window.speechSynthesis && utteranceRef.current) {
         window.speechSynthesis.cancel();
       }
     };
-  }, []);
+  }, [text]);
 
 
   const handleCopy = () => {
@@ -469,10 +469,12 @@ export function ExplanationView() {
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     
+    // Create the updated chat history that will be sent to the AI
+    const updatedChatHistory = [...chat, userMessage];
+
+    // Update the UI immediately
     addToChat(userMessage); 
     
-    const currentChat = [...chat, userMessage];
-
     form.reset();
     setImagePreview(null);
     if(fileInputRef.current) {
@@ -482,7 +484,7 @@ export function ExplanationView() {
     incrementUsage('explanation');
 
     const input = {
-      chatHistory: currentChat,
+      chatHistory: updatedChatHistory, // Use the new, updated history
       studentProfile: studentProfile,
     };
 
@@ -496,7 +498,8 @@ export function ExplanationView() {
             title: "Daily Limit Reached",
             description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
           });
-          setChat(currentChat.slice(0, -1)); // Revert optimistic update
+          // Revert optimistic update
+          setChat(chat);
           break;
         case 'PRO_RATE_LIMIT':
             friendlyError = "It looks like you're sending requests faster than normal learning activity. To protect ExplainMate and ensure fair usage for everyone, we've temporarily paused your requests. Please wait a moment and try again.";
@@ -650,3 +653,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
