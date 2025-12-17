@@ -139,19 +139,15 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     window.speechSynthesis.speak(utterance);
   }, [text, isPlaying, isPaused, playbackRate, toast]);
   
-  useEffect(() => {
-    const cleanup = () => {
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-        }
-    };
-    window.addEventListener('beforeunload', cleanup);
-
+   useEffect(() => {
+    // Cleanup function to stop speech when the component unmounts or re-renders
     return () => {
-        window.removeEventListener('beforeunload', cleanup);
-        cleanup();
-    }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, []);
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -183,50 +179,19 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
         utteranceRef.current = newUtterance;
     }
   };
-  
-  const ColorCodedText = ({ text }: { text: string }) => {
-    const sentences = text.split(/(?<=[.!?])\s+/);
-    const colors = ['text-foreground', 'text-blue-600 dark:text-blue-400'];
-    return (
-        <>
-            {sentences.map((sentence, index) => (
-                <span key={index} className={colors[index % colors.length]}>
-                    {sentence}
-                </span>
-            ))}
-        </>
-    );
-  };
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
       return <p className="text-muted-foreground">No content available for this section.</p>;
     }
     
-    const dyslexiaProps = studentProfile.dyslexiaFriendlyMode ? { className: "font-sans text-lg leading-relaxed" } : {};
-
-    const components = {
-        p: (props: any) => {
-            const children = props.children;
-            let text = '';
-            if (Array.isArray(children)) {
-                text = children.map((child: any) => typeof child === 'string' ? child : (child.props.children || '')).join('');
-            } else if (typeof children === 'string') {
-                text = children;
-            } else if (children && typeof children === 'object' && 'props' in children) {
-                text = children.props.children;
-            }
-
-            if (studentProfile.dyslexiaFriendlyMode) {
-                return <p {...props}><ColorCodedText text={text} /></p>;
-            }
-            return <p {...props} />;
-        }
-    }
+    const dyslexiaProps = studentProfile.dyslexiaFriendlyMode 
+        ? { className: "font-sans text-lg leading-relaxed dyslexia-friendly" } 
+        : {};
 
     return (
       <div {...dyslexiaProps} className={cn("prose dark:prose-invert max-w-none", dyslexiaProps.className)}>
-        <ReactMarkdown components={components} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {content}
         </ReactMarkdown>
       </div>
@@ -693,4 +658,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
