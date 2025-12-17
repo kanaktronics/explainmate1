@@ -59,9 +59,18 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     
     const hasLatin = /[a-zA-Z]/.test(content);
     if(hasLatin && !hasDevanagari) {
-       const hindiWords = ["kya", "hai", "kaise", "mein", "aur", "hota", "hoti"];
+       const hindiWords = [
+          "kya", "kaise", "mein", "aur", "ek", "do", "teen",
+          "nahi", "haan", "aap", "tum", "hum", "yeh", "woh", "yahan", "wahan",
+          "kab", "kyun", "liye", "bhi", "toh", "se", "ko", "ka", "ki", "ke",
+          "hota", "hoti", "hote", "gaya", "gayi", "gaye", "tha", "thi", "the",
+          "matlab", "kaun"
+        ];
        const lower = content.toLowerCase();
-       if (hindiWords.some(w => lower.includes(w))) {
+       const words = lower.split(/\s+/);
+       const containsHindiWord = words.some(word => hindiWords.includes(word));
+  
+       if (words.length > 2 && containsHindiWord) {
            return "hinglish";
        }
     }
@@ -179,13 +188,13 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     const sentences = text.split(/(?<=[.!?])\s+/);
     const colors = ['text-foreground', 'text-blue-600 dark:text-blue-400'];
     return (
-        <div>
+        <>
             {sentences.map((sentence, index) => (
                 <span key={index} className={colors[index % colors.length]}>
                     {sentence}
                 </span>
             ))}
-        </div>
+        </>
     );
   };
 
@@ -289,7 +298,9 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                             <CardTitle>Mind Map</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <MindMapView markdown={explanation.mindMap} />
+                           <div className="overflow-x-auto p-4">
+                              <MindMapView markdown={explanation.mindMap} />
+                           </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -673,3 +684,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
