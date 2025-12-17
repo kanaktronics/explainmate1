@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play, GitMerge } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -24,6 +24,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { MindMapView } from './mind-map-view';
+import { cn } from '@/lib/utils';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
@@ -46,6 +48,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const { studentProfile } = useAppContext();
 
   const { toast } = useToast();
 
@@ -54,12 +57,8 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     const hasDevanagari = /[\u0900-\u097F]/.test(content);
     if (hasDevanagari) return "hindi";
     
-    // A simple check for Latin characters suggests English or Hinglish
     const hasLatin = /[a-zA-Z]/.test(content);
     if(hasLatin && !hasDevanagari) {
-       // A more nuanced check could be here, but for TTS voice selection,
-       // we can treat Hinglish as something a Hindi voice can often handle well.
-       // Let's assume if it's not pure Devanagari, it could be Hinglish.
        const hindiWords = ["kya", "hai", "kaise", "mein", "aur", "hota", "hoti"];
        const lower = content.toLowerCase();
        if (hindiWords.some(w => lower.includes(w))) {
@@ -69,7 +68,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     return "english";
   }
   
-  const handleListen = () => {
+  const handleListen = useCallback(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       toast({
         variant: 'destructive',
@@ -80,37 +79,31 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     }
 
     if (isPlaying && !isPaused) {
-      // If currently playing, pause it.
       window.speechSynthesis.pause();
       setIsPaused(true);
       return;
     }
 
     if (isPlaying && isPaused) {
-      // If paused, resume it.
       window.speechSynthesis.resume();
       setIsPaused(false);
       return;
     }
 
-    // If not playing at all, start new speech.
-    window.speechSynthesis.cancel(); // Stop any other speech first.
+    window.speechSynthesis.cancel();
     setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
 
     const languageOfContent = detectContentLanguage(text);
-
     const voices = window.speechSynthesis.getVoices();
     let selectedVoice: SpeechSynthesisVoice | undefined;
 
     if (languageOfContent === 'hindi' || languageOfContent === 'hinglish') {
-        // Prioritize Hindi voice for both Hindi and Hinglish
         selectedVoice = voices.find(v => v.lang.startsWith('hi'));
         utterance.lang = 'hi-IN';
-    } else { // 'english'
-        // Prioritize a good quality English voice
+    } else {
         selectedVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural')));
         if (!selectedVoice) {
             selectedVoice = voices.find(v => v.lang.startsWith('en'));
@@ -123,46 +116,30 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     }
     
     utterance.rate = playbackRate;
-    utterance.onstart = () => {
-      setIsPlaying(true);
-      setIsPaused(false);
-    };
-    utterance.onpause = () => {
-      setIsPaused(true);
-      setIsPlaying(true);
-    };
-    utterance.onresume = () => {
-      setIsPaused(false);
-      setIsPlaying(true);
-    };
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-    };
+    utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
+    utterance.onpause = () => { setIsPaused(true); setIsPlaying(true); };
+    utterance.onresume = () => { setIsPaused(false); setIsPlaying(true); };
+    utterance.onend = () => { setIsPlaying(false); setIsPaused(false); utteranceRef.current = null; };
     utterance.onerror = (event) => {
       if (event.error !== 'interrupted' && event.error !== 'canceled') {
-        toast({
-            variant: 'destructive',
-            title: 'Speech Error',
-            description: 'Could not play the audio.',
-        });
+        toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
       }
-      setIsPlaying(false);
-      setIsPaused(false);
+      setIsPlaying(false); setIsPaused(false);
     };
 
     window.speechSynthesis.speak(utterance);
-  };
+  }, [text, isPlaying, isPaused, playbackRate, toast]);
   
   useEffect(() => {
-    const handleVoicesChanged = () => {
-        // Re-check voices when they are loaded
-    };
+    if (studentProfile.dyslexiaFriendlyMode && text && text !== 'N/A' && cardId === 'explanation') {
+        handleListen();
+    }
+  }, [studentProfile.dyslexiaFriendlyMode, text, cardId, handleListen]);
+
+  useEffect(() => {
+    const handleVoicesChanged = () => {};
     if (window.speechSynthesis) {
-        // Voices may load asynchronously. We need to listen for this event.
         window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-        // Ensure voices are loaded for the first time
         window.speechSynthesis.getVoices();
         
         return () => {
@@ -184,7 +161,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
     if (isPlaying && utteranceRef.current) {
-        // To change rate mid-speech, we have to stop and restart
         window.speechSynthesis.cancel();
         
         const newUtterance = new SpeechSynthesisUtterance(text);
@@ -192,37 +168,48 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
         newUtterance.lang = utteranceRef.current.lang;
         newUtterance.rate = rate;
         
-        newUtterance.onstart = () => {
-          setIsPlaying(true);
-          setIsPaused(false);
-        };
-        newUtterance.onend = () => {
-          setIsPlaying(false);
-          setIsPaused(false);
-          utteranceRef.current = null;
-        };
+        newUtterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
+        newUtterance.onend = () => { setIsPlaying(false); setIsPaused(false); utteranceRef.current = null; };
          newUtterance.onerror = (event) => {
             if (event.error !== 'interrupted' && event.error !== 'canceled') {
                 toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
             }
-            setIsPlaying(false);
-            setIsPaused(false);
+            setIsPlaying(false); setIsPaused(false);
         };
         
         window.speechSynthesis.speak(newUtterance);
         utteranceRef.current = newUtterance;
     }
   };
+  
+  const ColorCodedText = ({ text }: { text: string }) => {
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    const colors = ['text-foreground', 'text-blue-600 dark:text-blue-400'];
+    return (
+        <div>
+            {sentences.map((sentence, index) => (
+                <span key={index} className={colors[index % colors.length]}>
+                    {sentence}
+                </span>
+            ))}
+        </div>
+    );
+  };
 
   const renderContent = (content: string) => {
     if (!content || content === 'N/A') {
       return <p className="text-muted-foreground">No content available for this section.</p>;
     }
+    
+    const dyslexiaProps = studentProfile.dyslexiaFriendlyMode ? { className: "font-sans text-lg leading-relaxed" } : {};
+
     return (
-      <div className="prose dark:prose-invert max-w-none">
-        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-          {content}
-        </ReactMarkdown>
+      <div {...dyslexiaProps} className={cn("prose dark:prose-invert max-w-none", dyslexiaProps.className)}>
+        {studentProfile.dyslexiaFriendlyMode ? <ColorCodedText text={content} /> : 
+          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {content}
+          </ReactMarkdown>
+        }
       </div>
     );
   };
@@ -267,7 +254,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
 }
 
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
-  const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A';
+  const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A' || explanation.mindMap !== 'N/A';
   
   return (
     <div className="flex items-start gap-4">
@@ -276,11 +263,12 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
         </Avatar>
         {hasMultipleTabs ? (
             <Tabs defaultValue="explanation" className="w-full">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
                     <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
                     <TabsTrigger value="roughWork"><Codesandbox className="mr-2" />Rough Work</TabsTrigger>
                     <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World</TabsTrigger>
                     <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
+                    <TabsTrigger value="mindMap"><GitMerge className="mr-2" />Mind Map</TabsTrigger>
                 </TabsList>
                 <TabsContent value="explanation">
                   <ExplanationCard cardId="explanation" title="Explanation" text={explanation.explanation} />
@@ -293,6 +281,16 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                 </TabsContent>
                 <TabsContent value="fairWork">
                    <ExplanationCard cardId="fairWork" title="Fair Work (Notebook-ready)" text={explanation.fairWork} />
+                </TabsContent>
+                <TabsContent value="mindMap">
+                   <Card>
+                        <CardHeader>
+                            <CardTitle>Mind Map</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <MindMapView markdown={explanation.mindMap} />
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         ) : (
@@ -556,9 +554,11 @@ export function ExplanationView() {
     }
     return null;
   };
+  
+  const dyslexicFontClass = studentProfile.dyslexiaFriendlyMode ? "font-sans" : "";
 
   return (
-    <div className='flex flex-col h-full'>
+    <div className={cn('flex flex-col h-full', dyslexicFontClass)}>
       <div className="flex-1 overflow-y-auto">
         <div className="p-1 sm:p-2 md:p-4 space-y-8">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
@@ -672,3 +672,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    

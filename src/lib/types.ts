@@ -1,5 +1,4 @@
 
-
 import { ProgressEngineOutput } from "@/ai/flows/run-progress-engine";
 import { GenerateExamPlanOutput } from "@/ai/flows/generate-exam-plan";
 import { GenerateSubjectTopicsOutput } from "@/ai/flows/generate-subject-topics";
@@ -22,6 +21,7 @@ export interface StudentProfile {
   isBlocked: boolean;
   weeklyTimeSpent: number;
   timeSpentLastReset: string;
+  dyslexiaFriendlyMode?: boolean;
 }
 
 export interface Explanation {
@@ -29,6 +29,7 @@ export interface Explanation {
   roughWork: string;
   realWorldExamples: string;
   fairWork: string;
+  mindMap: string;
 }
 
 export interface TeacherCompanionResponse {
@@ -75,3 +76,5 @@ export type ProgressData = Omit<ProgressEngineOutput, 'totalMinutesAllTime' | 'm
 export type SubjectTopics = GenerateSubjectTopicsOutput;
 
 export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress' | 'exam-prep';
+
+    

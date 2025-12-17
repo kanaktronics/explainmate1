@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -82,6 +81,7 @@ const defaultProfile: StudentProfile = {
     isBlocked: false,
     weeklyTimeSpent: 0,
     timeSpentLastReset: new Date().toISOString(),
+    dyslexiaFriendlyMode: false,
 };
 
 
@@ -273,6 +273,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isBlocked: firestoreProfile.isBlocked,
         weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
         timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
+        dyslexiaFriendlyMode: firestoreProfile.dyslexiaFriendlyMode || false,
       };
       
       const isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
@@ -336,14 +337,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const saveProfileToFirestore = async (values: Partial<StudentProfile>) => {
     if (!user || !firestore) return;
     const profileRef = doc(firestore, 'users', user.uid);
-    const dataToSave = {
-        name: values.name,
-        gradeLevel: values.classLevel,
-        board: values.board,
-        weakSubjects: values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [],
-    };
+    
+    const dataToSave: any = {};
+    if (values.name !== undefined) dataToSave.name = values.name;
+    if (values.classLevel !== undefined) dataToSave.gradeLevel = values.classLevel;
+    if (values.board !== undefined) dataToSave.board = values.board;
+    if (values.weakSubjects !== undefined) dataToSave.weakSubjects = values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [];
+    if (values.dyslexiaFriendlyMode !== undefined) dataToSave.dyslexiaFriendlyMode = values.dyslexiaFriendlyMode;
 
-    await setDoc(profileRef, dataToSave, { merge: true });
+    if (Object.keys(dataToSave).length > 0) {
+      await setDoc(profileRef, dataToSave, { merge: true });
+    }
 
     const finalProfile = { ...studentProfile, ...values };
     setStudentProfileState(finalProfile);
@@ -545,3 +549,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
