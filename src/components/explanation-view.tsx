@@ -207,7 +207,16 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
 
     const components = {
         p: (props: any) => {
-            const text = props.children.map((child: any) => typeof child === 'string' ? child : child.props.children).join('');
+            const children = props.children;
+            let text = '';
+            if (Array.isArray(children)) {
+                text = children.map((child: any) => typeof child === 'string' ? child : (child.props.children || '')).join('');
+            } else if (typeof children === 'string') {
+                text = children;
+            } else if (children && typeof children === 'object' && 'props' in children) {
+                text = children.props.children;
+            }
+
             if (studentProfile.dyslexiaFriendlyMode) {
                 return <p {...props}><ColorCodedText text={text} /></p>;
             }
@@ -685,4 +694,3 @@ export function ExplanationView() {
   );
 }
 
-    
