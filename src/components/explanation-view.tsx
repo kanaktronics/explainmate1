@@ -140,8 +140,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
             window.speechSynthesis.cancel();
         }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentProfile.dyslexiaFriendlyMode, text, cardId]);
+  }, [studentProfile.dyslexiaFriendlyMode, text, cardId, handleListen]);
 
   useEffect(() => {
     const handleVoicesChanged = () => {};

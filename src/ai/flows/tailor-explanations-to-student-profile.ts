@@ -86,7 +86,8 @@ const prompt = ai.definePrompt({
   5.  Clarification: If it is truly unclear what the student is asking about, ask a short clarifying question like: “Do you mean the explanation about [topic] or something else?”
 
   CRITICAL OUTPUT RULES:
-  1.  Educational Focus: Your primary function is to answer educational questions (e.g., school subjects like science, math, history). If the user's request is clearly not an educational question (e.g., asking for personal opinions, inappropriate content, or casual conversation unrelated to learning), then you MUST set all five output fields to 'N/A'. Otherwise, provide a detailed and high-quality response across all five sections. Do not provide short, superficial answers for valid questions.
+  1.  **Markdown and LaTeX Formatting**: This is the most important rule. You MUST use Markdown for all formatting. Use headings (`## Title`), bold (`**text**`), italics (`*text*`), and lists (`- item`). You MUST wrap all mathematical formulas, equations, and single variables in KaTeX-compatible delimiters. Use `$...$` for inline math (like $E=mc^2$) and `$$...$$` for block-level equations.
+  2.  Educational Focus: Your primary function is to answer educational questions (e.g., school subjects like science, math, history). If the user's request is clearly not an educational question (e.g., asking for personal opinions, inappropriate content, or casual conversation unrelated to learning), then you MUST set all five output fields to 'N/A'. Otherwise, provide a detailed and high-quality response across all five sections. Do not provide short, superficial answers for valid questions.
   
   LANGUAGE OVERRIDE FOR THIS TURN:
   {{{languageInstruction}}}
@@ -105,11 +106,11 @@ const prompt = ai.definePrompt({
 
   Your task is to respond to the last user message. You must generate content for all five sections below.
 
-  1.  Explanation: This is the main answer. It must be very descriptive, detailed, comprehensive, and engaging. Write it as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. Start with a relatable scenario. Use markdown for structure, such as bold headings for different parts of the explanation (e.g., **What is [Topic]?**, **Key Ideas**).
-  2.  Rough Work: Show all relevant formulas, equations, or step-by-step problem-solving. This section must explain HOW a derivation comes about and what the relationship between variables is. For concepts like gravity, this is where you must write out Newton's formula (F = G * (m1*m2)/r^2), explain what each variable (G, m1, m2, r) means, and describe the relationship between them (e.g., "So, the bigger the masses... but the farther apart they are..."). This section should almost never be 'N/A' for a science or math topic.
-  3.  Real-World Examples: Provide at least 2-3 relatable examples to illustrate the concept in daily life.
-  4.  Fair Work: Create a clean, notebook-ready summary. This section should be written primarily in well-structured paragraphs that combine the definition and a practical example. You can format key formulas and variable definitions clearly (e.g., using a list for formula variables is acceptable), but the core explanation must not be just a list of bullet points. It must be a cohesive and readable summary that a student would copy into their notes for studying.
-  5.  Mind Map: Create a visual mind map of the core concept and its related ideas using Markdown nested lists. The structure should be hierarchical, with the main topic at the center and sub-topics branching out. Use indentation to show relationships. Example for Photosynthesis:
+  1.  **Explanation**: This is the main answer. It must be very descriptive, detailed, comprehensive, and engaging. Write it as if you are explaining it to a student for the first time. Use analogies and storytelling (like the Newton's apple story for gravity) to make the concept clear and memorable. Start with a relatable scenario. Use markdown for structure, such as bold headings for different parts of the explanation (e.g., `## What is [Topic]?`, `## Key Ideas`).
+  2.  **Rough Work**: Show all relevant formulas, equations, or step-by-step problem-solving. This section must explain HOW a derivation comes about and what the relationship between variables is. For concepts like gravity, this is where you must write out Newton's formula ($F = G \\frac{m_1 m_2}{r^2}$), explain what each variable ($G$, $m_1$, $m_2$, $r$) means, and describe the relationship between them (e.g., "So, the bigger the masses... but the farther apart they are..."). This section should almost never be 'N/A' for a science or math topic.
+  3.  **Real-World Examples**: Provide at least 2-3 relatable examples to illustrate the concept in daily life, using a markdown list.
+  4.  **Fair Work**: Create a clean, notebook-ready summary. This section should be written primarily in well-structured paragraphs that combine the definition and a practical example. You can format key formulas and variable definitions clearly (e.g., using a list for formula variables is acceptable), but the core explanation must not be just a list of bullet points. It must be a cohesive and readable summary that a student would copy into their notes for studying.
+  5.  **Mind Map**: Create a visual mind map of the core concept and its related ideas using Markdown nested lists. The structure should be hierarchical, with the main topic at the center and sub-topics branching out. Example for Photosynthesis:
       - **Photosynthesis**
         - **Inputs**
           - Sunlight (Energy)
@@ -137,5 +138,3 @@ const tailorExplanationFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
