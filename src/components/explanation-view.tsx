@@ -131,29 +131,16 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   }, [text, isPlaying, isPaused, playbackRate, toast]);
   
   useEffect(() => {
-    if (studentProfile.dyslexiaFriendlyMode && text && text !== 'N/A' && cardId === 'explanation') {
-        handleListen();
-    }
-
-    return () => {
+    const cleanup = () => {
         if (window.speechSynthesis) {
             window.speechSynthesis.cancel();
         }
-    }
-  }, [studentProfile.dyslexiaFriendlyMode, text, cardId, handleListen]);
+    };
+    window.addEventListener('beforeunload', cleanup);
 
-  useEffect(() => {
-    const handleVoicesChanged = () => {};
-    if (window.speechSynthesis) {
-        window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-        window.speechSynthesis.getVoices();
-        
-        return () => {
-            window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-            if (utteranceRef.current) {
-                window.speechSynthesis.cancel();
-            }
-        };
+    return () => {
+        window.removeEventListener('beforeunload', cleanup);
+        cleanup();
     }
   }, []);
 
@@ -209,13 +196,21 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     
     const dyslexiaProps = studentProfile.dyslexiaFriendlyMode ? { className: "font-sans text-lg leading-relaxed" } : {};
 
+    const components = {
+        p: (props: any) => {
+            const text = props.children.map((child: any) => typeof child === 'string' ? child : child.props.children).join('');
+            if (studentProfile.dyslexiaFriendlyMode) {
+                return <p {...props}><ColorCodedText text={text} /></p>;
+            }
+            return <p {...props} />;
+        }
+    }
+
     return (
       <div {...dyslexiaProps} className={cn("prose dark:prose-invert max-w-none", dyslexiaProps.className)}>
-        {studentProfile.dyslexiaFriendlyMode ? <ColorCodedText text={content} /> : 
-          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+        <ReactMarkdown components={components} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {content}
-          </ReactMarkdown>
-        }
+        </ReactMarkdown>
       </div>
     );
   };
@@ -530,7 +525,7 @@ export function ExplanationView() {
             setChat(chat);
             break;
         case 'ACCOUNT_BLOCKED':
-            friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support and we will review it.";
+            friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support.";
             setChat(chat);
             break;
         default:
