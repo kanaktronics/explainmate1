@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -392,44 +393,50 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const addToChat = useCallback(async (message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
     if (!user || !firestore) return;
-  
-    const updatedChat = [...chat, message];
-    setChat(updatedChat);
-  
-    let topic = '';
-    const firstUserMessage = updatedChat.find(m => m.role === 'user');
-    if (firstUserMessage) {
-      const content = firstUserMessage.content;
-      if (typeof content === 'string') {
-        topic = content.substring(0, 50);
-      } else if (typeof content === 'object' && 'text' in content) {
-        topic = content.text.substring(0, 50);
-      }
-    }
-  
-    if (message.role === 'assistant' && topic) {
-      await addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
-    }
-  
-    try {
-      if (activeHistoryId) {
-        const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
-        await setDocument(docRef, { messages: updatedChat, timestamp: new Date().toISOString() }, { merge: true });
-      } else if (topic) {
-        const historyCollection = collection(firestore, 'users', user.uid, 'history');
-        const newHistoryItem: Omit<HistoryItem, 'id'> = {
-          topic,
-          messages: updatedChat,
-          timestamp: new Date().toISOString(),
-          type: historyType,
-        };
-        const newDocRef = await addDocument(historyCollection, newHistoryItem);
-        setActiveHistoryId(newDocRef.id);
-      }
-    } catch (error) {
-      console.error("Failed to save chat history:", error);
-    }
-  }, [user, firestore, chat, activeHistoryId, addInteraction]);
+
+    setChat(prevChat => {
+        const updatedChat = [...prevChat, message];
+
+        // Perform side-effects after state update
+        (async () => {
+            let topic = '';
+            const firstUserMessage = updatedChat.find(m => m.role === 'user');
+            if (firstUserMessage) {
+                const content = firstUserMessage.content;
+                if (typeof content === 'string') {
+                    topic = content.substring(0, 50);
+                } else if (typeof content === 'object' && 'text' in content) {
+                    topic = content.text.substring(0, 50);
+                }
+            }
+
+            if (message.role === 'assistant' && topic) {
+                await addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
+            }
+
+            try {
+                if (activeHistoryId) {
+                    const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
+                    await setDocument(docRef, { messages: updatedChat, timestamp: new Date().toISOString() }, { merge: true });
+                } else if (topic) {
+                    const historyCollection = collection(firestore, 'users', user.uid, 'history');
+                    const newHistoryItem: Omit<HistoryItem, 'id'> = {
+                        topic,
+                        messages: updatedChat,
+                        timestamp: new Date().toISOString(),
+                        type: historyType,
+                    };
+                    const newDocRef = await addDocument(historyCollection, newHistoryItem);
+                    setActiveHistoryId(newDocRef.id);
+                }
+            } catch (error) {
+                console.error("Failed to save chat history:", error);
+            }
+        })();
+
+        return updatedChat;
+    });
+  }, [user, firestore, addInteraction, activeHistoryId]);
 
   const saveExamPlanToHistory = async (plan: ExamPlan, topic: string) => {
     if (!user || !firestore) return;
@@ -549,5 +556,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    

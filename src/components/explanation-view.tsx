@@ -469,10 +469,8 @@ export function ExplanationView() {
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     
-    // Create the updated chat history that will be sent to the AI
     const updatedChatHistory = [...chat, userMessage];
 
-    // Update the UI immediately
     addToChat(userMessage); 
     
     form.reset();
@@ -484,7 +482,7 @@ export function ExplanationView() {
     incrementUsage('explanation');
 
     const input = {
-      chatHistory: updatedChatHistory, // Use the new, updated history
+      chatHistory: updatedChatHistory,
       studentProfile: studentProfile,
     };
 
@@ -498,8 +496,6 @@ export function ExplanationView() {
             title: "Daily Limit Reached",
             description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
           });
-          // Revert optimistic update
-          setChat(chat);
           break;
         case 'PRO_RATE_LIMIT':
             friendlyError = "It looks like you're sending requests faster than normal learning activity. To protect ExplainMate and ensure fair usage for everyone, we've temporarily paused your requests. Please wait a moment and try again.";
@@ -653,5 +649,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
