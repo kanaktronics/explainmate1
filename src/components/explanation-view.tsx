@@ -134,7 +134,8 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     if (studentProfile.dyslexiaFriendlyMode && text && text !== 'N/A' && cardId === 'explanation') {
         handleListen();
     }
-  }, [studentProfile.dyslexiaFriendlyMode, text, cardId, handleListen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentProfile.dyslexiaFriendlyMode, text, cardId]);
 
   useEffect(() => {
     const handleVoicesChanged = () => {};
@@ -672,5 +673,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
