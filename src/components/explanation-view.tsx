@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -142,7 +143,7 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
    useEffect(() => {
     // Cleanup function to stop speech when the component unmounts or re-renders
     return () => {
-      if (window.speechSynthesis) {
+      if (window.speechSynthesis && utteranceRef.current) {
         window.speechSynthesis.cancel();
       }
     };
@@ -185,12 +186,8 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
       return <p className="text-muted-foreground">No content available for this section.</p>;
     }
     
-    const dyslexiaProps = studentProfile.dyslexiaFriendlyMode 
-        ? { className: "font-sans text-lg leading-relaxed dyslexia-friendly" } 
-        : {};
-
     return (
-      <div {...dyslexiaProps} className={cn("prose dark:prose-invert max-w-none", dyslexiaProps.className)}>
+      <div className={cn("prose dark:prose-invert max-w-none", studentProfile.dyslexiaFriendlyMode && "dyslexia-friendly")}>
         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {content}
         </ReactMarkdown>
@@ -499,23 +496,19 @@ export function ExplanationView() {
             title: "Daily Limit Reached",
             description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
           });
-          setChat(chat); // Revert optimistic update
+          setChat(currentChat.slice(0, -1)); // Revert optimistic update
           break;
         case 'PRO_RATE_LIMIT':
             friendlyError = "It looks like you're sending requests faster than normal learning activity. To protect ExplainMate and ensure fair usage for everyone, we've temporarily paused your requests. Please wait a moment and try again.";
-            setChat(chat);
             break;
         case 'PRO_DAILY_LIMIT':
             friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support and we’ll unlock additional access for you.";
-            setChat(chat);
             break;
         case 'ACCOUNT_BLOCKED':
             friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support.";
-            setChat(chat);
             break;
         default:
           friendlyError = result.error;
-          setChat(chat);
           break;
       }
       if(result.error !== 'DAILY_LIMIT_REACHED') {
@@ -526,7 +519,6 @@ export function ExplanationView() {
       addToChat(assistantMessage);
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
-       setChat(chat); // Revert optimistic update
     }
     setIsLoading(false);
   }
