@@ -95,9 +95,9 @@ export const MindMapView = ({ markdown }: { markdown: string }) => {
 
   return (
     <div className="flex justify-center p-4 overflow-x-auto">
-      <MindMapNodeComponent node={mindMapTree} />
+      <div className="inline-block min-w-full">
+        <MindMapNodeComponent node={mindMapTree} />
+      </div>
     </div>
   );
 };
-
-    

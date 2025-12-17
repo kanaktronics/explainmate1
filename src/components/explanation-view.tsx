@@ -134,6 +134,12 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
     if (studentProfile.dyslexiaFriendlyMode && text && text !== 'N/A' && cardId === 'explanation') {
         handleListen();
     }
+
+    return () => {
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentProfile.dyslexiaFriendlyMode, text, cardId]);
 
