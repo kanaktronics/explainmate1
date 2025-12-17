@@ -20,8 +20,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ScrollArea } from "./scroll-area"
-import { ClientOnly } from "../client-only"
-
 
 type SidebarContext = {
   open: boolean
@@ -143,11 +141,9 @@ const Sidebar = React.forwardRef<
                 <SheetTitle>Main Menu</SheetTitle>
               </SheetHeader>
               {header}
-              <ClientOnly>
-                <ScrollArea className="flex-1 h-full">
-                    {content}
-                </ScrollArea>
-              </ClientOnly>
+              <ScrollArea className="flex-1 h-full">
+                  {content}
+              </ScrollArea>
               {footer}
             </SheetContent>
           </Sheet>
@@ -480,5 +476,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
-    
