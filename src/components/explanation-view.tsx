@@ -469,9 +469,8 @@ export function ExplanationView() {
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     
-    const updatedChatHistory = [...chat, userMessage];
-
     addToChat(userMessage); 
+    const updatedChatHistory = [...chat, userMessage];
     
     form.reset();
     setImagePreview(null);

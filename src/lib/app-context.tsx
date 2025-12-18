@@ -391,7 +391,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
   
   
-  const addToChat = useCallback(async (message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
+  const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
     if (!user || !firestore) return;
 
     setChat(prevChat => {
