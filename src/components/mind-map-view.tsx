@@ -55,27 +55,35 @@ const MindMapNodeComponent = ({ node, level = 0 }: { node: MindMapNode, level?: 
   const style = levelStyles[Math.min(level, levelStyles.length - 1)];
 
   return (
-    <div className="flex flex-col items-center">
-      <div className={cn('shadow-md text-center', style.bg, style.text, style.padding, style.shape)}>
+    <div className="flex flex-col items-center relative">
+      {/* Vertical line connecting to parent (for mobile) */}
+      {level > 0 && <div className="absolute bottom-full h-8 w-px bg-border md:hidden" />}
+
+      <div className={cn('shadow-md text-center z-10', style.bg, style.text, style.padding, style.shape)}>
         <p className={cn('font-semibold', level === 0 ? 'text-lg' : 'text-sm')}>{node.content}</p>
       </div>
 
       {node.children.length > 0 && (
-        <div className="flex justify-center gap-4 mt-8 relative">
-          {/* Connecting lines */}
-          <div className="absolute top-[-1rem] h-4 w-px bg-border -z-10" style={{ height: '1rem' }}></div>
-          {node.children.map((_, index) => (
-             <div key={index} className="absolute top-[-1rem] h-4 border-t border-l border-r border-border -z-10" style={{ 
-                 width: '100%',
-                 left: `${(index - (node.children.length-1)/2) * 100/node.children.length}%`,
-                 transform: 'translateX(-50%)',
-             }}/>
-          ))}
-
+        <div className="flex flex-col md:flex-row items-center md:items-start md:justify-center md:gap-4 mt-8 relative">
+          {/* Horizontal connecting line (for desktop) */}
+          <div className="hidden md:block absolute top-0 left-0 right-0 h-px bg-border" style={{ transform: 'translateY(-1rem)' }}/>
 
           {node.children.map((child, index) => (
-            <div key={index} className="relative pt-8 flex-1">
-               <div className="absolute top-0 left-1/2 w-px h-8 bg-border -z-10" />
+            <div key={index} className="relative pt-8 md:pt-0 md:flex-1">
+               {/* Vertical line from node to child (desktop) */}
+               <div className="hidden md:block absolute top-0 left-1/2 w-px h-8 bg-border" style={{ transform: 'translateY(-2rem)'}}/>
+               
+               {/* Horizontal line segment for each child (desktop) */}
+               <div
+                  className="hidden md:block absolute top-0 h-px bg-border"
+                  style={{
+                    width: node.children.length > 1 && index !== 0 && index !== node.children.length - 1 ? '100%' : '50%',
+                    left: index === 0 ? '50%' : '0%',
+                    right: index === node.children.length - 1 ? '50%' : '0%',
+                    transform: 'translateY(-2rem)'
+                  }}
+                />
+
                <MindMapNodeComponent node={child} level={level + 1} />
             </div>
           ))}
