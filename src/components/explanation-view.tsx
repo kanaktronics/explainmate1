@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback }from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Check, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play, GitMerge } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, ChevronDown, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play, GitMerge } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -27,6 +27,8 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { MindMapView } from './mind-map-view';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
@@ -40,10 +42,12 @@ const explanationSchema = z.object({
 interface ExplanationCardProps {
   cardId: string;
   title: string;
+  icon: React.ReactNode;
   text: string;
+  isOnlyCard?: boolean;
 }
 
-const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
+const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: ExplanationCardProps) => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -141,7 +145,6 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   }, [text, isPlaying, isPaused, playbackRate, toast]);
   
    useEffect(() => {
-    // Cleanup function to stop speech when the component unmounts or text changes
     return () => {
       if (window.speechSynthesis && utteranceRef.current) {
         window.speechSynthesis.cancel();
@@ -186,6 +189,14 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
       return <p className="text-muted-foreground">No content available for this section.</p>;
     }
     
+    if (cardId === 'mindMap') {
+      return (
+        <div className="overflow-x-auto p-4">
+          <MindMapView markdown={content} />
+        </div>
+      );
+    }
+
     return (
       <div className={cn("prose dark:prose-invert max-w-none", studentProfile.dyslexiaFriendlyMode && "dyslexia-friendly")}>
         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
@@ -203,30 +214,32 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
 
   return (
     <Card>
-        <CardHeader className='flex-row items-center justify-between'>
-            <CardTitle>{title}</CardTitle>
-            <div className='flex items-center gap-2'>
-              <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
-                  {getButtonIcon()}
-              </Button>
-              <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon"><MoreVertical/></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                      <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(0.8)}>0.8x {playbackRate === 0.8 && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>1x {playbackRate === 1 && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.25)}>1.25x {playbackRate === 1.25 && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>1.5x {playbackRate === 1.5 && <Check className='ml-auto'/>}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={handleCopy}>
-                          {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
-                      </DropdownMenuItem>
-                  </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-        </CardHeader>
+        {!isOnlyCard && (
+          <CardHeader className='flex-row items-center justify-between'>
+              <CardTitle className="flex items-center gap-2">{icon} {title}</CardTitle>
+              <div className='flex items-center gap-2'>
+                <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
+                    {getButtonIcon()}
+                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon"><MoreVertical/></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
+                        <DropdownMenuItem onSelect={() => handleSpeedChange(0.8)}>0.8x {playbackRate === 0.8 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleSpeedChange(1)}>1x {playbackRate === 1 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleSpeedChange(1.25)}>1.25x {playbackRate === 1.25 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleSpeedChange(1.5)}>1.5x {playbackRate === 1.5 && <Check className='ml-auto'/>}</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={handleCopy}>
+                            {isCopied ? <><Check className="mr-2"/>Copied!</> : <><Clipboard className="mr-2"/>Download (Copy Text)</>}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+          </CardHeader>
+        )}
         <CardContent>
             {renderContent(text)}
         </CardContent>
@@ -234,51 +247,104 @@ const ExplanationCard = ({ cardId, title, text }: ExplanationCardProps) => {
   )
 }
 
+const explanationTabs = [
+    { id: 'explanation', title: 'Explanation', icon: <BookText /> },
+    { id: 'roughWork', title: 'Rough Work', icon: <Codesandbox /> },
+    { id: 'realWorldExamples', title: 'Real-World', icon: <Globe /> },
+    { id: 'fairWork', title: 'Fair Work', icon: <PenSquare /> },
+    { id: 'mindMap', title: 'Mind Map', icon: <GitMerge /> },
+];
+
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('explanation');
+
+  const getTabContent = (tabId: string) => {
+    switch (tabId) {
+      case 'explanation': return explanation.explanation;
+      case 'roughWork': return explanation.roughWork;
+      case 'realWorldExamples': return explanation.realWorldExamples;
+      case 'fairWork': return explanation.fairWork;
+      case 'mindMap': return explanation.mindMap;
+      default: return '';
+    }
+  };
+
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A' || explanation.mindMap !== 'N/A';
   
+  if (!hasMultipleTabs) {
+      return (
+          <div className="flex items-start gap-4">
+              <Avatar className="bg-primary flex-shrink-0">
+                <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+              </Avatar>
+              <ExplanationCard cardId="explanation" title="Explanation" icon={<BookText/>} text={explanation.explanation} isOnlyCard={true}/>
+          </div>
+      )
+  }
+
+  if (isMobile) {
+      const activeTabInfo = explanationTabs.find(t => t.id === activeTab);
+      return (
+           <div className="flex items-start gap-4">
+              <Avatar className="bg-primary flex-shrink-0">
+                <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+              </Avatar>
+              <div className="w-full space-y-2">
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between">
+                        {activeTabInfo?.icon}
+                        <span className="font-semibold">{activeTabInfo?.title}</span>
+                        <ChevronDown />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                      {explanationTabs.map(tab => {
+                        if (getTabContent(tab.id) === 'N/A') return null;
+                        return (
+                          <DropdownMenuItem key={tab.id} onSelect={() => setActiveTab(tab.id)}>
+                            {tab.icon}
+                            <span>{tab.title}</span>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <ExplanationCard 
+                      cardId={activeTab} 
+                      title={activeTabInfo?.title || ''} 
+                      icon={activeTabInfo?.icon || <></>}
+                      text={getTabContent(activeTab)} 
+                      isOnlyCard={true}
+                  />
+              </div>
+           </div>
+      )
+  }
+
   return (
     <div className="flex items-start gap-4">
         <Avatar className="bg-primary flex-shrink-0">
           <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
         </Avatar>
-        {hasMultipleTabs ? (
-            <Tabs defaultValue="explanation" className="w-full">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-                    <TabsTrigger value="explanation"><BookText className="mr-2" />Explanation</TabsTrigger>
-                    <TabsTrigger value="roughWork"><Codesandbox className="mr-2" />Rough Work</TabsTrigger>
-                    <TabsTrigger value="realWorld"><Globe className="mr-2" />Real-World</TabsTrigger>
-                    <TabsTrigger value="fairWork"><PenSquare className="mr-2" />Fair Work</TabsTrigger>
-                    <TabsTrigger value="mindMap"><GitMerge className="mr-2" />Mind Map</TabsTrigger>
-                </TabsList>
-                <TabsContent value="explanation">
-                  <ExplanationCard cardId="explanation" title="Explanation" text={explanation.explanation} />
-                </TabsContent>
-                <TabsContent value="roughWork">
-                   <ExplanationCard cardId="roughWork" title="Rough Work" text={explanation.roughWork} />
-                </TabsContent>
-                <TabsContent value="realWorld">
-                   <ExplanationCard cardId="realWorld" title="Real-World Examples" text={explanation.realWorldExamples} />
-                </TabsContent>
-                <TabsContent value="fairWork">
-                   <ExplanationCard cardId="fairWork" title="Fair Work (Notebook-ready)" text={explanation.fairWork} />
-                </TabsContent>
-                <TabsContent value="mindMap">
-                   <Card>
-                        <CardHeader>
-                            <CardTitle>Mind Map</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                           <div className="overflow-x-auto p-4">
-                              <MindMapView markdown={explanation.mindMap} />
-                           </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-        ) : (
-             <ExplanationCard cardId="explanation" title="Explanation" text={explanation.explanation} />
-        )}
+        <Tabs defaultValue="explanation" className="w-full">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+                {explanationTabs.map(tab => {
+                    if (getTabContent(tab.id) === 'N/A') return null;
+                    return <TabsTrigger key={tab.id} value={tab.id}>{React.cloneElement(tab.icon, {className: "mr-2"})} {tab.title}</TabsTrigger>
+                })}
+            </TabsList>
+            {explanationTabs.map(tab => {
+                 const content = getTabContent(tab.id);
+                 if (content === 'N/A') return null;
+                 return (
+                    <TabsContent key={tab.id} value={tab.id}>
+                      <ExplanationCard cardId={tab.id} title={tab.title} icon={tab.icon} text={content} />
+                    </TabsContent>
+                 )
+            })}
+        </Tabs>
     </div>
   );
 };
@@ -313,7 +379,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
 
 
 export function ExplanationView() {
-  const { user, studentProfile, chat, setChat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
+  const { user, studentProfile, chat, addToChat, isProfileComplete, incrementUsage, setView, showAd } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -469,8 +535,8 @@ export function ExplanationView() {
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     
-    addToChat(userMessage); 
     const updatedChatHistory = [...chat, userMessage];
+    addToChat(userMessage); 
     
     form.reset();
     setImagePreview(null);
@@ -648,3 +714,5 @@ export function ExplanationView() {
     </div>
   );
 }
+
+    
