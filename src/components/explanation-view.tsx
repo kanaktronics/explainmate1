@@ -33,7 +33,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12MB
 
 const explanationSchema = z.object({
   prompt: z.string().min(1, { message: 'Please ask a question.' }),
@@ -331,7 +331,8 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
         <Tabs defaultValue="explanation" className="w-full">
             <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
                 {explanationTabs.map(tab => {
-                    if (getTabContent(tab.id) === 'N/A') return null;
+                    const content = getTabContent(tab.id);
+                    if (content === 'N/A') return null;
                     return <TabsTrigger key={tab.id} value={tab.id}>{React.cloneElement(tab.icon, {className: "mr-2"})} {tab.title}</TabsTrigger>
                 })}
             </TabsList>
@@ -466,7 +467,7 @@ export function ExplanationView() {
     const file = e.target.files?.[0];
     if (file) {
         if (file.size > MAX_FILE_SIZE) {
-            toast({ variant: 'destructive', title: 'File too large', description: 'Please select an image smaller than 5MB.' });
+            toast({ variant: 'destructive', title: 'File too large', description: `Please select an image smaller than ${MAX_FILE_SIZE / 1024 / 1024}MB.` });
             return;
         }
         const reader = new FileReader();
