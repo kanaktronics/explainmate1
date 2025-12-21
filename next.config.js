@@ -2,10 +2,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  api: {
-    bodyParser: {
-      sizeLimit: '15mb',
-    },
+  serverActions: {
+    bodySizeLimit: '15mb',
   },
   typescript: {
     ignoreBuildErrors: true,
