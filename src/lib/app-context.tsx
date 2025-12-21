@@ -386,6 +386,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
     }
   }
+
+  const generateHistoryTitle = (question: string): string => {
+    // Remove common filler words and question prefixes
+    const cleanQuestion = question
+        .replace(/^(what is|what are|explain|can you explain|please explain|tell me about)\s+/i, '')
+        .replace(/\?$/, '')
+        .trim();
+
+    // Capitalize the first letter
+    let title = cleanQuestion.charAt(0).toUpperCase() + cleanQuestion.slice(1);
+    
+    // Trim to a reasonable length
+    if (title.length > 50) {
+        title = title.substring(0, 50).trim() + '...';
+    }
+
+    return title;
+  };
   
   
   const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
@@ -400,10 +418,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const firstUserMessage = updatedChat.find(m => m.role === 'user');
             if (firstUserMessage) {
                 const content = firstUserMessage.content;
+                let userQuestion = '';
                 if (typeof content === 'string') {
-                    topic = content.substring(0, 50);
+                    userQuestion = content;
                 } else if (typeof content === 'object' && 'text' in content) {
-                    topic = content.text.substring(0, 50);
+                    userQuestion = content.text;
+                }
+
+                if (userQuestion) {
+                    topic = generateHistoryTitle(userQuestion);
                 }
             }
 
