@@ -390,19 +390,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const generateHistoryTitle = (question: string): string => {
     // Remove common filler words and question prefixes
     const cleanQuestion = question
-        .replace(/^(what is|what are|explain|can you explain|please explain|tell me about)\s+/i, '')
-        .replace(/\?$/, '')
-        .trim();
+      .replace(/^(what is|what are|explain|can you explain|please explain|tell me about|who is|who are|define)\s+/i, '')
+      .replace(/\?$/, '')
+      .trim();
 
-    // Capitalize the first letter
-    let title = cleanQuestion.charAt(0).toUpperCase() + cleanQuestion.slice(1);
+    // Split into words, take the first 5, and join back
+    const words = cleanQuestion.split(/\s+/);
+    const shortTitleWords = words.slice(0, 5);
+    let title = shortTitleWords.join(' ');
     
-    // Trim to a reasonable length
-    if (title.length > 50) {
-        title = title.substring(0, 50).trim() + '...';
+    // Add ellipsis if the original was longer
+    if (words.length > 5) {
+        title += '...';
+    }
+    
+    if (!title) {
+        return "New Chat";
     }
 
-    return title;
+    // Capitalize the first letter
+    return title.charAt(0).toUpperCase() + title.slice(1);
   };
   
   
