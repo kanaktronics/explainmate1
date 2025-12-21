@@ -82,7 +82,6 @@ const defaultProfile: StudentProfile = {
     isBlocked: false,
     weeklyTimeSpent: 0,
     timeSpentLastReset: new Date().toISOString(),
-    dyslexiaFriendlyMode: false,
 };
 
 
@@ -274,7 +273,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isBlocked: firestoreProfile.isBlocked,
         weeklyTimeSpent: firestoreProfile.weeklyTimeSpent || 0,
         timeSpentLastReset: firestoreProfile.timeSpentLastReset || new Date().toISOString(),
-        dyslexiaFriendlyMode: firestoreProfile.dyslexiaFriendlyMode || false,
       };
       
       const isNewDay = serverProfile.lastUsageDate && !isToday(new Date(serverProfile.lastUsageDate));
@@ -344,7 +342,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (values.classLevel !== undefined) dataToSave.gradeLevel = values.classLevel;
     if (values.board !== undefined) dataToSave.board = values.board;
     if (values.weakSubjects !== undefined) dataToSave.weakSubjects = values.weakSubjects?.split(',').map(s => s.trim()).filter(Boolean) || [];
-    if (values.dyslexiaFriendlyMode !== undefined) dataToSave.dyslexiaFriendlyMode = values.dyslexiaFriendlyMode;
 
     if (Object.keys(dataToSave).length > 0) {
       await setDoc(profileRef, dataToSave, { merge: true });

@@ -84,13 +84,4 @@
   body {
     @apply bg-background text-foreground;
   }
-  .dyslexia-friendly .prose p:nth-child(odd) {
-    color: hsl(var(--foreground));
-  }
-  .dyslexia-friendly .prose p:nth-child(even) {
-    color: hsl(210 100% 45%);
-  }
-  .dark .dyslexia-friendly .prose p:nth-child(even) {
-    color: hsl(210 100% 75%);
-  }
 }

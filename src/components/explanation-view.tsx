@@ -53,7 +53,6 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const { studentProfile } = useAppContext();
 
   const { toast } = useToast();
 
@@ -198,7 +197,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
     }
 
     return (
-      <div className={cn("prose dark:prose-invert max-w-none", studentProfile.dyslexiaFriendlyMode && "dyslexia-friendly")}>
+      <div className="prose dark:prose-invert max-w-none">
         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {content}
         </ReactMarkdown>
@@ -546,12 +545,10 @@ export function ExplanationView() {
 
     incrementUsage('explanation');
 
-    const input = {
+    const result = await getExplanation({
       chatHistory: updatedChatHistory,
       studentProfile: studentProfile,
-    };
-
-    const result = await getExplanation(input);
+    });
 
     if (result && 'error' in result) {
       let friendlyError = 'An unexpected error occurred. Please try again.';
@@ -596,11 +593,9 @@ export function ExplanationView() {
     }
     return null;
   };
-  
-  const dyslexicFontClass = studentProfile.dyslexiaFriendlyMode ? "font-sans" : "";
 
   return (
-    <div className={cn('flex flex-col h-full', dyslexicFontClass)}>
+    <div className='flex flex-col h-full'>
       <div className="flex-1 overflow-y-auto">
         <div className="p-1 sm:p-2 md:p-4 space-y-8">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}

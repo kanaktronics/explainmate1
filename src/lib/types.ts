@@ -1,4 +1,5 @@
 
+
 import { ProgressEngineOutput } from "@/ai/flows/run-progress-engine";
 import { GenerateExamPlanOutput } from "@/ai/flows/generate-exam-plan";
 import { GenerateSubjectTopicsOutput } from "@/ai/flows/generate-subject-topics";
@@ -21,7 +22,6 @@ export interface StudentProfile {
   isBlocked: boolean;
   weeklyTimeSpent: number;
   timeSpentLastReset: string;
-  dyslexiaFriendlyMode?: boolean;
 }
 
 export interface Explanation {

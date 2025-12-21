@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -17,7 +18,7 @@ import { AppLogo } from '@/components/app-logo';
 import { StudentProfile } from '@/components/student-profile';
 import { MainPanel } from '@/components/main-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users, TrendingUp, GraduationCap, ClipboardCheck, Eye } from 'lucide-react';
+import { BookOpen, Contact, HelpCircle, Info, ChevronDown, History, Trash2, X, Sparkles, Zap, LogOut, Shield, FileText, Receipt, Truck, LogIn, Users, TrendingUp, GraduationCap, ClipboardCheck } from 'lucide-react';
 import React, { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HistoryItem } from '@/lib/types';
@@ -29,8 +30,6 @@ import { useFirebase } from '@/firebase';
 import { AdPopup } from '@/components/ad-popup';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Label } from './ui/label';
-import { Switch } from './ui/switch';
 
 function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher-companion' | 'exam-prep' }) {
   const { history, teacherHistory, examPrepHistory, loadChatFromHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory, user, view } = useAppContext();
@@ -154,37 +153,6 @@ function ProSection() {
             </Button>
         </div>
     )
-}
-
-function AccessibilitySection() {
-  const { studentProfile, saveProfileToFirestore } = useAppContext();
-
-  const handleDyslexiaModeChange = (checked: boolean) => {
-    saveProfileToFirestore({ dyslexiaFriendlyMode: checked });
-  }
-
-  if (!studentProfile.id) return null;
-
-  return (
-    <div className='px-4'>
-      <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-        <div className="space-y-0.5">
-          <Label htmlFor="dyslexia-mode" className='flex items-center gap-2'>
-            <Eye className="h-4 w-4"/>
-            Dyslexia-Friendly
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Enhance readability with special fonts and colors.
-          </p>
-        </div>
-        <Switch
-          id="dyslexia-mode"
-          checked={studentProfile.dyslexiaFriendlyMode}
-          onCheckedChange={handleDyslexiaModeChange}
-        />
-      </div>
-    </div>
-  )
 }
 
 function UserProfileSection() {
@@ -341,8 +309,6 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                 </SidebarMenu>
                 <SidebarSeparator />
                 <ProSection />
-                <SidebarSeparator />
-                <AccessibilitySection />
                 <SidebarSeparator />
                 <HistorySection historyType="explanation" />
                 <HistorySection historyType="teacher-companion" />
