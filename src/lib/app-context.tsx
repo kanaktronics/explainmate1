@@ -388,18 +388,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const generateHistoryTitle = (question: string): string => {
-    // Remove common filler words and question prefixes
     const cleanQuestion = question
       .replace(/^(what is|what are|explain|can you explain|please explain|tell me about|who is|who are|define)\s+/i, '')
       .replace(/\?$/, '')
       .trim();
-
-    // Split into words, take the first 5, and join back
+      
     const words = cleanQuestion.split(/\s+/);
     const shortTitleWords = words.slice(0, 5);
     let title = shortTitleWords.join(' ');
     
-    // Add ellipsis if the original was longer
     if (words.length > 5) {
         title += '...';
     }
@@ -408,7 +405,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return "New Chat";
     }
 
-    // Capitalize the first letter
     return title.charAt(0).toUpperCase() + title.slice(1);
   };
   
@@ -583,3 +579,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
