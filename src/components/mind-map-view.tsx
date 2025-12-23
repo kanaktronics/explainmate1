@@ -88,6 +88,11 @@ export const MindMapView = ({ markdown }: { markdown: string }) => {
     return <p className="text-muted-foreground">Mind map could not be generated.</p>;
   }
 
-  return <MindMapNodeComponent node={mindMapTree} />;
+  return (
+    <div className="w-full overflow-x-auto">
+        <div className="inline-block p-4 min-w-full">
+            <MindMapNodeComponent node={mindMapTree} />
+        </div>
+    </div>
+  );
 };
-
