@@ -84,4 +84,23 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Mobile-specific typography improvements */
+  @media (max-width: 768px) {
+    .prose {
+      @apply text-base;
+    }
+    .prose p {
+      @apply leading-relaxed;
+    }
+    .prose h1, .prose h2, .prose h3 {
+      @apply font-semibold;
+    }
+    .prose ul, .prose ol {
+        @apply my-4;
+    }
+    .prose li {
+        @apply my-2;
+    }
+  }
 }

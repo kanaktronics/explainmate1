@@ -202,14 +202,16 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
     
     if (cardId === 'mindMap') {
       return (
-        <div className="overflow-x-auto">
-          <MindMapView markdown={content} />
+        <div className="max-w-full overflow-x-auto overflow-y-hidden py-3">
+          <div className="min-w-max">
+            <MindMapView markdown={content} />
+          </div>
         </div>
       );
     }
 
     return (
-      <div className="prose dark:prose-invert max-w-none">
+      <div className="prose dark:prose-invert max-w-none md:prose-sm lg:prose-base prose-li:my-1 prose-p:leading-relaxed">
         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {content}
         </ReactMarkdown>
@@ -224,17 +226,17 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   }
 
   return (
-    <Card className='md:border-faint'>
+    <Card className='md:border-faint border-transparent shadow-none md:shadow-sm bg-transparent md:bg-card'>
         {!isOnlyCard && (
-          <CardHeader className='flex-row items-center justify-between'>
-              <CardTitle className="flex items-center gap-2">{icon} {title}</CardTitle>
-              <div className='flex items-center gap-2'>
-                <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0">
+          <CardHeader className='flex-row items-center justify-between p-4 md:p-6'>
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">{icon} {title}</CardTitle>
+              <div className='flex items-center gap-1 md:gap-2'>
+                <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0 h-8 w-8 md:h-9 md:w-9">
                     {getButtonIcon()}
                 </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreVertical/></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9"><MoreVertical/></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
@@ -251,7 +253,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
               </div>
           </CardHeader>
         )}
-        <CardContent className="md:p-6">
+        <CardContent className={cn("p-4 md:p-6", {"pt-0 md:pt-0": !isOnlyCard})}>
             {renderContent(text)}
         </CardContent>
     </Card>
@@ -285,7 +287,7 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   
   if (!hasMultipleTabs) {
       return (
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-2 md:gap-4">
               <Avatar className="bg-primary flex-shrink-0">
                 <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
               </Avatar>
@@ -297,7 +299,7 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   if (isMobile) {
       const activeTabInfo = explanationTabs.find(t => t.id === activeTab);
       return (
-           <div className="flex items-start gap-4">
+           <div className="flex items-start gap-2 md:gap-4">
               <Avatar className="bg-primary flex-shrink-0">
                 <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
               </Avatar>
@@ -335,7 +337,7 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   }
 
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-2 md:gap-4">
         <Avatar className="bg-primary flex-shrink-0">
           <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
         </Avatar>
@@ -372,7 +374,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
   const imageUrl = typeof content === 'object' && content !== null && 'imageUrl' in content ? content.imageUrl : undefined;
 
   return (
-    <div className="flex items-start gap-4 justify-end">
+    <div className="flex items-start gap-2 md:gap-4 justify-end">
       <Card className="bg-muted">
         <CardContent className="p-3">
           {imageUrl && (
@@ -610,12 +612,12 @@ export function ExplanationView() {
   return (
     <div className='flex flex-col h-full'>
       <ScrollArea className="flex-1" id="chat-scroll-area">
-        <div className="p-1 sm:p-2 md:p-4 space-y-4 md:space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
             
             {isLoading && (
-              <div className="flex items-start gap-4 animate-in fade-in duration-500">
+               <div className="flex items-start gap-2 md:gap-4 animate-in fade-in duration-500">
                 <Avatar className="bg-primary flex-shrink-0">
                   <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
                 </Avatar>
@@ -640,7 +642,7 @@ export function ExplanationView() {
 
       <div className="flex-shrink-0 p-2 md:p-4 bg-background/80 backdrop-blur-sm">
         <Card className="max-w-4xl mx-auto">
-          <CardContent className="p-2">
+          <CardContent className="p-2 md:p-3">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
                 <Button 
@@ -649,7 +651,7 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleImageButtonClick}
                     title="Upload Image (Pro)"
-                    className='h-12 w-12 md:h-10 md:w-10'
+                    className='h-12 w-12 md:h-12 md:w-12'
                     >
                     <ImageIcon />
                 </Button>
@@ -680,7 +682,7 @@ export function ExplanationView() {
                             <Textarea 
                                 placeholder="Explain the steps of photosynthesis..." 
                                 {...field}
-                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-base md:text-sm p-3 md:p-2 min-h-[48px] md:min-h-[40px]"
+                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-base md:text-base p-3 md:p-4 min-h-[52px] md:min-h-[52px]"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
@@ -704,11 +706,11 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleListen}
                     title="Ask with your voice"
-                    className='h-12 w-12 md:h-10 md:w-10'
+                    className='h-12 w-12 md:h-12 md:w-12'
                     >
                     <Mic />
                 </Button>
-                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon" className='h-12 w-12 md:h-10 md:w-10'>
+                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon" className='h-12 w-12 md:h-12 md:w-12'>
                   <Send />
                   <span className="sr-only">Send</span>
                 </Button>
