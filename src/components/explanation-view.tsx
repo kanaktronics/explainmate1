@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -33,7 +34,7 @@ import { ScrollArea } from './ui/scroll-area';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
-const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
 const explanationSchema = z.object({
   prompt: z.string().min(1, { message: 'Please ask a question.' }),
@@ -598,21 +599,21 @@ export function ExplanationView() {
 
   return (
     <div className='flex flex-col h-full'>
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1" id="chat-scroll-area">
         <div className="p-1 sm:p-2 md:p-4 space-y-8">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
             
             {isLoading && (
-              <div className="flex justify-center items-center p-8 animate-in fade-in duration-500">
-                <div className="flex flex-col items-center gap-4 text-center">
-                    <div className="bg-primary p-3 rounded-lg animate-pulse">
-                      <BrainCircuit className="text-primary-foreground h-8 w-8" />
+              <div className="flex items-start gap-4 animate-in fade-in duration-500">
+                <Avatar className="bg-primary flex-shrink-0">
+                  <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
+                </Avatar>
+                <div className="flex items-center gap-2 pt-2">
+                    <div className="bg-muted p-2 rounded-full animate-pulse">
+                      <div className="h-2 w-2 bg-primary rounded-full"></div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-primary">ExplainMate is thinking...</p>
-                      <p className="text-sm text-muted-foreground">Please wait a moment.</p>
-                    </div>
+                    <p className="text-sm font-semibold text-primary">ExplainMate is thinking...</p>
                 </div>
               </div>
             )}
@@ -625,7 +626,7 @@ export function ExplanationView() {
             )}
              <div ref={chatEndRef} />
         </div>
-      </div>
+      </ScrollArea>
 
       <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-sm">
         <Card className="max-w-4xl mx-auto">
