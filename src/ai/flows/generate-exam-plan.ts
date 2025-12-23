@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { differenceInDays } from 'date-fns';
 
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe("The student's class level."),
@@ -25,6 +26,11 @@ const GenerateExamPlanInputSchema = z.object({
   studentProfile: StudentProfileSchema.describe('The profile of the student.'),
 });
 export type GenerateExamPlanInput = z.infer<typeof GenerateExamPlanInputSchema>;
+
+// Internal schema used by the prompt, which includes the calculated days
+const InternalPromptInputSchema = GenerateExamPlanInputSchema.extend({
+    daysUntilExam: z.number().describe('The exact number of days available for the study plan.'),
+});
 
 const TaskSchema = z.object({
   type: z.enum(['explanation', 'quiz', 'revision', 'practice']).describe('The type of study task.'),
@@ -69,7 +75,7 @@ export async function generateExamPlan(
 
 const examPlanPrompt = ai.definePrompt({
   name: 'examPlanPrompt',
-  input: {schema: GenerateExamPlanInputSchema},
+  input: {schema: InternalPromptInputSchema},
   output: {schema: GenerateExamPlanOutputSchema},
   prompt: `You are an expert academic planner for Indian students. Your task is to create a detailed, day-by-day study roadmap and, if requested, a full-length sample question paper.
 
@@ -81,11 +87,10 @@ Student Profile:
 Exam Details:
 - Subject: {{subject}}
 - Selected Topics: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
-- Today's Date: {{currentDate}}
-- Exam Date: {{examDate}}
+- Days until exam: {{daysUntilExam}}
 
 PART 1: ROADMAP GENERATION (MANDATORY)
-CRITICAL INSTRUCTION: First, you MUST calculate the exact number of days available from "Today's Date" ({{currentDate}}) to the "Exam Date" ({{examDate}}). The roadmap you generate MUST have exactly that many days. For example, if the exam is tomorrow, create a 1-day plan. If it's in 10 days, create a 10-day plan.
+CRITICAL INSTRUCTION: You MUST create a study roadmap that has exactly **{{daysUntilExam}}** days. For example, if there is 1 day, create a 1-day plan. If there are 10 days, create a 10-day plan. DO NOT add more or fewer days.
 
 The roadmap should ONLY cover the **selected topics**: {{#each topics}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Be practical and cover all these topics within the available days. Each day should have a clear goal and a list of tasks (explanation, quiz, revision, practice) with estimated durations. The final day should be for light revision only.
 
@@ -119,7 +124,18 @@ const generateExamPlanFlow = ai.defineFlow(
     outputSchema: GenerateExamPlanOutputSchema,
   },
   async input => {
-    const {output} = await examPlanPrompt(input);
+    // Calculate the number of days available for the plan.
+    const daysUntilExam = differenceInDays(new Date(input.examDate), new Date(input.currentDate)) + 1;
+
+    // Ensure at least a 1-day plan is generated.
+    const planDays = Math.max(1, daysUntilExam);
+
+    const promptInput = {
+        ...input,
+        daysUntilExam: planDays,
+    };
+
+    const {output} = await examPlanPrompt(promptInput);
     return output!;
   }
 );
