@@ -56,34 +56,21 @@ const MindMapNodeComponent = ({ node, level = 0 }: { node: MindMapNode, level?: 
 
   return (
     <div className="flex flex-col items-center relative">
-      {/* Vertical line connecting to parent (for mobile) */}
-      {level > 0 && <div className="absolute bottom-full h-8 w-px bg-border md:hidden" />}
+      {/* Vertical line connecting to parent */}
+      {level > 0 && <div className="absolute bottom-full h-8 w-px bg-border" />}
 
       <div className={cn('shadow-md text-center z-10', style.bg, style.text, style.padding, style.shape)}>
         <p className={cn('font-semibold whitespace-nowrap', level === 0 ? 'text-lg' : 'text-sm')}>{node.content}</p>
       </div>
 
       {node.children.length > 0 && (
-        <div className="flex flex-col md:flex-row items-center md:items-start md:justify-center md:gap-4 mt-8 relative">
-          {/* Horizontal connecting line (for desktop) */}
-          <div className="hidden md:block absolute top-0 left-0 right-0 h-px bg-border" style={{ transform: 'translateY(-1rem)' }}/>
+        <div className="flex flex-wrap items-start justify-center gap-4 mt-8 relative">
+          {/* Connecting line structure (simplified for wrapping) */}
+          <div className="hidden md:block absolute top-0 left-1/4 right-1/4 h-px bg-border -translate-y-4"/>
 
           {node.children.map((child, index) => (
-            <div key={index} className="relative pt-8 md:pt-0 md:flex-1">
-               {/* Vertical line from node to child (desktop) */}
-               <div className="hidden md:block absolute top-0 left-1/2 w-px h-8 bg-border" style={{ transform: 'translateY(-2rem)'}}/>
-               
-               {/* Horizontal line segment for each child (desktop) */}
-               <div
-                  className="hidden md:block absolute top-0 h-px bg-border"
-                  style={{
-                    width: node.children.length > 1 && index !== 0 && index !== node.children.length - 1 ? '100%' : '50%',
-                    left: index === 0 ? '50%' : '0%',
-                    right: index === node.children.length - 1 ? '50%' : '0%',
-                    transform: 'translateY(-2rem)'
-                  }}
-                />
-
+            <div key={index} className="relative pt-8 flex flex-col items-center">
+               <div className="absolute top-0 w-px h-8 bg-border -translate-y-8"/>
                <MindMapNodeComponent node={child} level={level + 1} />
             </div>
           ))}
@@ -103,3 +90,4 @@ export const MindMapView = ({ markdown }: { markdown: string }) => {
 
   return <MindMapNodeComponent node={mindMapTree} />;
 };
+
