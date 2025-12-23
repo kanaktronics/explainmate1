@@ -34,7 +34,7 @@ import { ScrollArea } from './ui/scroll-area';
 
 const MAX_PROMPT_LENGTH_FREE = 500;
 const MAX_PROMPT_LENGTH_PRO = 2000;
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12MB
 
 const explanationSchema = z.object({
   prompt: z.string().min(1, { message: 'Please ask a question.' }),
@@ -116,10 +116,13 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
     let selectedVoice: SpeechSynthesisVoice | undefined;
 
     if (languageOfContent === 'hindi' || languageOfContent === 'hinglish') {
-        selectedVoice = voices.find(v => v.lang.startsWith('hi'));
+        selectedVoice = voices.find(v => v.lang.startsWith('hi') && v.name.includes('Google'));
+        if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.lang.startsWith('hi'));
+        }
         utterance.lang = 'hi-IN';
     } else {
-        selectedVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural')));
+        selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
         if (!selectedVoice) {
             selectedVoice = voices.find(v => v.lang.startsWith('en'));
         }
@@ -146,12 +149,19 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   }, [text, isPlaying, isPaused, playbackRate, toast]);
   
    useEffect(() => {
+    // Ensure voices are loaded
+    const handleVoicesChanged = () => {
+      // The voices are now loaded, you could re-trigger something here if needed
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+    
     return () => {
-      if (window.speechSynthesis && utteranceRef.current) {
+      if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
+        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
       }
     };
-  }, [text]);
+  }, []);
 
 
   const handleCopy = () => {
@@ -708,3 +718,4 @@ export function ExplanationView() {
     </div>
   );
 }
+
