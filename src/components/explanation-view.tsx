@@ -202,7 +202,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
     
     if (cardId === 'mindMap') {
       return (
-        <div className="overflow-x-auto p-4">
+        <div className="overflow-x-auto">
           <MindMapView markdown={content} />
         </div>
       );
@@ -718,4 +718,3 @@ export function ExplanationView() {
     </div>
   );
 }
-

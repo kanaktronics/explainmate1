@@ -60,7 +60,7 @@ const MindMapNodeComponent = ({ node, level = 0 }: { node: MindMapNode, level?: 
       {level > 0 && <div className="absolute bottom-full h-8 w-px bg-border md:hidden" />}
 
       <div className={cn('shadow-md text-center z-10', style.bg, style.text, style.padding, style.shape)}>
-        <p className={cn('font-semibold', level === 0 ? 'text-lg' : 'text-sm')}>{node.content}</p>
+        <p className={cn('font-semibold whitespace-nowrap', level === 0 ? 'text-lg' : 'text-sm')}>{node.content}</p>
       </div>
 
       {node.children.length > 0 && (
@@ -102,8 +102,8 @@ export const MindMapView = ({ markdown }: { markdown: string }) => {
   }
 
   return (
-    <div className="flex justify-center p-4 overflow-x-auto">
-      <div className="inline-block min-w-full">
+    <div className="flex justify-center p-4">
+      <div className="inline-block">
         <MindMapNodeComponent node={mindMapTree} />
       </div>
     </div>
