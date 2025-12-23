@@ -64,7 +64,7 @@ const MindMapNodeComponent = ({ node, level = 0 }: { node: MindMapNode, level?: 
       {level > 0 && <div className="absolute bottom-full h-8 w-px bg-border" />}
 
       <div className={cn('shadow-md text-center z-10', style.bg, style.text, style.padding, style.shape)}>
-        <p className={cn('font-semibold whitespace-nowrap', level === 0 ? 'text-lg' : 'text-sm')}>
+        <div className={cn('font-semibold whitespace-nowrap', level === 0 ? 'text-lg' : 'text-sm')}>
              <ReactMarkdown
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -72,13 +72,13 @@ const MindMapNodeComponent = ({ node, level = 0 }: { node: MindMapNode, level?: 
               >
                 {node.content}
               </ReactMarkdown>
-        </p>
+        </div>
       </div>
 
       {node.children.length > 0 && (
         <div className="flex flex-wrap items-start justify-center gap-4 mt-8 relative">
-          {/* Connecting line structure (simplified for wrapping) */}
-          <div className="hidden md:block absolute top-0 left-1/4 right-1/4 h-px bg-border -translate-y-4"/>
+          {/* Horizontal line connecting children */}
+          {node.children.length > 1 && <div className="absolute top-0 left-1/4 right-1/4 h-px bg-border -translate-y-4" />}
 
           {node.children.map((child, index) => (
             <div key={index} className="relative pt-8 flex flex-col items-center">
@@ -101,7 +101,7 @@ export const MindMapView = ({ markdown }: { markdown: string }) => {
   }
 
   return (
-    <div className="w-full scale-[0.85] md:scale-100 origin-top">
+    <div className="w-full scale-90 md:scale-100 origin-top">
         <MindMapNodeComponent node={mindMapTree} />
     </div>
   );
