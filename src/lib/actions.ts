@@ -168,7 +168,19 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
     if (!result) {
       throw new Error('AI did not return a response.');
     }
-
+    
+    // Check if the AI decided it couldn't answer (for non-educational questions).
+    if (result.explanation && result.explanation !== 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
+        // This is a conversational response.
+        return {
+            explanation: result.explanation,
+            roughWork: 'N/A',
+            realWorldExamples: 'N/A',
+            fairWork: 'N/A',
+            mindMap: 'N/A',
+        };
+    }
+    
     // Handle the special "who created you" case
     if (result.fairWork.includes("Kanak Raj")) {
         return {
@@ -176,14 +188,10 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
             roughWork: 'N/A',
             realWorldExamples: 'N/A',
             fairWork: 'N/A',
+            mindMap: 'N/A',
         };
     }
 
-    // Check if the AI decided it couldn't answer (for non-educational questions).
-    if (result.explanation === 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
-        return { error: "I can only answer educational questions. Please ask me something related to your studies." };
-    }
-    
     return result;
   } catch (e: any) {
     console.error(`An unexpected error occurred:`, e);
