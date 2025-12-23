@@ -2,9 +2,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  serverActions: {
-    bodySizeLimit: '15mb',
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -20,7 +17,7 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https/images.unsplash.com',
         hostname: 'images.unsplash.com',
         port: '',
         pathname: '/**',
