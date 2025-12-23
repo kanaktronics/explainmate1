@@ -202,8 +202,10 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
     
     if (cardId === 'mindMap') {
       return (
-        <div className="w-full overflow-hidden flex justify-center items-center py-3">
-          <MindMapView markdown={content} />
+        <div className="w-full overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <MindMapView markdown={content} />
+          </div>
         </div>
       );
     }
@@ -224,7 +226,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   }
 
   return (
-    <Card className='md:border-faint border-transparent shadow-none md:shadow-sm bg-transparent md:bg-card'>
+    <Card className='md:border-faint border-transparent shadow-none md:shadow-sm bg-transparent md:bg-card md:border'>
         {!isOnlyCard && (
           <CardHeader className='flex-row items-center justify-between p-4 md:p-6'>
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">{icon} {title}</CardTitle>
@@ -610,7 +612,7 @@ export function ExplanationView() {
   return (
     <div className='flex flex-col h-full'>
       <ScrollArea className="flex-1" id="chat-scroll-area">
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="p-2 md:p-6 space-y-4 md:space-y-6">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
             
@@ -649,7 +651,7 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleImageButtonClick}
                     title="Upload Image (Pro)"
-                    className='h-12 w-12 md:h-12 md:w-12'
+                    className='h-12 w-12 md:h-12 md:w-12 flex-shrink-0'
                     >
                     <ImageIcon />
                 </Button>
@@ -704,11 +706,11 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleListen}
                     title="Ask with your voice"
-                    className='h-12 w-12 md:h-12 md:w-12'
+                    className='h-12 w-12 md:h-12 md:w-12 flex-shrink-0'
                     >
                     <Mic />
                 </Button>
-                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon" className='h-12 w-12 md:h-12 md:w-12'>
+                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon" className='h-12 w-12 md:h-12 md:w-12 flex-shrink-0'>
                   <Send />
                   <span className="sr-only">Send</span>
                 </Button>
