@@ -4,6 +4,9 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 interface MindMapNode {
   content: string;
@@ -61,7 +64,15 @@ const MindMapNodeComponent = ({ node, level = 0 }: { node: MindMapNode, level?: 
       {level > 0 && <div className="absolute bottom-full h-8 w-px bg-border" />}
 
       <div className={cn('shadow-md text-center z-10', style.bg, style.text, style.padding, style.shape)}>
-        <p className={cn('font-semibold whitespace-nowrap', level === 0 ? 'text-lg' : 'text-sm')}>{node.content}</p>
+        <p className={cn('font-semibold whitespace-nowrap', level === 0 ? 'text-lg' : 'text-sm')}>
+             <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                className="prose prose-sm dark:prose-invert"
+              >
+                {node.content}
+              </ReactMarkdown>
+        </p>
       </div>
 
       {node.children.length > 0 && (
