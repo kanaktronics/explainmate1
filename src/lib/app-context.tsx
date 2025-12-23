@@ -29,7 +29,7 @@ interface AppContextType {
   setView: (view: AppView) => void;
   chat: ChatMessage[];
   setChat: (chat: ChatMessage[]) => void;
-  addToChat: (message: ChatMessage, historyType?: 'explanation' | 'teacher-companion') => void;
+  addToChat: (message: ChatMessage) => void;
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
   history: HistoryItem[];
@@ -104,6 +104,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [weeklyTimeSpent, setWeeklyTimeSpent] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
+  const isSavingRef = useRef(false);
+  const chatRef = useRef(chat);
+
+  useEffect(() => {
+    chatRef.current = chat;
+  }, [chat]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -409,57 +415,63 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   
-  const addToChat = useCallback((message: ChatMessage, historyType: 'explanation' | 'teacher-companion' = 'explanation') => {
-    if (!user || !firestore) return;
+  const addToChat = useCallback((message: ChatMessage) => {
+    setChat(prevChat => [...prevChat, message]);
+  }, []);
 
-    setChat(prevChat => {
-        const updatedChat = [...prevChat, message];
+  const getHistoryType = useCallback((): 'explanation' | 'teacher-companion' => {
+      return view === 'teacher-companion' ? 'teacher-companion' : 'explanation';
+  }, [view]);
 
-        // Perform side-effects after state update
-        (async () => {
-            let topic = '';
-            const firstUserMessage = updatedChat.find(m => m.role === 'user');
-            if (firstUserMessage) {
-                const content = firstUserMessage.content;
-                let userQuestion = '';
-                if (typeof content === 'string') {
-                    userQuestion = content;
-                } else if (typeof content === 'object' && 'text' in content) {
-                    userQuestion = content.text;
-                }
+  // Effect to save chat to history
+  useEffect(() => {
+    const saveChatHistory = async () => {
+        if (!user || !firestore || chat.length === 0 || isSavingRef.current) {
+            return;
+        }
 
-                if (userQuestion) {
-                    topic = generateHistoryTitle(userQuestion);
+        const historyType = getHistoryType();
+        isSavingRef.current = true;
+
+        try {
+            if (activeHistoryId) {
+                const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
+                await setDocument(docRef, { messages: chat, timestamp: new Date().toISOString() }, { merge: true });
+            } else {
+                const firstUserMessage = chat.find(m => m.role === 'user');
+                if (firstUserMessage) {
+                    const content = firstUserMessage.content;
+                    let userQuestion = '';
+                    if (typeof content === 'string') {
+                        userQuestion = content;
+                    } else if (typeof content === 'object' && 'text' in content) {
+                        userQuestion = content.text;
+                    }
+
+                    if (userQuestion) {
+                        const topic = generateHistoryTitle(userQuestion);
+                        const historyCollection = collection(firestore, 'users', user.uid, 'history');
+                        const newHistoryItem: Omit<HistoryItem, 'id'> = {
+                            topic,
+                            messages: chat,
+                            timestamp: new Date().toISOString(),
+                            type: historyType,
+                        };
+                        const newDocRef = await addDocument(historyCollection, newHistoryItem);
+                        setActiveHistoryId(newDocRef.id);
+                    }
                 }
             }
+        } catch (error) {
+            console.error("Failed to save chat history:", error);
+        } finally {
+            isSavingRef.current = false;
+        }
+    };
 
-            if (message.role === 'assistant' && topic) {
-                await addInteraction({ type: historyType === 'explanation' ? 'explanation' : 'teacher_companion_chat', topic, payload: { chat: updatedChat } });
-            }
+    saveChatHistory();
+  }, [chat, user, firestore, activeHistoryId, getHistoryType]);
 
-            try {
-                if (activeHistoryId) {
-                    const docRef = doc(firestore, 'users', user.uid, 'history', activeHistoryId);
-                    await setDocument(docRef, { messages: updatedChat, timestamp: new Date().toISOString() }, { merge: true });
-                } else if (topic) {
-                    const historyCollection = collection(firestore, 'users', user.uid, 'history');
-                    const newHistoryItem: Omit<HistoryItem, 'id'> = {
-                        topic,
-                        messages: updatedChat,
-                        timestamp: new Date().toISOString(),
-                        type: historyType,
-                    };
-                    const newDocRef = await addDocument(historyCollection, newHistoryItem);
-                    setActiveHistoryId(newDocRef.id);
-                }
-            } catch (error) {
-                console.error("Failed to save chat history:", error);
-            }
-        })();
-
-        return updatedChat;
-    });
-  }, [user, firestore, addInteraction, activeHistoryId]);
 
   const saveExamPlanToHistory = async (plan: ExamPlan, topic: string) => {
     if (!user || !firestore) return;
@@ -579,5 +591,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    

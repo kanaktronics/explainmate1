@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -93,7 +94,7 @@ export function TeacherCompanionView() {
                     setError(result.error);
                 } else if (result) {
                     const assistantMessage: ChatMessage = { role: 'assistant', content: result };
-                    addToChat(assistantMessage, 'teacher-companion');
+                    addToChat(assistantMessage);
                 }
             })
             .finally(() => setIsLoading(false));
@@ -113,7 +114,7 @@ export function TeacherCompanionView() {
     setError(null);
     
     const userMessage: ChatMessage = { role: 'user', content: { text: values.prompt } };
-    addToChat(userMessage, 'teacher-companion'); 
+    addToChat(userMessage); 
     
     const currentChat = [...chat, userMessage];
 
@@ -145,7 +146,7 @@ export function TeacherCompanionView() {
         setError(friendlyError);
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
-      addToChat(assistantMessage, 'teacher-companion');
+      addToChat(assistantMessage);
     } else {
        setError("An unexpected error occurred and the AI did not return a response.");
        setChat(chat);
