@@ -224,7 +224,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   }
 
   return (
-    <Card>
+    <Card className='md:border-faint'>
         {!isOnlyCard && (
           <CardHeader className='flex-row items-center justify-between'>
               <CardTitle className="flex items-center gap-2">{icon} {title}</CardTitle>
@@ -251,7 +251,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
               </div>
           </CardHeader>
         )}
-        <CardContent>
+        <CardContent className="md:p-6">
             {renderContent(text)}
         </CardContent>
     </Card>
@@ -610,7 +610,7 @@ export function ExplanationView() {
   return (
     <div className='flex flex-col h-full'>
       <ScrollArea className="flex-1" id="chat-scroll-area">
-        <div className="p-1 sm:p-2 md:p-4 space-y-8">
+        <div className="p-1 sm:p-2 md:p-4 space-y-4 md:space-y-6">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
             
@@ -638,7 +638,7 @@ export function ExplanationView() {
         </div>
       </ScrollArea>
 
-      <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 p-2 md:p-4 bg-background/80 backdrop-blur-sm">
         <Card className="max-w-4xl mx-auto">
           <CardContent className="p-2">
             <Form {...form}>
@@ -649,6 +649,7 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleImageButtonClick}
                     title="Upload Image (Pro)"
+                    className='h-12 w-12 md:h-10 md:w-10'
                     >
                     <ImageIcon />
                 </Button>
@@ -679,7 +680,7 @@ export function ExplanationView() {
                             <Textarea 
                                 placeholder="Explain the steps of photosynthesis..." 
                                 {...field}
-                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-sm"
+                                className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring resize-none text-base md:text-sm p-3 md:p-2 min-h-[48px] md:min-h-[40px]"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
@@ -703,10 +704,11 @@ export function ExplanationView() {
                     size="icon" 
                     onClick={handleListen}
                     title="Ask with your voice"
+                    className='h-12 w-12 md:h-10 md:w-10'
                     >
                     <Mic />
                 </Button>
-                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon">
+                <Button type="submit" disabled={isLoading || form.formState.isSubmitting} size="icon" className='h-12 w-12 md:h-10 md:w-10'>
                   <Send />
                   <span className="sr-only">Send</span>
                 </Button>
