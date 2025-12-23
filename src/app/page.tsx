@@ -38,7 +38,13 @@ export default function Home() {
       case 'explanation':
         return <ExplanationView />;
       case 'quiz':
-        return <QuizView />;
+        return (
+          <ScrollArea className="h-full">
+            <div className={cn("container mx-auto p-2 sm:p-4 md:p-6")}>
+                <QuizView />
+            </div>
+          </ScrollArea>
+        );
       case 'teacher-companion':
         return <TeacherCompanionView />;
       case 'exam-prep':
@@ -49,19 +55,9 @@ export default function Home() {
     }
   }
 
-  if (['explanation', 'welcome', 'teacher-companion', 'exam-prep'].includes(view)) {
-    return (
-       <div className={cn("h-full")}>
-          {renderView()}
-      </div>
-    )
-  }
-
   return (
-    <ScrollArea className="h-full">
-      <div className={cn("container mx-auto p-2 sm:p-4 md:p-6")}>
-          {renderView()}
+      <div className={cn("h-full")}>
+        {renderView()}
       </div>
-    </ScrollArea>
   );
 }

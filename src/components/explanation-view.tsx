@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -29,6 +28,7 @@ import rehypeKatex from 'rehype-katex';
 import { MindMapView } from './mind-map-view';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ScrollArea } from './ui/scroll-area';
 
 
 const MAX_PROMPT_LENGTH_FREE = 500;
@@ -385,7 +385,7 @@ export function ExplanationView() {
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -400,7 +400,12 @@ export function ExplanationView() {
   const promptValue = form.watch('prompt');
   
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollAreaRef.current) {
+        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        }
+    }
   }, [chat, isLoading, error]);
 
   useEffect(() => {
@@ -598,7 +603,7 @@ export function ExplanationView() {
 
   return (
     <div className='flex flex-col h-full'>
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1" ref={scrollAreaRef}>
         <div className="p-1 sm:p-2 md:p-4 space-y-8">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
@@ -627,9 +632,8 @@ export function ExplanationView() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div ref={chatEndRef} />
         </div>
-      </div>
+      </ScrollArea>
 
       <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-sm">
         <Card className="max-w-4xl mx-auto">
@@ -711,7 +715,3 @@ export function ExplanationView() {
     </div>
   );
 }
-
-    
-
-    
