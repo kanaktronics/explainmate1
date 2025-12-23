@@ -385,10 +385,10 @@ export function ExplanationView() {
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const maxPromptLength = studentProfile.isPro ? MAX_PROMPT_LENGTH_PRO : MAX_PROMPT_LENGTH_FREE;
 
@@ -400,12 +400,7 @@ export function ExplanationView() {
   const promptValue = form.watch('prompt');
   
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
-        if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-        }
-    }
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat, isLoading, error]);
 
   useEffect(() => {
@@ -603,26 +598,22 @@ export function ExplanationView() {
 
   return (
     <div className='flex flex-col h-full'>
-      <ScrollArea className="flex-1" ref={scrollAreaRef}>
+      <div className="flex-1 overflow-y-auto">
         <div className="p-1 sm:p-2 md:p-4 space-y-8">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
             
             {isLoading && (
-              <div className="flex items-start gap-4">
-                  <Avatar className="bg-primary flex-shrink-0 animate-pulse">
-                      <AvatarFallback>
-                          <BrainCircuit className="text-primary-foreground h-6 w-6" />
-                      </AvatarFallback>
-                  </Avatar>
-                  <div className="w-full space-y-4">
-                      <div className='flex gap-2'>
-                        <Skeleton className="h-8 w-1/4" />
-                        <Skeleton className="h-8 w-1/4" />
-                      </div>
-                      <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                  </div>
+              <div className="flex justify-center items-center p-8 animate-in fade-in duration-500">
+                <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="bg-primary p-3 rounded-lg animate-pulse">
+                      <BrainCircuit className="text-primary-foreground h-8 w-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-primary">ExplainMate is thinking...</p>
+                      <p className="text-sm text-muted-foreground">Please wait a moment.</p>
+                    </div>
+                </div>
               </div>
             )}
             {error && (
@@ -632,8 +623,9 @@ export function ExplanationView() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+             <div ref={chatEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-sm">
         <Card className="max-w-4xl mx-auto">
