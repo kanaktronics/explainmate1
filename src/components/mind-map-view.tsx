@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -89,10 +90,8 @@ export const MindMapView = ({ markdown }: { markdown: string }) => {
   }
 
   return (
-    <div className="w-full overflow-x-auto">
-        <div className="inline-block p-4 min-w-full">
-            <MindMapNodeComponent node={mindMapTree} />
-        </div>
+    <div className="w-full scale-[0.85] md:scale-100 origin-top">
+        <MindMapNodeComponent node={mindMapTree} />
     </div>
   );
 };

@@ -202,10 +202,8 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
     
     if (cardId === 'mindMap') {
       return (
-        <div className="max-w-full overflow-x-auto overflow-y-hidden py-3">
-          <div className="min-w-max">
-            <MindMapView markdown={content} />
-          </div>
+        <div className="w-full overflow-hidden flex justify-center items-center py-3">
+          <MindMapView markdown={content} />
         </div>
       );
     }
