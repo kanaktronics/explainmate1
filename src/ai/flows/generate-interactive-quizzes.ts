@@ -83,11 +83,15 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 
 **CRITICAL RULES:**
 1.  **Question Type**:
-    {{#if questionType}}{{#unless (eq questionType "Mixed")}}
+    {{#if questionType}}
+        {{#if (eq questionType "Mixed")}}
+    If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.
+        {{else}}
     You MUST generate ONLY questions of the type **'{{questionType}}'**.
+        {{/if}}
     {{else}}
     If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.
-    {{/unless}}{{/if}}
+    {{/if}}
 2.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
 3.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
 4.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.
