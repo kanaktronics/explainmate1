@@ -15,11 +15,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
-import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Lightbulb, MessageSquare, Mic, Pilcrow, Type, XCircle } from 'lucide-react';
 import type { QuizQuestion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
 import { Slider } from './ui/slider';
+import { Textarea } from './ui/textarea';
+import { cn } from '@/lib/utils';
 
 const quizSetupSchema = z.object({
   topic: z.string().min(3, { message: 'Topic must be at least 3 characters.' }),
@@ -29,6 +31,7 @@ const quizSetupSchema = z.object({
 
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
 
+// A Zod schema for a dynamic record of answers, which can be strings.
 const quizAnswersSchema = z.object({
     answers: z.record(z.string()),
 });
@@ -129,10 +132,6 @@ export function QuizView() {
     setIsLoading(false);
   }
 
-  const handleAnswerChange = (questionIndex: number, selectedOption: string) => {
-    answersForm.setValue(`answers.${questionIndex}`, selectedOption);
-  };
-
   const checkAnswers = (data: z.infer<typeof quizAnswersSchema>) => {
     if (!quiz) return;
     let score = 0;
@@ -140,26 +139,33 @@ export function QuizView() {
     const evaluatedAnswers: UserAnswers = {};
 
     quiz.quiz.forEach((q, index) => {
-      const selected = answered[index];
-      if (selected) {
-        const isCorrect = selected === q.correctAnswer;
-        if (isCorrect) score++;
-        
-        evaluatedAnswers[index] = { selected, isCorrect };
+        const selected = answered[index];
+        if (selected) {
+            let isCorrect = false;
+            // Case-insensitive comparison for text-based answers
+            if (q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer') {
+                isCorrect = selected.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+            } else {
+                isCorrect = selected === q.correctAnswer;
+            }
 
-        const interactionPayload = {
-            correct: isCorrect,
-            question: q.question,
-            userAnswer: selected,
-            correctAnswer: q.correctAnswer,
-        };
+            if (isCorrect) score++;
+            
+            evaluatedAnswers[index] = { selected, isCorrect };
 
-        addInteraction({ 
-            type: 'quiz_answer', 
-            topic: setupForm.getValues('topic'), 
-            payload: interactionPayload 
-        });
-      }
+            const interactionPayload = {
+                correct: isCorrect,
+                question: q.question,
+                userAnswer: selected,
+                correctAnswer: q.correctAnswer,
+            };
+
+            addInteraction({ 
+                type: 'quiz_answer', 
+                topic: setupForm.getValues('topic'), 
+                payload: interactionPayload 
+            });
+        }
     });
 
     setUserAnswers(evaluatedAnswers);
@@ -171,7 +177,7 @@ export function QuizView() {
   };
   
   const score = Object.values(userAnswers).filter(a => a.isCorrect).length;
-  const answeredQuestions = Object.keys(answersForm.watch('answers') || {}).length;
+  const answeredQuestions = Object.keys(answersForm.watch('answers') || {}).filter(key => answersForm.watch('answers')[key]).length;
   const progress = quiz ? (answeredQuestions / quiz.quiz.length) * 100 : 0;
 
   if (isLoading) return <LoadingSkeleton />;
@@ -279,7 +285,6 @@ export function QuizView() {
                     q={q} 
                     index={index} 
                     userAnswer={userAnswers[index]} 
-                    onAnswerChange={handleAnswerChange}
                     showResult={showResults}
                     control={answersForm.control}
                     disabled={showResults}
@@ -298,56 +303,134 @@ export function QuizView() {
   );
 }
 
-const QuizCard = ({ q, index, userAnswer, onAnswerChange, showResult, control, disabled }: { q: QuizQuestion, index: number, userAnswer: UserAnswers[number] | undefined, onAnswerChange: (index: number, option: string) => void, showResult: boolean, control: any, disabled: boolean }) => {
-    const isAnswered = !!userAnswer;
-    const isCorrect = isAnswered && userAnswer.isCorrect;
-    const selected = isAnswered ? userAnswer.selected : '';
+function McqInput({ question, control, disabled, showResult, userAnswer }: { question: QuizQuestion; control: any; disabled: boolean; showResult: boolean; userAnswer: UserAnswers[number] | undefined; }) {
+    return (
+        <FormField
+            control={control}
+            name={`answers.${question.question}`}
+            render={({ field }) => (
+                <FormItem>
+                    <FormControl>
+                        <RadioGroup onValueChange={field.onChange} value={field.value} disabled={disabled}>
+                            {(question.options || []).map((option, i) => {
+                                const isSelected = field.value === option;
+                                const isCorrectAnswer = question.correctAnswer === option;
+                                
+                                return (
+                                    <FormItem key={i} className={cn("flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors", showResult && isCorrectAnswer && "bg-green-500/10", showResult && isSelected && !isCorrectAnswer && "bg-red-500/10")}>
+                                        <FormControl><RadioGroupItem value={option} /></FormControl>
+                                        <FormLabel className={cn("font-normal flex-1", showResult && isCorrectAnswer && "text-green-700 dark:text-green-400", showResult && isSelected && !isCorrectAnswer && "text-red-700 dark:text-red-400")}>
+                                            {option}
+                                        </FormLabel>
+                                        {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
+                                        {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
+                                    </FormItem>
+                                );
+                            })}
+                        </RadioGroup>
+                    </FormControl>
+                </FormItem>
+            )}
+        />
+    );
+}
+
+function FillInTheBlanksInput({ question, control, disabled }: { question: QuizQuestion; control: any; disabled: boolean; }) {
+    return (
+        <FormField
+            control={control}
+            name={`answers.${question.question}`}
+            render={({ field }) => (
+                <FormItem>
+                     <p className="text-lg mb-4">{question.question.replace('___', '______')}</p>
+                    <FormControl>
+                        <Input {...field} placeholder="Type your answer here" disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+    );
+}
+
+function ShortAnswerInput({ control, question, disabled }: { control: any; question: QuizQuestion; disabled: boolean; }) {
+    return (
+        <FormField
+            control={control}
+            name={`answers.${question.question}`}
+            render={({ field }) => (
+                <FormItem>
+                    <FormControl>
+                        <Textarea {...field} placeholder="Type your answer here (2-3 lines)..." disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+    );
+}
+
+const getQuestionTypeIcon = (type: QuizQuestion['type']) => {
+    switch (type) {
+        case 'MCQ': return <Pilcrow />;
+        case 'TrueFalse': return <Type />;
+        case 'AssertionReason': return <MessageSquare />;
+        case 'FillInTheBlanks': return <Pilcrow />;
+        case 'ShortAnswer': return <MessageSquare />;
+        default: return <Lightbulb />;
+    }
+}
+
+const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: QuizQuestion, index: number, userAnswer: UserAnswers[number] | undefined, showResult: boolean, control: any, disabled: boolean }) => {
+    const isCorrect = userAnswer?.isCorrect;
+
+    const renderQuestionInput = () => {
+        switch (q.type) {
+            case 'MCQ':
+            case 'TrueFalse':
+            case 'AssertionReason':
+                return <McqInput question={q} control={control} disabled={disabled} showResult={showResult} userAnswer={userAnswer} />;
+            case 'FillInTheBlanks':
+                return <FillInTheBlanksInput question={q} control={control} disabled={disabled} />;
+            case 'ShortAnswer':
+                return <ShortAnswerInput question={q} control={control} disabled={disabled} />;
+            default:
+                return <p>Unsupported question type</p>;
+        }
+    }
     
     return (
-        <Card className={`${showResult && isAnswered ? (isCorrect ? 'border-green-500' : 'border-red-500') : ''}`}>
+        <Card className={cn(showResult && (isCorrect ? 'border-green-500' : 'border-red-500'))}>
           <CardHeader>
-            <CardTitle>{index + 1}. {q.question}</CardTitle>
+            <CardTitle className="flex items-start gap-3">
+              <span className="text-primary font-bold">{index + 1}.</span>
+              <div className='flex-1'>
+                {q.type === 'AssertionReason' ? (
+                    <>
+                        <p className="font-normal text-base"><strong className="font-semibold">Assertion (A):</strong> {q.assertion}</p>
+                        <p className="font-normal text-base mt-2"><strong className="font-semibold">Reason (R):</strong> {q.reason}</p>
+                    </>
+                ) : (
+                   q.question
+                )}
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <FormField
-              control={control}
-              name={`answers.${index}`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={disabled}>
-                      {q.options.map((option, i) => {
-                        const isSelected = field.value === option;
-                        const isCorrectAnswer = q.correctAnswer === option;
-                        
-                        let indicatorClass = "";
-                        if (showResult && isCorrectAnswer) indicatorClass = "text-green-500";
-                        if (showResult && isSelected && !isCorrectAnswer) indicatorClass = "text-red-500";
-
-                        return (
-                          <FormItem key={i} className={`flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors ${showResult && isCorrectAnswer ? 'bg-green-500/10' : ''} ${showResult && isSelected && !isCorrectAnswer ? 'bg-red-500/10' : ''}`}>
-                            <FormControl>
-                              <RadioGroupItem value={option} />
-                            </FormControl>
-                            <FormLabel className={`font-normal flex-1 ${indicatorClass}`}>
-                              {option}
-                            </FormLabel>
-                            {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
-                            {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
-                          </FormItem>
-                        );
-                      })}
-                    </RadioGroup>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            {renderQuestionInput()}
           </CardContent>
           {showResult && (
             <CardFooter>
-                <Alert variant={isCorrect ? 'default' : 'destructive'} className={`${isCorrect ? 'bg-green-500/10 border-green-500/50' : ''}`}>
-                    <AlertTitle className='flex items-center gap-2'>{isCorrect ? <CheckCircle /> : <XCircle />} Correct Answer</AlertTitle>
-                    <AlertDescription>{q.explanation}</AlertDescription>
+                <Alert variant={isCorrect ? 'default' : 'destructive'} className={cn(isCorrect ? 'bg-green-500/10 border-green-500/50' : '')}>
+                    <AlertTitle className='flex items-center gap-2'>
+                        {isCorrect ? <CheckCircle /> : <XCircle />} 
+                        {q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer' ? 'Model Answer' : 'Correct Answer'}
+                    </AlertTitle>
+                    <AlertDescription>
+                        <strong>{q.correctAnswer}</strong>
+                        <br />
+                        {q.explanation}
+                    </AlertDescription>
                 </Alert>
             </CardFooter>
           )}
@@ -371,5 +454,3 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
-    

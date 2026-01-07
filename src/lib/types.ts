@@ -53,8 +53,11 @@ export interface HistoryItem {
 }
 
 export interface QuizQuestion {
+  type: 'MCQ' | 'TrueFalse' | 'AssertionReason' | 'FillInTheBlanks' | 'ShortAnswer';
   question: string;
-  options: string[];
+  assertion?: string;
+  reason?: string;
+  options?: string[];
   correctAnswer: string;
   explanation: string;
 }
