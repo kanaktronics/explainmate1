@@ -37,6 +37,10 @@ export type GenerateInteractiveQuizzesInput = z.infer<
   typeof GenerateInteractiveQuizzesInputSchema
 >;
 
+const InternalPromptInputSchema = GenerateInteractiveQuizzesInputSchema.extend({
+    questionTypeInstruction: z.string(),
+});
+
 const QuestionSchema = z.object({
     type: z.enum(['MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).describe('The type of question.'),
     question: z.string().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
@@ -65,7 +69,7 @@ export async function generateInteractiveQuizzes(
 
 const quizPrompt = ai.definePrompt({
   name: 'quizPrompt',
-  input: {schema: GenerateInteractiveQuizzesInputSchema},
+  input: {schema: InternalPromptInputSchema},
   output: {schema: GenerateInteractiveQuizzesOutputSchema},
   prompt: `You are an expert quiz generator for Indian middle and high school students. Your task is to create a quiz with a variety of question types that are relevant to the student's curriculum and simulate real exam practice.
 
@@ -83,15 +87,7 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 
 **CRITICAL RULES:**
 1.  **Question Type**:
-    {{#if questionType}}
-        {{#if (eq questionType "Mixed")}}
-    If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.
-        {{else}}
-    You MUST generate ONLY questions of the type **'{{questionType}}'**.
-        {{/if}}
-    {{else}}
-    If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.
-    {{/if}}
+    {{{questionTypeInstruction}}}
 2.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
 3.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
 4.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.
@@ -152,7 +148,20 @@ const generateInteractiveQuizzesFlow = ai.defineFlow(
     outputSchema: GenerateInteractiveQuizzesOutputSchema,
   },
   async input => {
-    const {output} = await quizPrompt(input);
+    let questionTypeInstruction = '';
+
+    if (input.questionType && input.questionType !== 'Mixed') {
+        questionTypeInstruction = `You MUST generate ONLY questions of the type **'${input.questionType}'**.`;
+    } else {
+        questionTypeInstruction = `If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.`;
+    }
+
+    const promptInput = {
+      ...input,
+      questionTypeInstruction,
+    };
+
+    const {output} = await quizPrompt(promptInput);
     return output!;
   }
 );
