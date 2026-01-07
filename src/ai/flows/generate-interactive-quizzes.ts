@@ -43,7 +43,7 @@ const InternalPromptInputSchema = GenerateInteractiveQuizzesInputSchema.extend({
 
 const QuestionSchema = z.object({
     type: z.enum(['MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).describe('The type of question.'),
-    question: z.string().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
+    question: z.string().optional().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
     assertion: z.string().optional().describe('The assertion text for Assertion-Reason questions.'),
     reason: z.string().optional().describe('The reason text for Assertion-Reason questions.'),
     options: z.array(z.string()).optional().describe('An array of options for MCQ questions.'),

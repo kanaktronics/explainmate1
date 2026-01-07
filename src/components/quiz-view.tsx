@@ -162,7 +162,7 @@ export function QuizView() {
 
             if (q.type === 'ShortAnswer') {
                 const promise = gradeShortAnswer({
-                    question: q.question,
+                    question: q.question || '',
                     userAnswer: selected,
                     modelAnswer: q.correctAnswer
                 }).then(gradingResult => {
@@ -221,7 +221,7 @@ export function QuizView() {
   };
   
   const score = Object.values(userAnswers).filter(a => a.isCorrect).length;
-  const answeredQuestions = Object.keys(answersForm.watch('answers') || {}).filter(key => answersForm.watch('answers')[key]).length;
+  const answeredQuestions = Object.keys(answersForm.watch('answers') || {}).filter(key => !!answersForm.watch('answers')[key]).length;
   const progress = quiz ? (answeredQuestions / quiz.quiz.length) * 100 : 0;
 
   if (isLoading) return <LoadingSkeleton />;
@@ -416,7 +416,7 @@ function FillInTheBlanksInput({ index, question, control, disabled }: { index: n
             defaultValue=""
             render={({ field }) => (
                 <FormItem>
-                     <p className="text-lg mb-4">{question.question.replace('___', '______')}</p>
+                     <p className="text-lg mb-4">{question.question?.replace('___', '______')}</p>
                     <FormControl>
                         <Input {...field} placeholder="Type your answer here" disabled={disabled} />
                     </FormControl>
