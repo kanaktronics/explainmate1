@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css';
 import { ClientLayout } from '@/components/client-layout';
 import { Alegreya, Belleza } from 'next/font/google';
 import { cn } from '@/lib/utils';
+import { RegisterSW } from './register-sw';
 
 const fontBody = Alegreya({
   subsets: ['latin'],
@@ -56,6 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-body antialiased', fontBody.variable, fontHeadline.variable)}>
+        <RegisterSW />
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
