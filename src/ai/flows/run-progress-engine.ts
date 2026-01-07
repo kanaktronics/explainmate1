@@ -67,9 +67,9 @@ const progressPrompt = ai.definePrompt({
   1.  **Identify True Topics**: The 'topic' field in the events can be messy (e.g., "hi", "what is this", "Introduction"). Your first and most important job is to look inside the 'payload.chat' array for 'explanation' events. Read the conversation to determine the *actual* academic subject (e.g., "Photosynthesis", "Newton's Laws of Motion", "Circle Congruency"). Group all related events under this true topic. Ignore conversational filler.
 
   2.  **Calculate Stats**:
-      -   For 'overallAccuracyPercent': Calculate from 'quiz_answer' interactions. (correct answers / total answers) * 100. If no quizzes, default to 50.
-      -   For 'weakTopics': This is the most important part. You must analyze the 'quiz_answer' interactions where 'payload.correct' is false. Look for patterns in the *incorrect* answers. For example, if the student consistently gets questions wrong about 'calculating the area of a sector' within the broader topic of 'Circles', then the weak topic is 'Area of a Sector', not just 'Circles'. The suggestion must be highly specific and actionable, e.g., "Focus on reviewing the formula for the area of a sector and practice with 2-3 examples." Do NOT give a generic suggestion like "Review Circles".
-      -   For 'topTopics': List the 3-5 *true topics* with the most interactions.
+      -   For 'overallAccuracyPercent': Calculate this by analyzing ONLY the 'quiz_answer' interactions. The formula is (total correct 'quiz_answer' events / total 'quiz_answer' events) * 100. Round to the nearest whole number. If there are NO 'quiz_answer' events, you MUST set this value to 0. Do not guess or use a default like 50.
+      -   For 'weakTopics': This is the most important part. You must analyze the 'quiz_answer' interactions where 'payload.correct' is false. Look for patterns in the *incorrect* answers. For example, if the student consistently gets questions wrong about 'calculating the area of a sector' within the broader topic of 'Circles', then the weak topic is 'Area of a Sector', not just 'Circles'. The suggestion must be highly specific and actionable, e.g., "Focus on reviewing the formula for the area of a sector and practice with 2-3 examples." Do NOT give a generic suggestion like "Review Circles". Calculate the accuracy for each weak topic based on all answers for that specific topic.
+      -   For 'topTopics': List the 3-5 *true topics* with the most interactions of any type.
 
   3.  **Generate Meaningful 7-Day Plan**:
       -   Create a sevenDayPlan focusing on one of the identified weakTopics.
@@ -80,7 +80,8 @@ const progressPrompt = ai.definePrompt({
   4.  **Output Format**:
       -   The final output MUST be a JSON object matching the ProgressEngineOutput schema.
       -   computedAt must be the current ISO 8601 timestamp.
-      -   If interaction data is sparse, provide sensible defaults (e.g., accuracy 50%), identify 1-2 weak topics based on chat content if no quizzes exist, and add a notes field explaining that the results are estimated due to limited data. Do not make up a 7-day plan if there isn't a clear weak topic.`,
+      -   If interaction data is sparse (e.g., fewer than 5 interactions), you can add a note in the 'notes' field like "Results are based on limited data. Interact more to get a more accurate report."
+      -   Do not generate a 7-day plan if there isn't a clear weak topic identified from quiz answers.`,
 });
 
 const runProgressEngineFlow = ai.defineFlow(
@@ -95,5 +96,3 @@ const runProgressEngineFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

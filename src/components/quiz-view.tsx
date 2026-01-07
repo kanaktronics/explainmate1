@@ -151,7 +151,7 @@ export function QuizView() {
     const evaluatedAnswers: UserAnswers = {};
 
     quiz.quiz.forEach((q, index) => {
-        const selected = answered[index];
+        const selected = answered[String(index)];
         if (selected) {
             let isCorrect = false;
             // Case-insensitive comparison for text-based answers
