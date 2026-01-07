@@ -152,7 +152,7 @@ export function QuizView() {
 
     quiz.quiz.forEach((q, index) => {
         const selected = answered[String(index)];
-        if (selected) {
+        if (selected !== undefined) {
             let isCorrect = false;
             // Case-insensitive comparison for text-based answers
             if (q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer') {
@@ -345,6 +345,7 @@ function McqInput({ index, question, control, disabled, showResult, userAnswer }
         <FormField
             control={control}
             name={`answers.${index}`}
+            defaultValue=""
             render={({ field }) => (
                 <FormItem>
                     <FormControl>
@@ -377,6 +378,7 @@ function FillInTheBlanksInput({ index, question, control, disabled }: { index: n
         <FormField
             control={control}
             name={`answers.${index}`}
+            defaultValue=""
             render={({ field }) => (
                 <FormItem>
                      <p className="text-lg mb-4">{question.question.replace('___', '______')}</p>
@@ -395,6 +397,7 @@ function ShortAnswerInput({ index, control, question, disabled }: { index: numbe
         <FormField
             control={control}
             name={`answers.${index}`}
+            defaultValue=""
             render={({ field }) => (
                 <FormItem>
                     <FormControl>
