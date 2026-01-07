@@ -1,0 +1,8 @@
+node_modules
+.next
+*.log
+.env.local
+.DS_Store
+*.pem
+*.p12
+*.pfx
