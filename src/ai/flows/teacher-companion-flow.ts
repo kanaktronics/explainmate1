@@ -6,7 +6,7 @@
  * - teacherCompanion - A function that guides a teacher through lesson planning and explanation strategies.
  * - TeacherCompanionInput - The input type for the teacherCompanion function.
  * - TeacherCompanionOutput - The return type for the teacherCompanion function.
- */
+- */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
