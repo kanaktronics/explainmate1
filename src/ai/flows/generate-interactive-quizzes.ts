@@ -105,9 +105,9 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 
 3.  **Assertion – Reason**:
     -   \`type\`: "AssertionReason"
-    -   \`question\`: This field should be left empty or contain a general instruction like "Read the assertion and reason carefully."
-    -   \`assertion\`: The assertion statement.
-    -   \`reason\`: The reason statement.
+    -   \`question\`: This field MUST be an empty string: \`""\`.
+    -   \`assertion\`: A single, concise assertion statement (max 150 characters).
+    -   \`reason\`: A single, concise reason statement (max 150 characters). It must NOT be a repeated phrase.
     -   \`options\`: Must be the standard 4 A/R options:
         -   "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)."
         -   "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)."
@@ -118,7 +118,7 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 
 4.  **Fill in the Blanks**:
     -   \`type\`: "FillInTheBlanks"
-    -   \`question\`: The sentence with a blank, represented by \\\`___\`. Example: "The powerhouse of the cell is the ___."
+    -   \`question\`: The sentence with a blank, represented by \`___\`. Example: "The powerhouse of the cell is the ___."
     -   \`options\`: This field must be omitted.
     -   \`correctAnswer\`: The word or short phrase that fills the blank. Example: "mitochondria".
     -   \`explanation\`: A one-line reason why that word is correct.
