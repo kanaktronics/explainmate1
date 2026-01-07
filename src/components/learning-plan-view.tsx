@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { BookOpen, CheckSquare, Dumbbell, Clock } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { useAppContext } from '@/lib/app-context';
 
 interface LearningPlanViewProps {
   plan: ProgressEngineOutput['sevenDayPlan'];
@@ -24,6 +25,8 @@ const getIconForTask = (type: 'explain' | 'practice' | 'quiz') => {
 };
 
 export function LearningPlanView({ plan }: LearningPlanViewProps) {
+  const { setView, setQuizTopic, setChatTopic } = useAppContext();
+
   if (!plan || plan.length === 0) {
     return (
       <Card>
@@ -34,11 +37,21 @@ export function LearningPlanView({ plan }: LearningPlanViewProps) {
     );
   }
 
+  const handleTaskStart = (type: 'explain' | 'practice' | 'quiz', topic: string) => {
+    if (type === 'explain') {
+        setChatTopic(topic);
+        setView('explanation');
+    } else {
+        setQuizTopic(topic);
+        setView('quiz');
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your 7-Day Improvement Plan</CardTitle>
-        <CardDescription>A personalized plan to help you master your weak spots.</CardDescription>
+        <CardTitle>Your 7-Day Adaptive Plan</CardTitle>
+        <CardDescription>A personalized plan to help you master your weak spots, one day at a time.</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="day-1" className="w-full">
@@ -54,7 +67,7 @@ export function LearningPlanView({ plan }: LearningPlanViewProps) {
               <Card>
                 <CardHeader>
                   <div className="flex justify-between items-center">
-                    <CardTitle>Day {day.day} Focus</CardTitle>
+                    <CardTitle>Day {day.day}: {day.tasks[0]?.topic || 'Review'}</CardTitle>
                     <Badge variant="secondary" className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
                       {day.estimatedMinutes} mins
@@ -69,7 +82,7 @@ export function LearningPlanView({ plan }: LearningPlanViewProps) {
                         <p className="font-semibold capitalize">{task.type}: <span className="font-normal text-primary">{task.topic}</span></p>
                         <p className="text-sm text-muted-foreground">{task.text}</p>
                       </div>
-                       <Button size="sm" variant="outline">Start</Button>
+                       <Button size="sm" variant="outline" onClick={() => handleTaskStart(task.type, task.topic)}>Start</Button>
                     </div>
                   ))}
                 </CardContent>

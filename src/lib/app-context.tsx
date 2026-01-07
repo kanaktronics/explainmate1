@@ -30,8 +30,10 @@ interface AppContextType {
   chat: ChatMessage[];
   setChat: (chat: ChatMessage[]) => void;
   addToChat: (message: ChatMessage) => void;
+  setChatTopic: (topic: string) => void;
   quiz: Quiz | null;
   setQuiz: (quiz: Quiz | null) => void;
+  setQuizTopic: (topic: string) => void;
   history: HistoryItem[];
   teacherHistory: HistoryItem[];
   examPrepHistory: HistoryItem[];
@@ -91,6 +93,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [view, setViewState] = useState<AppView>('explanation');
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [quizTopic, setQuizTopic] = useState<string>('');
+  const [chatTopic, setChatTopic] = useState<string>('');
   const [examPlan, setExamPlan] = useState<ExamPlan | null>(null);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -555,6 +559,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
+  const setQuizTopicCallback = useCallback((topic: string) => {
+    setQuiz(null); // Clear previous quiz
+    setQuizTopic(topic);
+  }, []);
+
+  const setChatTopicCallback = useCallback((topic: string) => {
+    // Pre-fill the chat with a user message to kickstart the explanation
+    const userMessage: ChatMessage = { role: 'user', content: { text: `Explain ${topic}` } };
+    setChat([userMessage]);
+    setActiveHistoryId(null);
+  }, []);
+
+
   // Ad logic
   useEffect(() => {
     if (user && !studentProfile.isPro && !isAdOpen && !hasShownFirstAdToday && pathname === '/') {
@@ -569,13 +586,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
-    quiz, setQuiz, history, teacherHistory, examPrepHistory, loadChatFromHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
+    quiz, setQuiz, setQuizTopic: setQuizTopicCallback, setChatTopic: setChatTopicCallback,
+    history, teacherHistory, examPrepHistory, loadChatFromHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory, isProfileComplete, 
     examPlan, setExamPlan, saveExamPlanToHistory,
     isAdOpen, showAd, hideAd, adContent, user, isUserLoading, activeHistoryId, setActiveHistoryId,
     postLoginAction, setPostLoginAction, clearPostLoginAction,
     interactions, addInteraction, progressData, setProgressData, progressError, setProgressError, isProgressLoading, setIsProgressLoading,
     weeklyTimeSpent,
   };
+
+  // This is a bit of a hack to pre-fill the topic when a user clicks 'start' or 'practice'
+  // It's not ideal but works for this structure.
+  useEffect(() => {
+      if (view === 'quiz' && quizTopic) {
+          setQuiz(null); // Ensure we are in setup mode
+          // We can't set the form value directly here, so we'll do it in the QuizView component.
+      }
+  }, [view, quizTopic]);
 
   return (
     <AppContext.Provider value={value}>

@@ -1,4 +1,3 @@
-
 'use client';
 
 interface ProgressCircularProps {
@@ -38,7 +37,7 @@ export function ProgressCircular({ progress, size = 180, strokeWidth = 15 }: Pro
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-4xl font-bold text-primary">{Math.round(progress)}%</span>
-        <span className="text-sm font-medium text-muted-foreground">Overall Progress</span>
+        <span className="text-sm font-medium text-muted-foreground">Overall Accuracy</span>
       </div>
     </div>
   );

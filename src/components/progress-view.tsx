@@ -9,6 +9,8 @@ import { ProgressStats } from './progress-stats';
 import { LearningPlanView } from './learning-plan-view';
 import { WeakTopicsView } from './weak-topics-view';
 import { ScrollArea } from './ui/scroll-area';
+import { ProgressCircular } from './progress-circular';
+import { Card, CardContent } from './ui/card';
 
 export function ProgressView() {
   const { progressData, progressError, isProgressLoading } = useAppContext();
@@ -54,26 +56,35 @@ export function ProgressView() {
   return (
     <ScrollArea className="h-full">
         <div className="container mx-auto p-4 space-y-8">
-        <header className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-                <h1 className="text-4xl font-headline text-primary">Your Progress Dashboard</h1>
-                <p className="text-muted-foreground">A summary of your learning journey, updated automatically.</p>
-            </div>
-        </header>
+            <header className="flex flex-col items-center justify-between gap-4 text-center">
+                <div>
+                    <h1 className="text-4xl font-headline text-primary">Your Progress Dashboard</h1>
+                    <p className="text-muted-foreground">A summary of your learning journey, updated automatically.</p>
+                </div>
+            </header>
 
-        <ProgressStats />
+            <Card>
+                <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <div className="md:col-span-1 flex justify-center">
+                        <ProgressCircular progress={progressData.overallAccuracyPercent} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <ProgressStats />
+                    </div>
+                </CardContent>
+            </Card>
         
-        <WeakTopicsView topics={progressData.weakTopics} />
+            <WeakTopicsView topics={progressData.weakTopics} />
 
-        <LearningPlanView plan={progressData.sevenDayPlan} />
+            <LearningPlanView plan={progressData.sevenDayPlan} />
 
-        {progressData.notes && (
-            <Alert variant="default">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Note from the Analyst</AlertTitle>
-                <AlertDescription>{progressData.notes}</AlertDescription>
-            </Alert>
-        )}
+            {progressData.notes && (
+                <Alert variant="default">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Note from the Analyst</AlertTitle>
+                    <AlertDescription>{progressData.notes}</AlertDescription>
+                </Alert>
+            )}
         </div>
     </ScrollArea>
   );

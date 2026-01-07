@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -41,7 +41,7 @@ const quizAnswersSchema = z.object({
 const FREE_TIER_QUIZ_LIMIT = 1;
 
 export function QuizView() {
-  const { user, studentProfile, setStudentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView, addInteraction } = useAppContext();
+  const { user, studentProfile, setStudentProfile, quiz, setQuiz, isProfileComplete, incrementUsage, showAd, setView, addInteraction, quizTopic, setQuizTopic } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -50,7 +50,7 @@ export function QuizView() {
 
   const setupForm = useForm<z.infer<typeof quizSetupSchema>>({
     resolver: zodResolver(quizSetupSchema),
-    defaultValues: { topic: '', numQuestions: 5, difficulty: 'Medium', questionType: 'Mixed' },
+    defaultValues: { topic: quizTopic || '', numQuestions: 5, difficulty: 'Medium', questionType: 'Mixed' },
   });
 
   const answersForm = useForm<z.infer<typeof quizAnswersSchema>>({
@@ -59,6 +59,15 @@ export function QuizView() {
   });
 
   const numQuestionsValue = setupForm.watch('numQuestions');
+
+  useEffect(() => {
+    if (quizTopic) {
+      setupForm.setValue('topic', quizTopic);
+      // Clear the topic so it doesn't persist on subsequent visits to the quiz page
+      setQuizTopic('');
+    }
+  }, [quizTopic, setupForm, setQuizTopic]);
+
 
   async function onSubmit(values: z.infer<typeof quizSetupSchema>) {
     if (!user) {
@@ -158,7 +167,7 @@ export function QuizView() {
 
             const interactionPayload = {
                 correct: isCorrect,
-                question: q.question,
+                question: q.question || `${q.assertion} ${q.reason}`,
                 userAnswer: selected,
                 correctAnswer: q.correctAnswer,
             };
@@ -322,7 +331,7 @@ export function QuizView() {
                 {!showResults ? (
                     <Button type="submit" disabled={answeredQuestions !== quiz.quiz.length}>Check Answers</Button>
                 ) : (
-                    <Button onClick={() => { setQuiz(null); setupForm.reset({ topic: '', numQuestions: 5, difficulty: 'Medium' }); }}>Try Another Quiz</Button>
+                    <Button onClick={() => { setQuiz(null); setQuizTopic(''); setupForm.reset({ topic: '', numQuestions: 5, difficulty: 'Medium', questionType: 'Mixed' }); }}>Try Another Quiz</Button>
                 )}
               </div>
             </form>
@@ -452,12 +461,16 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
                 <Alert variant={isCorrect ? 'default' : 'destructive'} className={cn(isCorrect ? 'bg-green-500/10 border-green-500/50' : '')}>
                     <AlertTitle className='flex items-center gap-2'>
                         {isCorrect ? <CheckCircle /> : <XCircle />} 
-                        {q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer' ? 'Model Answer' : 'Correct Answer'}
+                        {isCorrect ? 'Correct!' : (q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer' ? 'Model Answer' : 'Correct Answer')}
                     </AlertTitle>
                     <AlertDescription>
-                        <strong>{q.correctAnswer}</strong>
-                        <br />
-                        {q.explanation}
+                        {isCorrect ? q.explanation : (
+                           <>
+                                <strong>{q.correctAnswer}</strong>
+                                <br />
+                                {q.explanation}
+                           </>
+                        )}
                     </AlertDescription>
                 </Alert>
             </CardFooter>
