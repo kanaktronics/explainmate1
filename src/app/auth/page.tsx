@@ -1,11 +1,21 @@
-
-import { AuthView } from "@/components/auth-view";
-import { Suspense } from "react";
-
-export default function AuthPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <AuthView />
-        </Suspense>
-    );
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "iconLibrary": "lucide"
 }

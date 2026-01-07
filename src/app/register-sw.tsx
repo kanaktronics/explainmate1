@@ -1,17 +1,21 @@
-
-'use client';
-
-import { useEffect } from 'react';
-
-export function RegisterSW() {
-  useEffect(() => {
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => console.log('Service Worker registered with scope:', registration.scope))
-        .catch((error) => console.error('Service Worker registration failed:', error));
-    }
-  }, []);
-
-  return null;
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "iconLibrary": "lucide"
 }

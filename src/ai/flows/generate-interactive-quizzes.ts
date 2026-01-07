@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const StudentProfileSchema = z.object({
   classLevel: z.string().describe("The student's class level."),
