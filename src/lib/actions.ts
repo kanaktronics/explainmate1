@@ -214,9 +214,10 @@ export async function getQuiz(input: {
     numQuestions: number;
     studentProfile: StudentProfile;
     difficulty: 'Easy' | 'Medium' | 'Hard';
+    questionType: 'Mixed' | 'MCQ' | 'TrueFalse' | 'AssertionReason' | 'FillInTheBlanks' | 'ShortAnswer';
 }): Promise<GenerateInteractiveQuizzesOutput | { error: string }> {
     try {
-        const { studentProfile, topic, numQuestions, difficulty } = input;
+        const { studentProfile, topic, numQuestions, difficulty, questionType } = input;
         const userId = studentProfile.id;
 
         if (!userId) {
@@ -243,6 +244,7 @@ export async function getQuiz(input: {
                 weakSubjects: studentProfile.weakSubjects,
             },
             difficulty: studentProfile.isPro ? difficulty : undefined,
+            questionType: studentProfile.isPro ? questionType : 'Mixed',
         });
 
         if (!result) {

@@ -31,6 +31,7 @@ const GenerateInteractiveQuizzesInputSchema = z.object({
     .default(5)
     .describe('The number of questions to generate (1-15).'),
   difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional().describe('The difficulty level of the quiz.'),
+  questionType: z.enum(['Mixed', 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).optional().describe('The specific type of questions to generate.'),
 });
 export type GenerateInteractiveQuizzesInput = z.infer<
   typeof GenerateInteractiveQuizzesInputSchema
@@ -81,7 +82,12 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 {{/if}}
 
 **CRITICAL RULES:**
-1.  **Mix Question Types**: If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.
+1.  **Question Type**:
+    {{#if questionType}}{{#unless (eq questionType "Mixed")}}
+    You MUST generate ONLY questions of the type **'{{questionType}}'**.
+    {{else}}
+    If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.
+    {{/unless}}{{/if}}
 2.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
 3.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
 4.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.

@@ -22,11 +22,13 @@ import { Progress } from './ui/progress';
 import { Slider } from './ui/slider';
 import { Textarea } from './ui/textarea';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const quizSetupSchema = z.object({
   topic: z.string().min(3, { message: 'Topic must be at least 3 characters.' }),
   numQuestions: z.number().min(1).max(15).default(5),
   difficulty: z.enum(['Easy', 'Medium', 'Hard']).default('Medium'),
+  questionType: z.enum(['Mixed', 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).default('Mixed'),
 });
 
 type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
@@ -48,7 +50,7 @@ export function QuizView() {
 
   const setupForm = useForm<z.infer<typeof quizSetupSchema>>({
     resolver: zodResolver(quizSetupSchema),
-    defaultValues: { topic: '', numQuestions: 5, difficulty: 'Medium' },
+    defaultValues: { topic: '', numQuestions: 5, difficulty: 'Medium', questionType: 'Mixed' },
   });
 
   const answersForm = useForm<z.infer<typeof quizAnswersSchema>>({
@@ -96,6 +98,7 @@ export function QuizView() {
       numQuestions: studentProfile.isPro ? values.numQuestions : 5,
       studentProfile: studentProfile,
       difficulty: studentProfile.isPro ? values.difficulty : 'Medium',
+      questionType: studentProfile.isPro ? values.questionType : 'Mixed',
     };
 
     const result = await getQuiz(input as any);
@@ -209,6 +212,31 @@ export function QuizView() {
                 />
                 {studentProfile.isPro && (
                     <>
+                    <FormField
+                        control={setupForm.control}
+                        name="questionType"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Question Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Select a question type" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Mixed">Mixed</SelectItem>
+                                    <SelectItem value="MCQ">Multiple Choice</SelectItem>
+                                    <SelectItem value="TrueFalse">True / False</SelectItem>
+                                    <SelectItem value="AssertionReason">Assertion / Reason</SelectItem>
+                                    <SelectItem value="FillInTheBlanks">Fill in the Blanks</SelectItem>
+                                    <SelectItem value="ShortAnswer">Short Answer</SelectItem>
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                     <FormField
                     control={setupForm.control}
                     name="numQuestions"
