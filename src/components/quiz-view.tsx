@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getQuiz } from '@/lib/actions';
+import { getQuiz, gradeShortAnswer } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
-import { AlertCircle, CheckCircle, Lightbulb, MessageSquare, Mic, Pilcrow, Type, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Lightbulb, Loader2, MessageSquare, Mic, Pilcrow, Type, XCircle } from 'lucide-react';
 import type { QuizQuestion } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
@@ -31,7 +31,7 @@ const quizSetupSchema = z.object({
   questionType: z.enum(['Mixed', 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).default('Mixed'),
 });
 
-type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean } };
+type UserAnswers = { [key: number]: { selected: string; isCorrect: boolean, feedback?: string } };
 
 // A Zod schema for a dynamic record of answers, which can be strings.
 const quizAnswersSchema = z.object({
@@ -46,6 +46,7 @@ export function QuizView() {
   const [error, setError] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
   const [showResults, setShowResults] = useState(false);
+  const [isGrading, setIsGrading] = useState(false);
   const { toast } = useToast();
 
   const setupForm = useForm<z.infer<typeof quizSetupSchema>>({
@@ -124,7 +125,7 @@ export function QuizView() {
           friendlyError = "It looks like you're sending requests faster than normal learning activity. To protect ExplainMate and ensure fair usage for everyone, we've temporarily paused your requests. Please wait a moment and try again.";
           break;
         case 'PRO_DAILY_LIMIT':
-          friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support and we’ll unlock additional access for you.";
+          friendlyError = "You're learning really fast! To keep ExplainMate running smoothly for everyone, we slow things down after extremely long study sessions. Please take a short break and try again a little later. If you feel you reached this limit by mistake, or you genuinely need more usage today, please contact ExplainMate Support.";
           break;
         case 'ACCOUNT_BLOCKED':
           friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support.";
@@ -144,44 +145,75 @@ export function QuizView() {
     setIsLoading(false);
   }
 
-  const checkAnswers = (data: z.infer<typeof quizAnswersSchema>) => {
+  const checkAnswers = async (data: z.infer<typeof quizAnswersSchema>) => {
     if (!quiz) return;
+    
+    setIsGrading(true);
     let score = 0;
     const answered = data.answers;
     const evaluatedAnswers: UserAnswers = {};
+    const shortAnswerPromises: Promise<void>[] = [];
 
     quiz.quiz.forEach((q, index) => {
         const selected = answered[String(index)];
         if (selected !== undefined) {
-            let isCorrect = false;
-            // Case-insensitive comparison for text-based answers
-            if (q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer') {
-                isCorrect = selected.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+            let isCorrect: boolean;
+            let feedback: string | undefined;
+
+            if (q.type === 'ShortAnswer') {
+                const promise = gradeShortAnswer({
+                    question: q.question,
+                    userAnswer: selected,
+                    modelAnswer: q.correctAnswer
+                }).then(gradingResult => {
+                    if (gradingResult && !('error' in gradingResult)) {
+                        isCorrect = gradingResult.isCorrect;
+                        feedback = gradingResult.feedback;
+                        if (isCorrect) score++;
+                        evaluatedAnswers[index] = { selected, isCorrect, feedback };
+                    } else {
+                        // Fallback or error handling
+                        isCorrect = false;
+                        feedback = "Could not grade this answer automatically.";
+                        evaluatedAnswers[index] = { selected, isCorrect, feedback };
+                    }
+                     const interactionPayload = {
+                        correct: isCorrect,
+                        question: q.question,
+                        userAnswer: selected,
+                        correctAnswer: q.correctAnswer,
+                        feedback
+                    };
+                    addInteraction({ type: 'quiz_answer', topic: setupForm.getValues('topic'), payload: interactionPayload });
+                });
+                shortAnswerPromises.push(promise);
             } else {
-                isCorrect = selected === q.correctAnswer;
+                 // Case-insensitive comparison for fill-in-the-blanks
+                if (q.type === 'FillInTheBlanks') {
+                    isCorrect = selected.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+                } else {
+                    isCorrect = selected === q.correctAnswer;
+                }
+                
+                if (isCorrect) score++;
+                evaluatedAnswers[index] = { selected, isCorrect };
+
+                 const interactionPayload = {
+                    correct: isCorrect,
+                    question: q.question || `${q.assertion} ${q.reason}`,
+                    userAnswer: selected,
+                    correctAnswer: q.correctAnswer,
+                };
+                addInteraction({ type: 'quiz_answer', topic: setupForm.getValues('topic'), payload: interactionPayload });
             }
-
-            if (isCorrect) score++;
-            
-            evaluatedAnswers[index] = { selected, isCorrect };
-
-            const interactionPayload = {
-                correct: isCorrect,
-                question: q.question || `${q.assertion} ${q.reason}`,
-                userAnswer: selected,
-                correctAnswer: q.correctAnswer,
-            };
-
-            addInteraction({ 
-                type: 'quiz_answer', 
-                topic: setupForm.getValues('topic'), 
-                payload: interactionPayload 
-            });
         }
     });
 
+    await Promise.all(shortAnswerPromises);
+    
     setUserAnswers(evaluatedAnswers);
     setShowResults(true);
+    setIsGrading(false);
     toast({
         title: "Quiz Finished!",
         description: `You scored ${score} out of ${quiz.quiz.length}.`
@@ -324,12 +356,15 @@ export function QuizView() {
                     userAnswer={userAnswers[index]} 
                     showResult={showResults}
                     control={answersForm.control}
-                    disabled={showResults}
+                    disabled={showResults || isGrading}
                 />
               ))}
               <div className="flex justify-center gap-4">
                 {!showResults ? (
-                    <Button type="submit" disabled={answeredQuestions !== quiz.quiz.length}>Check Answers</Button>
+                    <Button type="submit" disabled={answeredQuestions !== quiz.quiz.length || isGrading}>
+                        {isGrading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isGrading ? 'Grading...' : 'Check Answers'}
+                    </Button>
                 ) : (
                     <Button onClick={() => { setQuiz(null); setQuizTopic(''); setupForm.reset({ topic: '', numQuestions: 5, difficulty: 'Medium', questionType: 'Mixed' }); }}>Try Another Quiz</Button>
                 )}
@@ -464,10 +499,12 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
                 <Alert variant={isCorrect ? 'default' : 'destructive'} className={cn(isCorrect ? 'bg-green-500/10 border-green-500/50' : '')}>
                     <AlertTitle className='flex items-center gap-2'>
                         {isCorrect ? <CheckCircle /> : <XCircle />} 
-                        {isCorrect ? 'Correct!' : (q.type === 'FillInTheBlanks' || q.type === 'ShortAnswer' ? 'Model Answer' : 'Correct Answer')}
+                        {isCorrect ? 'Correct!' : (q.type === 'ShortAnswer' ? 'Evaluation' : 'Correct Answer')}
                     </AlertTitle>
                     <AlertDescription>
-                        {isCorrect ? q.explanation : (
+                        {userAnswer?.feedback ? (
+                            <p>{userAnswer.feedback}</p>
+                        ) : (
                            <>
                                 <strong>{q.correctAnswer}</strong>
                                 <br />

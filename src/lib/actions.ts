@@ -13,6 +13,8 @@ import { generateExamPlan } from '@/ai/flows/generate-exam-plan';
 import type { GenerateExamPlanInput, GenerateExamPlanOutput } from '@/ai/flows/generate-exam-plan';
 import { getTopicsForSubject } from '@/ai/flows/generate-subject-topics';
 import type { GenerateSubjectTopicsInput, GenerateSubjectTopicsOutput } from '@/ai/flows/generate-subject-topics';
+import { gradeShortAnswer as gradeShortAnswerFlow } from '@/ai/flows/grade-short-answer';
+import type { GradeShortAnswerInput, GradeShortAnswerOutput } from '@/ai/flows/grade-short-answer';
 
 import { ChatMessage, StudentProfile, SubjectTopics } from './types';
 
@@ -261,6 +263,20 @@ export async function getQuiz(input: {
         return { error: 'An unexpected error occurred while generating the quiz. Please try again.' };
     }
 }
+
+export async function gradeShortAnswer(input: GradeShortAnswerInput): Promise<GradeShortAnswerOutput | { error: string }> {
+    try {
+        const result = await gradeShortAnswerFlow(input);
+        if (!result) {
+            throw new Error('AI did not return a grading response.');
+        }
+        return result;
+    } catch (e: any) {
+        console.error("Error grading short answer:", e);
+        return { error: 'Failed to grade answer. Please try checking answers again.' };
+    }
+}
+
 
 export async function getTeacherCompanionResponse(input: { studentProfile: StudentProfile; chatHistory: ChatMessage[] }): Promise<TeacherCompanionOutput | { error: string }> {
   try {
