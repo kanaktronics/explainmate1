@@ -331,11 +331,11 @@ export function QuizView() {
   );
 }
 
-function McqInput({ question, control, disabled, showResult, userAnswer }: { question: QuizQuestion; control: any; disabled: boolean; showResult: boolean; userAnswer: UserAnswers[number] | undefined; }) {
+function McqInput({ index, question, control, disabled, showResult, userAnswer }: { index: number; question: QuizQuestion; control: any; disabled: boolean; showResult: boolean; userAnswer: UserAnswers[number] | undefined; }) {
     return (
         <FormField
             control={control}
-            name={`answers.${question.question}`}
+            name={`answers.${index}`}
             render={({ field }) => (
                 <FormItem>
                     <FormControl>
@@ -363,11 +363,11 @@ function McqInput({ question, control, disabled, showResult, userAnswer }: { que
     );
 }
 
-function FillInTheBlanksInput({ question, control, disabled }: { question: QuizQuestion; control: any; disabled: boolean; }) {
+function FillInTheBlanksInput({ index, question, control, disabled }: { index: number; question: QuizQuestion; control: any; disabled: boolean; }) {
     return (
         <FormField
             control={control}
-            name={`answers.${question.question}`}
+            name={`answers.${index}`}
             render={({ field }) => (
                 <FormItem>
                      <p className="text-lg mb-4">{question.question.replace('___', '______')}</p>
@@ -381,11 +381,11 @@ function FillInTheBlanksInput({ question, control, disabled }: { question: QuizQ
     );
 }
 
-function ShortAnswerInput({ control, question, disabled }: { control: any; question: QuizQuestion; disabled: boolean; }) {
+function ShortAnswerInput({ index, control, question, disabled }: { index: number; control: any; question: QuizQuestion; disabled: boolean; }) {
     return (
         <FormField
             control={control}
-            name={`answers.${question.question}`}
+            name={`answers.${index}`}
             render={({ field }) => (
                 <FormItem>
                     <FormControl>
@@ -417,11 +417,11 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
             case 'MCQ':
             case 'TrueFalse':
             case 'AssertionReason':
-                return <McqInput question={q} control={control} disabled={disabled} showResult={showResult} userAnswer={userAnswer} />;
+                return <McqInput question={q} control={control} disabled={disabled} showResult={showResult} userAnswer={userAnswer} index={index} />;
             case 'FillInTheBlanks':
-                return <FillInTheBlanksInput question={q} control={control} disabled={disabled} />;
+                return <FillInTheBlanksInput question={q} control={control} disabled={disabled} index={index} />;
             case 'ShortAnswer':
-                return <ShortAnswerInput question={q} control={control} disabled={disabled} />;
+                return <ShortAnswerInput question={q} control={control} disabled={disabled} index={index} />;
             default:
                 return <p>Unsupported question type</p>;
         }
