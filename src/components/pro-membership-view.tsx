@@ -165,7 +165,7 @@ export function ProMembershipView() {
                     <DialogHeader>
                         <DialogTitle>Confirm Your Phone Number</DialogTitle>
                         <DialogDescription>
-                            Please enter your 10-digit phone number to proceed with the payment.
+                            Please enter your 10-digit phone number to proceed with the payment. This is required by our payment provider.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -251,5 +251,3 @@ export function ProMembershipView() {
         </>
     );
 }
-
-    
