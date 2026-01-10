@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +15,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Save, AlertTriangle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
@@ -45,15 +44,6 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
       weakSubjects: studentProfile.weakSubjects || '',
     },
   });
-
-  useEffect(() => {
-    form.reset({
-      name: studentProfile.name || '',
-      classLevel: studentProfile.classLevel || '',
-      board: studentProfile.board || '',
-      weakSubjects: studentProfile.weakSubjects || '',
-    });
-  }, [studentProfile, form]);
 
   async function onSubmit(values: ProfileFormValues) {
     setIsSaving(true);
@@ -138,15 +128,13 @@ export function StudentProfile() {
   const { studentProfile, isProfileComplete, user } = useAppContext();
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
+  // Set initial editing state based on whether the profile is complete
+  // This runs only once when the component mounts or when the user status changes
+  useState(() => {
     if (user && !isProfileComplete) {
       setIsEditing(true);
-    } else if (user && isProfileComplete) {
-      setIsEditing(false);
-    } else if (!user) {
-      setIsEditing(false);
     }
-  }, [user, isProfileComplete]);
+  });
 
   if (!user) return null;
 
