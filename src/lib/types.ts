@@ -38,7 +38,7 @@ export interface TeacherCompanionResponse {
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
-  content: string | Explanation | TeacherCompanionResponse | { text: string; imageUrl?: string };
+  content: string | Explanation | TeacherCompanionResponse | { text: string; dataUrl?: string };
 }
 
 export type ExamPlan = GenerateExamPlanOutput;

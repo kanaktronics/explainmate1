@@ -37,11 +37,14 @@ function convertToGenkitHistory(chatHistory: ChatMessage[]) {
 
     if (message.role === 'user' && typeof message.content === 'object' && message.content !== null) {
       const contentParts = [];
-      if ('text' in message.content) {
-        contentParts.push({ text: message.content.text });
+      const content = message.content as { text?: string; dataUrl?: string };
+
+      if (content.text) {
+        contentParts.push({ text: content.text });
       }
-      if ('imageUrl' in message.content && message.content.imageUrl) {
-        contentParts.push({ media: { url: message.content.imageUrl } });
+      if (content.dataUrl) {
+        console.log("actions.ts: Found dataUrl, creating media part for Genkit.", content.dataUrl.substring(0, 50) + "...");
+        contentParts.push({ media: { url: content.dataUrl } });
       }
       return {
         role: 'user',
@@ -157,13 +160,16 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
         hinglish: `For THIS message, reply ONLY in Hinglish (Hindi written in English letters). Mix English and Hindi words naturally, as a real person would. Do NOT answer in pure English or pure Devanagari Hindi.`,
     }[lang];
 
+    const convertedHistory = convertToGenkitHistory(chatHistory);
+    console.log("actions.ts: Payload being sent to AI flow:", JSON.stringify(convertedHistory, null, 2));
+
     const result = await tailorExplanation({
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,
         weakSubjects: studentProfile.weakSubjects,
       },
-      chatHistory: convertToGenkitHistory(chatHistory),
+      chatHistory: convertedHistory,
       languageInstruction: langInstruction,
     });
     
@@ -171,6 +177,8 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
       throw new Error('AI did not return a response.');
     }
     
+    console.log("actions.ts: Received response from AI flow.");
+
     // Check if the AI decided it couldn't answer (for non-educational questions).
     if (result.explanation && result.explanation !== 'N/A' && result.roughWork === 'N/A' && result.realWorldExamples === 'N/A' && result.fairWork === 'N/A') {
         // This is a conversational response.
@@ -196,7 +204,7 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
 
     return result;
   } catch (e: any) {
-    console.error(`An unexpected error occurred:`, e);
+    console.error(`[actions.ts] An unexpected error occurred in getExplanation:`, e);
     const errorMessage = e.message || '';
 
     if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {

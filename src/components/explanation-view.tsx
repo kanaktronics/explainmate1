@@ -371,14 +371,14 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
   }
 
   const textPart = typeof content === 'string' ? content : (content as { text?: string }).text;
-  const imageUrl = typeof content === 'object' && content !== null && 'imageUrl' in content ? content.imageUrl : undefined;
+  const dataUrl = typeof content === 'object' && content !== null && 'dataUrl' in content ? content.dataUrl : undefined;
 
   return (
     <div className="flex items-start gap-2 md:gap-4 justify-end">
       <Card className="bg-muted">
         <CardContent className="p-3">
-          {imageUrl && (
-            <Image src={imageUrl} alt="Uploaded diagram" width={200} height={200} className="rounded-md mb-2" />
+          {dataUrl && (
+            <Image src={dataUrl} alt="Uploaded diagram" width={200} height={200} className="rounded-md mb-2 object-cover" />
           )}
           {textPart && <p className="font-semibold">{textPart}</p>}
         </CardContent>
@@ -543,9 +543,10 @@ export function ExplanationView() {
     setIsLoading(true);
     setError(null);
     
-    const userMessageContent: ChatMessage['content'] = { text: values.prompt };
+    const userMessageContent: { text: string; dataUrl?: string } = { text: values.prompt };
     if (values.image) {
-      userMessageContent.imageUrl = values.image;
+      userMessageContent.dataUrl = values.image;
+      console.log("explanation-view.tsx: Image dataUrl attached to user message.", values.image.substring(0, 50) + "...");
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     
@@ -571,7 +572,7 @@ export function ExplanationView() {
         case 'DAILY_LIMIT_REACHED':
           showAd({
             title: "Daily Limit Reached",
-            description: "You've used all your free explanations for today. Upgrade to Pro for unlimited access."
+            description: "You've used your free explanations for today. Upgrade to Pro for unlimited access."
           });
           break;
         case 'PRO_RATE_LIMIT':
@@ -590,6 +591,7 @@ export function ExplanationView() {
       if(result.error !== 'DAILY_LIMIT_REACHED') {
           setError(friendlyError);
       }
+      console.error("explanation-view.tsx: Received error from getExplanation:", result.error);
     } else if (result) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage);
@@ -660,7 +662,7 @@ export function ExplanationView() {
                 <div className="flex-1 relative">
                     {imagePreview && (
                         <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border">
-                            <Image src={imagePreview} alt="preview" width={60} height={60} className="rounded-md" />
+                            <Image src={imagePreview} alt="preview" width={60} height={60} className="rounded-md object-cover" />
                             <button 
                                 type="button" 
                                 onClick={() => {
