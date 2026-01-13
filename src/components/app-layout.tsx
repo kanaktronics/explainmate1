@@ -30,6 +30,7 @@ import { useFirebase } from '@/firebase';
 import { AdPopup } from '@/components/ad-popup';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { ClientOnly } from './client-only';
 
 function HistorySection({ historyType }: { historyType: 'explanation' | 'teacher-companion' | 'exam-prep' }) {
   const { history, teacherHistory, examPrepHistory, loadChatFromHistory, loadExamPlanFromHistory, deleteFromHistory, clearHistory, user, view } = useAppContext();
@@ -339,7 +340,9 @@ export function AppLayout({children}: {children: React.ReactNode}) {
                 </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
-                <UserProfileSection />
+                <ClientOnly>
+                    <UserProfileSection />
+                </ClientOnly>
             </SidebarFooter>
         </Sidebar>
         <SidebarInset>

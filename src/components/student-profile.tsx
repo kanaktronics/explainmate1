@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/lib/app-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Save, AlertTriangle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
@@ -44,6 +44,18 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
       weakSubjects: studentProfile.weakSubjects || '',
     },
   });
+
+  useEffect(() => {
+    // This effect synchronizes the form with the studentProfile from the context.
+    // It runs whenever studentProfile changes.
+    form.reset({
+      name: studentProfile.name || '',
+      classLevel: studentProfile.classLevel || '',
+      board: studentProfile.board || '',
+      weakSubjects: studentProfile.weakSubjects || '',
+    });
+  }, [studentProfile, form.reset]);
+
 
   async function onSubmit(values: ProfileFormValues) {
     setIsSaving(true);
@@ -130,11 +142,12 @@ export function StudentProfile() {
 
   // Set initial editing state based on whether the profile is complete
   // This runs only once when the component mounts or when the user status changes
-  useState(() => {
+  useEffect(() => {
     if (user && !isProfileComplete) {
       setIsEditing(true);
     }
-  });
+  }, [user, isProfileComplete]);
+
 
   if (!user) return null;
 
