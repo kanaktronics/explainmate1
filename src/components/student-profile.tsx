@@ -37,6 +37,8 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
+    // Initialize the form with the current profile data from the context.
+    // This happens only ONCE when the component mounts.
     defaultValues: {
       name: studentProfile.name || '',
       classLevel: studentProfile.classLevel || '',
@@ -44,18 +46,6 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
       weakSubjects: studentProfile.weakSubjects || '',
     },
   });
-
-  useEffect(() => {
-    // This effect synchronizes the form with the studentProfile from the context.
-    // It runs whenever studentProfile changes.
-    form.reset({
-      name: studentProfile.name || '',
-      classLevel: studentProfile.classLevel || '',
-      board: studentProfile.board || '',
-      weakSubjects: studentProfile.weakSubjects || '',
-    });
-  }, [studentProfile, form.reset]);
-
 
   async function onSubmit(values: ProfileFormValues) {
     setIsSaving(true);
@@ -138,13 +128,18 @@ function ProfileForm({ onSave }: { onSave: () => void }) {
 
 export function StudentProfile() {
   const { studentProfile, isProfileComplete, user } = useAppContext();
+  // Default to not editing. Only enter edit mode if user clicks "Edit" or if profile is truly incomplete on load.
   const [isEditing, setIsEditing] = useState(false);
 
-  // Set initial editing state based on whether the profile is complete
-  // This runs only once when the component mounts or when the user status changes
+  // This effect runs once when the user data is confirmed to be loaded.
+  // It sets the initial editing state correctly.
   useEffect(() => {
+    // If the user exists and we've confirmed their profile is incomplete, force the edit view.
     if (user && !isProfileComplete) {
       setIsEditing(true);
+    } else {
+      // Otherwise, stay in display mode.
+      setIsEditing(false);
     }
   }, [user, isProfileComplete]);
 
@@ -196,6 +191,7 @@ export function StudentProfile() {
       )}
 
       <div className="mt-4">
+        {/* Pass a function to set isEditing to false after a successful save */}
         <ProfileForm onSave={() => setIsEditing(false)} />
       </div>
     </div>
