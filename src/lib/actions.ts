@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { tailorExplanation } from '@/ai/flows/tailor-explanations-to-student-profile';
@@ -125,6 +126,7 @@ function detectLanguageLabel(text: string): "english" | "hindi" | "hinglish" {
   return "english";
 }
 
+const MAX_CHAT_HISTORY = 10; // Keep the last 5 pairs of user/assistant messages
 
 export async function getExplanation(input: { studentProfile: StudentProfile; chatHistory: ChatMessage[] }): Promise<TailorExplanationOutput | { error: string }> {
   try {
@@ -162,7 +164,12 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
         hinglish: `For THIS message, reply ONLY in Hinglish (Hindi written in English letters). Mix English and Hindi words naturally, as a real person would. Do NOT answer in pure English or pure Devanagari Hindi.`,
     }[lang];
 
-    const convertedHistory = convertToGenkitHistory(chatHistory);
+    // Truncate history to avoid token limits
+    const truncatedHistory = chatHistory.length > MAX_CHAT_HISTORY 
+      ? chatHistory.slice(-MAX_CHAT_HISTORY)
+      : chatHistory;
+
+    const convertedHistory = convertToGenkitHistory(truncatedHistory);
     console.log("actions.ts: Payload being sent to AI flow:", JSON.stringify(convertedHistory, null, 2));
 
     const result = await tailorExplanation({
@@ -209,8 +216,8 @@ export async function getExplanation(input: { studentProfile: StudentProfile; ch
     console.error(`[actions.ts] An unexpected error occurred in getExplanation:`, e);
     const errorMessage = e.message || '';
 
-    if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
-      return { error: 'The AI model is currently experiencing high demand and is overloaded. Please try again in a moment.' };
+    if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('400 Bad Request')) {
+      return { error: 'The AI model is currently experiencing high demand or the request was too large. Please try a shorter question or start a new chat.' };
     }
     
     if (errorMessage.includes('429')) {
@@ -305,9 +312,13 @@ export async function getTeacherCompanionResponse(input: { studentProfile: Stude
     if (!usageCheck.allowed) {
         return { error: usageCheck.error || 'PRO_USAGE_LIMIT' };
     }
+    
+    const truncatedHistory = chatHistory.length > MAX_CHAT_HISTORY 
+      ? chatHistory.slice(-MAX_CHAT_HISTORY)
+      : chatHistory;
 
     const result = await teacherCompanion({
-      chatHistory: convertToGenkitHistory(chatHistory),
+      chatHistory: convertToGenkitHistory(truncatedHistory),
       studentProfile: {
         classLevel: studentProfile.classLevel,
         board: studentProfile.board,

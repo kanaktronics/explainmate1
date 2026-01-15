@@ -582,7 +582,7 @@ export function ExplanationView() {
 
                 <div className="flex-1 relative">
                     {imagePreview && (
-                        <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border">
+                        <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border w-16 h-16">
                             <Image src={imagePreview} alt="preview" fill className="rounded-md object-cover" />
                             <button 
                                 type="button" 
