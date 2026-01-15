@@ -15,6 +15,8 @@ import { getTopicsForSubject } from '@/ai/flows/generate-subject-topics';
 import type { GenerateSubjectTopicsInput, GenerateSubjectTopicsOutput } from '@/ai/flows/generate-subject-topics';
 import { gradeShortAnswer as gradeShortAnswerFlow } from '@/ai/flows/grade-short-answer';
 import type { GradeShortAnswerInput, GradeShortAnswerOutput } from '@/ai/flows/grade-short-answer';
+import { textToSpeech } from '@/ai/flows/text-to-speech-flow';
+import type { TextToSpeechInput, TextToSpeechOutput } from '@/ai/flows/text-to-speech-flow';
 
 import { ChatMessage, StudentProfile, SubjectTopics } from './types';
 
@@ -373,5 +375,19 @@ export async function getSubjectTopics(input: GenerateSubjectTopicsInput): Promi
         return { error: "Failed to fetch topics for the selected subject. Please try again." };
     }
 }
+
+export async function getTextToSpeech(input: TextToSpeechInput): Promise<TextToSpeechOutput | { error: string }> {
+    try {
+        const result = await textToSpeech(input);
+        if (!result) {
+            throw new Error("The TTS model did not return any audio.");
+        }
+        return result;
+    } catch (e: any) {
+        console.error("Error generating speech:", e);
+        return { error: "Failed to generate audio for this text. Please try again." };
+    }
+}
+
 
 export { generateExamPlan };

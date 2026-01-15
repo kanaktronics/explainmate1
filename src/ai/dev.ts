@@ -11,3 +11,4 @@ import '@/ai/flows/run-progress-engine.ts';
 import '@/ai/flows/generate-exam-plan.ts';
 import '@/ai/flows/generate-subject-topics.ts';
 import '@/ai/flows/grade-short-answer.ts';
+import '@/ai/flows/text-to-speech-flow.ts';

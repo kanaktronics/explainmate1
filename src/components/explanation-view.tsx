@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAppContext } from '@/lib/app-context';
-import { getExplanation } from '@/lib/actions';
+import { getExplanation, getTextToSpeech } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,118 +50,56 @@ interface ExplanationCardProps {
 }
 
 const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: ExplanationCardProps) => {
+  const { toast } = useToast();
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const { toast } = useToast();
-
-  const detectContentLanguage = (content: string): "english" | "hindi" | "hinglish" => {
-    if (!content) return "english";
-    const hasDevanagari = /[\u0900-\u097F]/.test(content);
-    if (hasDevanagari) return "hindi";
-    
-    const hasLatin = /[a-zA-Z]/.test(content);
-    if(hasLatin && !hasDevanagari) {
-       const hindiWords = [
-          "kya", "kaise", "mein", "aur", "ek", "do", "teen",
-          "nahi", "haan", "aap", "tum", "hum", "yeh", "woh", "yahan", "wahan",
-          "kab", "kyun", "liye", "bhi", "toh", "se", "ko", "ka", "ki", "ke",
-          "hota", "hoti", "hote", "gaya", "gayi", "gaye", "tha", "thi", "the",
-          "matlab", "kaun"
-        ];
-       const lower = content.toLowerCase();
-       const words = lower.split(/\s+/);
-       const containsHindiWord = words.some(word => hindiWords.includes(word));
-  
-       if (words.length > 2 && containsHindiWord) {
-           return "hinglish";
-       }
-    }
-    return "english";
-  }
-  
-  const handleListen = useCallback(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      toast({
-        variant: 'destructive',
-        title: 'Not Supported',
-        description: 'Your browser does not support text-to-speech.',
-      });
+  const handleListen = useCallback(async () => {
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
       return;
     }
 
-    if (isPlaying && !isPaused) {
-      window.speechSynthesis.pause();
-      setIsPaused(true);
-      return;
+    if (audioRef.current && audioRef.current.src) {
+        audioRef.current.play();
+        setIsPlaying(true);
+        return;
     }
 
-    if (isPlaying && isPaused) {
-      window.speechSynthesis.resume();
-      setIsPaused(false);
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-    setIsPaused(false);
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
-
-    const languageOfContent = detectContentLanguage(text);
-    const voices = window.speechSynthesis.getVoices();
-    let selectedVoice: SpeechSynthesisVoice | undefined;
-
-    if (languageOfContent === 'hindi' || languageOfContent === 'hinglish') {
-        selectedVoice = voices.find(v => v.lang.startsWith('hi') && v.name.includes('Google'));
-        if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith('hi'));
+    setIsLoadingAudio(true);
+    try {
+        const result = await getTextToSpeech({ text });
+        if (result && 'error' in result) {
+            throw new Error(result.error);
         }
-        utterance.lang = 'hi-IN';
-    } else {
-        selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
-        if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith('en'));
-        }
-        utterance.lang = 'en-US';
-    }
-    
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
-    }
-    
-    utterance.rate = playbackRate;
-    utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
-    utterance.onpause = () => { setIsPaused(true); setIsPlaying(true); };
-    utterance.onresume = () => { setIsPaused(false); setIsPlaying(true); };
-    utterance.onend = () => { setIsPlaying(false); setIsPaused(false); utteranceRef.current = null; };
-    utterance.onerror = (event) => {
-      if (event.error !== 'interrupted' && event.error !== 'canceled') {
-        toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
-      }
-      setIsPlaying(false); setIsPaused(false);
-    };
+        
+        if (result.audioDataUri) {
+            if (!audioRef.current) {
+                audioRef.current = new Audio();
+            }
+            audioRef.current.src = result.audioDataUri;
+            audioRef.current.playbackRate = playbackRate;
+            audioRef.current.play();
+            setIsPlaying(true);
 
-    window.speechSynthesis.speak(utterance);
-  }, [text, isPlaying, isPaused, playbackRate, toast]);
-  
-   useEffect(() => {
-    // Ensure voices are loaded
-    const handleVoicesChanged = () => {
-      // The voices are now loaded, you could re-trigger something here if needed
-    };
-    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-    
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-      }
-    };
-  }, []);
+            audioRef.current.onended = () => {
+                setIsPlaying(false);
+            };
+        }
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Text-to-Speech Failed',
+            description: error.message || 'Could not generate audio for this text.',
+        });
+    } finally {
+        setIsLoadingAudio(false);
+    }
+  }, [text, isPlaying, playbackRate, toast]);
 
 
   const handleCopy = () => {
@@ -173,25 +111,8 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
 
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
-    if (isPlaying && utteranceRef.current) {
-        window.speechSynthesis.cancel();
-        
-        const newUtterance = new SpeechSynthesisUtterance(text);
-        newUtterance.voice = utteranceRef.current.voice;
-        newUtterance.lang = utteranceRef.current.lang;
-        newUtterance.rate = rate;
-        
-        newUtterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
-        newUtterance.onend = () => { setIsPlaying(false); setIsPaused(false); utteranceRef.current = null; };
-         newUtterance.onerror = (event) => {
-            if (event.error !== 'interrupted' && event.error !== 'canceled') {
-                toast({ variant: 'destructive', title: 'Speech Error', description: 'Could not play the audio.' });
-            }
-            setIsPlaying(false); setIsPaused(false);
-        };
-        
-        window.speechSynthesis.speak(newUtterance);
-        utteranceRef.current = newUtterance;
+    if (audioRef.current) {
+        audioRef.current.playbackRate = rate;
     }
   };
 
@@ -220,8 +141,8 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   };
 
   const getButtonIcon = () => {
-    if (isPlaying && !isPaused) return <Pause />;
-    if (isPlaying && isPaused) return <Play />;
+    if (isLoadingAudio) return <Loader2 className="animate-spin" />;
+    if (isPlaying) return <Pause />;
     return <Volume2 />;
   }
 
@@ -231,7 +152,7 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
           <CardHeader className='flex-row items-center justify-between p-4 md:p-6'>
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">{icon} {title}</CardTitle>
               <div className='flex items-center gap-1 md:gap-2'>
-                <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A'} className="focus-visible:ring-0 focus-visible:ring-offset-0 h-8 w-8 md:h-9 md:w-9">
+                <Button variant="ghost" size="icon" onClick={handleListen} disabled={!text || text === 'N/A' || isLoadingAudio} className="focus-visible:ring-0 focus-visible:ring-offset-0 h-8 w-8 md:h-9 md:w-9">
                     {getButtonIcon()}
                 </Button>
                 <DropdownMenu>
@@ -662,7 +583,7 @@ export function ExplanationView() {
                 <div className="flex-1 relative">
                     {imagePreview && (
                         <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border">
-                            <Image src={imagePreview} alt="preview" width={60} height={60} className="rounded-md object-cover" />
+                            <Image src={imagePreview} alt="preview" fill className="rounded-md object-cover" />
                             <button 
                                 type="button" 
                                 onClick={() => {
