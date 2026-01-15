@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import wav from 'wav';
+// import wav from 'wav';
 
 async function toWav(
   pcmData: Buffer,
@@ -16,6 +16,7 @@ async function toWav(
   rate = 24000,
   sampleWidth = 2
 ): Promise<string> {
+  const wav = require('wav');
   return new Promise((resolve, reject) => {
     const writer = new wav.Writer({
       channels,
