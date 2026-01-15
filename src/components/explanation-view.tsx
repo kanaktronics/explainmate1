@@ -531,7 +531,7 @@ export function ExplanationView() {
 
   return (
     <div className='flex flex-col h-full'>
-      <ScrollArea className="flex-1" id="chat-scroll-area">
+      <ScrollArea className="flex-1">
         <div className="p-2 md:p-6 space-y-4 md:space-y-6">
             {chat.length === 0 && !isLoading && !error && <WelcomeScreen />}
             {chat.map(renderMessage)}
@@ -581,7 +581,7 @@ export function ExplanationView() {
                     {imagePreview && (
                         <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border w-16 h-16">
                             <div className='relative w-full h-full'>
-                                <Image src={imagePreview} alt="preview" fill className="rounded-md object-cover" />
+                                <Image src={imagePreview} alt="preview" fill style={{objectFit: 'cover'}} className="rounded-md" />
                             </div>
                             <button 
                                 type="button" 

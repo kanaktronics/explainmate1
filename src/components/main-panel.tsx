@@ -69,7 +69,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col">
         <ContentWrapper {...contentWrapperProps}>
             <div className={innerDivClass}>
                 {children}
