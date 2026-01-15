@@ -299,7 +299,9 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
       <Card className="bg-muted">
         <CardContent className="p-3">
           {dataUrl && (
-            <Image src={dataUrl} alt="Uploaded diagram" width={200} height={200} className="rounded-md mb-2 object-cover" />
+            <div className="relative w-full h-auto" style={{maxWidth: '200px', maxHeight: '200px'}}>
+              <Image src={dataUrl} alt="Uploaded diagram" layout="fill" objectFit="contain" className="rounded-md" />
+            </div>
           )}
           {textPart && <p className="font-semibold">{textPart}</p>}
         </CardContent>
@@ -583,7 +585,9 @@ export function ExplanationView() {
                 <div className="flex-1 relative">
                     {imagePreview && (
                         <div className="absolute bottom-full left-0 mb-2 p-1 bg-muted rounded-md border w-16 h-16">
-                            <Image src={imagePreview} alt="preview" fill className="rounded-md object-cover" />
+                            <div className='relative w-full h-full'>
+                                <Image src={imagePreview} alt="preview" fill className="rounded-md object-cover" />
+                            </div>
                             <button 
                                 type="button" 
                                 onClick={() => {
