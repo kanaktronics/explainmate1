@@ -299,8 +299,8 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
       <Card className="bg-muted">
         <CardContent className="p-3">
           {dataUrl && (
-            <div className="relative w-full h-auto" style={{maxWidth: '200px', maxHeight: '200px'}}>
-              <Image src={dataUrl} alt="Uploaded diagram" fill objectFit="contain" className="rounded-md" />
+            <div className="relative" style={{width: '60px', height: '60px'}}>
+              <Image src={dataUrl} alt="Uploaded diagram" fill style={{objectFit: 'cover'}} className="rounded-md" />
             </div>
           )}
           {textPart && <p className="font-semibold">{textPart}</p>}
@@ -469,7 +469,6 @@ export function ExplanationView() {
     const userMessageContent: { text: string; dataUrl?: string } = { text: values.prompt };
     if (values.image) {
       userMessageContent.dataUrl = values.image;
-      console.log("explanation-view.tsx: Image dataUrl attached to user message.", values.image.substring(0, 50) + "...");
     }
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     
@@ -489,9 +488,10 @@ export function ExplanationView() {
       studentProfile: studentProfile,
     });
 
-    if (result && 'error' in result) {
-      let friendlyError = 'An unexpected error occurred. Please try again.';
-      switch (result.error) {
+    if (!result || 'error' in result) {
+        const errorMsg = result?.error || 'An unexpected error occurred.';
+        let friendlyError = errorMsg;
+      switch (errorMsg) {
         case 'DAILY_LIMIT_REACHED':
           showAd({
             title: "Daily Limit Reached",
@@ -507,19 +507,14 @@ export function ExplanationView() {
         case 'ACCOUNT_BLOCKED':
             friendlyError = "Your account is currently on hold due to unusual activity. If you believe this is a mistake, please contact ExplainMate Support.";
             break;
-        default:
-          friendlyError = result.error;
-          break;
       }
-      if(result.error !== 'DAILY_LIMIT_REACHED') {
+      if(errorMsg !== 'DAILY_LIMIT_REACHED') {
           setError(friendlyError);
       }
-      console.error("explanation-view.tsx: Received error from getExplanation:", result.error);
-    } else if (result) {
+      console.error("explanation-view.tsx: Received error from getExplanation:", friendlyError);
+    } else {
       const assistantMessage: ChatMessage = { role: 'assistant', content: result };
       addToChat(assistantMessage);
-    } else {
-       setError("An unexpected error occurred and the AI did not return a response.");
     }
     setIsLoading(false);
   }

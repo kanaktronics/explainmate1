@@ -23,6 +23,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
     '/refund-policy',
     '/service-delivery-policy',
     '/pricing',
+    '/progress',
   ];
 
   const needsScroll = legalPages.includes(pathname);
@@ -68,7 +69,7 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <ContentWrapper {...contentWrapperProps}>
             <div className={innerDivClass}>
                 {children}
