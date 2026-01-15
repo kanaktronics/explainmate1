@@ -21,6 +21,7 @@ const fontHeadline = Belleza({
 export const metadata: Metadata = {
   title: 'ExplainMate AI Tutor',
   description: 'Your personal AI-powered tutor for simplifying any topic. Get step-by-step explanations, rough work, real-world examples, and quizzes.',
+  manifest: '/manifest.json',
   metadataBase: new URL('https://explainmate.tech'),
   openGraph: {
     title: 'ExplainMate AI Tutor',
@@ -46,6 +47,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/favicon.ico',
+    apple: '/icons/icon-192x192.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'ExplainMate AI Tutor',
   },
 };
 
@@ -56,6 +63,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+       <head>
+        <meta name="theme-color" content="#FF8216" />
+      </head>
       <body className={cn('font-body antialiased', fontBody.variable, fontHeadline.variable)}>
         <RegisterSW />
         <ClientLayout>{children}</ClientLayout>
