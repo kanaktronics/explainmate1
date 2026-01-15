@@ -300,7 +300,7 @@ const UserMessage = ({ content }: { content: ChatMessage['content'] }) => {
         <CardContent className="p-3">
           {dataUrl && (
             <div className="relative w-full h-auto" style={{maxWidth: '200px', maxHeight: '200px'}}>
-              <Image src={dataUrl} alt="Uploaded diagram" layout="fill" objectFit="contain" className="rounded-md" />
+              <Image src={dataUrl} alt="Uploaded diagram" fill objectFit="contain" className="rounded-md" />
             </div>
           )}
           {textPart && <p className="font-semibold">{textPart}</p>}
