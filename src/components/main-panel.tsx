@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -8,32 +9,12 @@ import { AppLogo } from './app-logo';
 import { Button } from './ui/button';
 import { Sparkles, LogIn } from 'lucide-react';
 import Link from 'next/link';
-import { ScrollArea } from './ui/scroll-area';
-import { usePathname } from 'next/navigation';
 
 export function MainPanel({ children }: { children: React.ReactNode }) {
   const { studentProfile, user } = useAppContext();
-  const pathname = usePathname();
-
-  const legalPages = [
-    '/about',
-    '/contact',
-    '/privacy-policy',
-    '/terms-conditions',
-    '/refund-policy',
-    '/service-delivery-policy',
-    '/pricing',
-    '/progress',
-  ];
-
-  const needsScroll = legalPages.includes(pathname);
-
-  const ContentWrapper = needsScroll ? ScrollArea : React.Fragment;
-  const contentWrapperProps = needsScroll ? { className: 'h-full' } : {};
-  const innerDivClass = needsScroll ? "container mx-auto p-4 sm:p-6 md:p-8" : "h-full";
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-full bg-background">
       <header className="p-4 border-b flex items-center justify-between gap-4 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
          <div className='flex items-center gap-4'>
             <div className="md:hidden">
@@ -69,12 +50,10 @@ export function MainPanel({ children }: { children: React.ReactNode }) {
             )}
          </div>
       </header>
-      <main className="flex-1 flex flex-col">
-        <ContentWrapper {...contentWrapperProps}>
-            <div className={innerDivClass}>
-                {children}
-            </div>
-        </ContentWrapper>
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          {children}
+        </div>
       </main>
     </div>
   );

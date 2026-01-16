@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -397,7 +398,7 @@ const SidebarMenuButton = React.forwardRef<
       </Comp>
     )
 
-    const buttonWithLink = href ? <Link href={href} passHref legacyBehavior={asChild}>{button}</Link> : button;
+    const buttonWithLink = href ? <Link href={href}>{button}</Link> : button;
 
     if (!open && tooltip) {
       if (typeof tooltip === "string") {
@@ -476,5 +477,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
-    
