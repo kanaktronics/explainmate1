@@ -46,7 +46,7 @@ const QuestionSchema = z.object({
     question: z.string().optional().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
     assertion: z.string().optional().describe('The assertion text for Assertion-Reason questions.'),
     reason: z.string().optional().describe('The reason text for Assertion-Reason questions.'),
-    options: z.array(z.string()).optional().describe('An array of options for MCQ questions.'),
+    options: z.array(z.string()).optional().describe('An array of options for MCQ, True/False, and Assertion-Reason questions.'),
     correctAnswer: z.string().describe('The correct answer. For True/False, it is "True" or "False". For FillInTheBlanks, it is the word/phrase to fill in. For ShortAnswer, it is a model answer.'),
     explanation: z.string().describe('A brief, one-line explanation of why the answer is correct.'),
 });
@@ -86,41 +86,43 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 {{/if}}
 
 **CRITICAL RULES:**
-1.  **Question Type**:
+1.  **Number of Questions**: You MUST generate exactly **{{numQuestions}}** questions.
+2.  **Question Type**:
     {{{questionTypeInstruction}}}
-2.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
-3.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
-4.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.
-5.  **Strict Output Format**: Your entire output must be a single JSON object matching the provided Zod schema. Each question object in the "quiz" array must conform to the specified structure for its type.
+3.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
+4.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
+5.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.
+6.  **Strict Output Format**: Your entire output must be a single JSON object matching the provided Zod schema. Each question object in the "quiz" array must conform to the specified structure for its type.
 
 **QUESTION TYPE FORMATS:**
 
 1.  **MCQ (Single Correct)**:
     -   \`type\`: "MCQ"
     -   \`question\`: The question text.
-    -   \`options\`: An array of 4 strings.
-    -   \`correctAnswer\`: The correct option's text.
-    -   \`explanation\`: A one-line reason why the answer is correct.
+    -   \`options\`: MANDATORY. An array of 4 distinct strings. Incorrect options must be plausible distractors.
+    -   \`correctAnswer\`: The text of the single correct option.
+    -   \`explanation\`: A brief, one-line explanation of why the answer is correct.
 
 2.  **True / False**:
     -   \`type\`: "TrueFalse"
     -   \`question\`: The statement to be evaluated.
-    -   \`options\`: Must be \`["True", "False"]\`.
+    -   \`options\`: MANDATORY. Must be \`["True", "False"]\`.
     -   \`correctAnswer\`: Either "True" or "False".
-    -   \`explanation\`: A one-line reason why the statement is true or false.
+    -   \`explanation\`: A brief, one-line reason why the statement is true or false.
 
 3.  **Assertion – Reason**:
     -   \`type\`: "AssertionReason"
     -   \`question\`: This field MUST be an empty string: \`""\`.
-    -   \`assertion\`: A single, concise assertion statement (max 150 characters).
-    -   \`reason\`: A single, concise reason statement (max 150 characters). It must NOT be a repeated phrase.
-    -   \`options\`: Must be the standard 4 A/R options:
+    -   \`assertion\`: A single, concise assertion statement. MANDATORY. HARD LIMIT: 150 characters.
+    -   \`reason\`: A single, concise reason statement explaining the 'why' of the assertion. MANDATORY. HARD LIMIT: 150 characters & max 1-2 lines.
+    -   \`options\`: MANDATORY. Must be the standard 4 A/R options:
         -   "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)."
         -   "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)."
         -   "Assertion (A) is true but Reason (R) is false."
         -   "Assertion (A) is false but Reason (R) is true."
     -   \`correctAnswer\`: The full text of the correct option.
-    -   \`explanation\`: A one-line justification for the A/R relationship.
+    -   \`explanation\`: A one-line justification for the correct A/R relationship.
+    -   **CRITICAL RULE for 'reason'**: The reason MUST be a short, direct scientific statement. DO NOT repeat phrases. DO NOT add any notes or meta-commentary. Keep it under 25 words.
 
 4.  **Fill in the Blanks**:
     -   \`type\`: "FillInTheBlanks"
