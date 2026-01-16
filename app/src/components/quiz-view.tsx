@@ -381,22 +381,7 @@ export function QuizView() {
 
 function McqInput({ index, question, control, disabled, showResult, userAnswer }: { index: number; question: QuizQuestion; control: any; disabled: boolean; showResult: boolean; userAnswer: UserAnswers[number] | undefined; }) {
     
-    const getOptions = () => {
-        if (question.type === 'TrueFalse') {
-            return ['True', 'False'];
-        }
-        if (question.type === 'AssertionReason') {
-            return [
-                "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
-                "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
-                "Assertion (A) is true but Reason (R) is false.",
-                "Assertion (A) is false but Reason (R) is true."
-            ];
-        }
-        return question.options || [];
-    }
-
-    const options = getOptions();
+    const options = question.options || [];
 
     return (
         <FormField

@@ -46,7 +46,7 @@ const QuestionSchema = z.object({
     question: z.string().optional().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
     assertion: z.string().optional().describe('The assertion text for Assertion-Reason questions.'),
     reason: z.string().optional().describe('The reason text for Assertion-Reason questions.'),
-    options: z.array(z.string()).optional().describe('An array of options for MCQ questions.'),
+    options: z.array(z.string()).optional().describe('An array of options for MCQ, True/False, and Assertion-Reason questions.'),
     correctAnswer: z.string().describe('The correct answer. For True/False, it is "True" or "False". For FillInTheBlanks, it is the word/phrase to fill in. For ShortAnswer, it is a model answer.'),
     explanation: z.string().describe('A brief, one-line explanation of why the answer is correct.'),
 });
@@ -106,17 +106,21 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 2.  **True / False**:
     -   \`type\`: "TrueFalse"
     -   \`question\`: The statement to be evaluated.
-    -   \`options\`: This field MUST be omitted.
+    -   \`options\`: MANDATORY. Must be \`["True", "False"]\`.
     -   \`correctAnswer\`: Either "True" or "False".
     -   \`explanation\`: A brief, one-line reason why the statement is true or false.
 
 3.  **Assertion – Reason**:
     -   \`type\`: "AssertionReason"
     -   \`question\`: This field MUST be an empty string: \`""\`.
-    -   \`assertion\`: **MANDATORY**: A single, concise assertion statement. This field cannot be empty.
-    -   \`reason\`: **MANDATORY**: A single, concise reason statement. **MUST be under 150 characters and 1-2 lines long.** Do not add notes, meta-commentary, or repeat the same phrase over and over.
-    -   \`options\`: This field MUST be omitted.
-    -   \`correctAnswer\`: The full text of one of the four standard A/R options.
+    -   \`assertion\`: A single, concise assertion statement. MANDATORY. HARD LIMIT: 150 characters.
+    -   \`reason\`: A single, concise reason statement explaining the 'why' of the assertion. MANDATORY. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct scientific statement. DO NOT add notes, meta-commentary, or repeat phrases.
+    -   \`options\`: MANDATORY. Must be the standard 4 A/R options:
+        -   "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)."
+        -   "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)."
+        -   "Assertion (A) is true but Reason (R) is false."
+        -   "Assertion (A) is false but Reason (R) is true."
+    -   \`correctAnswer\`: The full text of the correct option.
     -   \`explanation\`: A one-line justification for the correct A/R relationship.
 
 4.  **Fill in the Blanks**:
