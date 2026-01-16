@@ -380,17 +380,8 @@ export function QuizView() {
 }
 
 function McqInput({ index, question, control, disabled, showResult, userAnswer }: { index: number; question: QuizQuestion; control: any; disabled: boolean; showResult: boolean; userAnswer: UserAnswers[number] | undefined; }) {
-    const standardOptions: { [key: string]: string[] } = {
-        'TrueFalse': ['True', 'False'],
-        'AssertionReason': [
-            "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
-            "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
-            "Assertion (A) is true but Reason (R) is false.",
-            "Assertion (A) is false but Reason (R) is true."
-        ]
-    };
-
-    const options = standardOptions[question.type] || question.options || [];
+    
+    const options = question.options || [];
 
     return (
         <FormField
@@ -478,6 +469,11 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
     const isCorrect = userAnswer?.isCorrect;
 
     const renderQuestionInput = () => {
+        // Gracefully handle malformed MCQs from the AI by treating them as Short Answer questions.
+        if (q.type === 'MCQ' && (!q.options || q.options.length === 0)) {
+            return <ShortAnswerInput question={q} control={control} disabled={disabled} index={index} />;
+        }
+        
         switch (q.type) {
             case 'MCQ':
             case 'TrueFalse':
@@ -525,7 +521,8 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
                             <p>{userAnswer.feedback}</p>
                         ) : (
                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                               <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**${q.correctAnswer}**\n\n${q.explanation}`}</ReactMarkdown>
+                                <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**${q.correctAnswer}**`}</ReactMarkdown>
+                                <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`${q.explanation}`}</ReactMarkdown>
                            </div>
                         )}
                     </AlertDescription>
@@ -552,3 +549,5 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
+
+    
