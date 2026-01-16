@@ -44,9 +44,9 @@ const InternalPromptInputSchema = GenerateInteractiveQuizzesInputSchema.extend({
 const QuestionSchema = z.object({
     type: z.enum(['MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).describe('The type of question.'),
     question: z.string().optional().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
-    assertion: z.string().optional().describe('The assertion text for Assertion-Reason questions.'),
-    reason: z.string().optional().describe('The reason text for Assertion-Reason questions.'),
-    options: z.array(z.string()).optional().describe('An array of options for MCQ, True/False, and Assertion-Reason questions.'),
+    assertion: z.string().optional().describe('The assertion text for Assertion-Reason questions. MANDATORY for this type. HARD LIMIT: 150 characters.'),
+    reason: z.string().optional().describe("The reason text for Assertion-Reason questions. MANDATORY for this type. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct scientific statement. DO NOT add notes, meta-commentary, or repeat phrases."),
+    options: z.array(z.string()).optional().describe('An array of options for MCQ, True/False, and Assertion-Reason questions. MANDATORY for these types.'),
     correctAnswer: z.string().describe('The correct answer. For True/False, it is "True" or "False". For FillInTheBlanks, it is the word/phrase to fill in. For ShortAnswer, it is a model answer.'),
     explanation: z.string().describe('A brief, one-line explanation of why the answer is correct.'),
 });
