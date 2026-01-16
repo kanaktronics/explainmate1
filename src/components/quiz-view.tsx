@@ -2,6 +2,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -379,6 +380,18 @@ export function QuizView() {
 }
 
 function McqInput({ index, question, control, disabled, showResult, userAnswer }: { index: number; question: QuizQuestion; control: any; disabled: boolean; showResult: boolean; userAnswer: UserAnswers[number] | undefined; }) {
+    const standardOptions: { [key: string]: string[] } = {
+        'TrueFalse': ['True', 'False'],
+        'AssertionReason': [
+            "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).",
+            "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).",
+            "Assertion (A) is true but Reason (R) is false.",
+            "Assertion (A) is false but Reason (R) is true."
+        ]
+    };
+
+    const options = standardOptions[question.type] || question.options || [];
+
     return (
         <FormField
             control={control}
@@ -388,7 +401,7 @@ function McqInput({ index, question, control, disabled, showResult, userAnswer }
                 <FormItem>
                     <FormControl>
                         <RadioGroup onValueChange={field.onChange} value={field.value} disabled={disabled}>
-                            {(question.options || []).map((option, i) => {
+                            {options.map((option, i) => {
                                 const isSelected = field.value === option;
                                 const isCorrectAnswer = question.correctAnswer === option;
                                 
@@ -512,9 +525,7 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
                             <p>{userAnswer.feedback}</p>
                         ) : (
                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                               <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                   {`**${q.correctAnswer}**\n\n${q.explanation}`}
-                               </ReactMarkdown>
+                               <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**${q.correctAnswer}**\n\n${q.explanation}`}</ReactMarkdown>
                            </div>
                         )}
                     </AlertDescription>
