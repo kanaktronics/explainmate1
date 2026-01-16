@@ -57,38 +57,76 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handleListen = useCallback(async () => {
-    if (isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-      return;
+  // When the text content of the card changes, we must reset the audio state.
+  // This prevents playing stale audio from a previous explanation.
+  useEffect(() => {
+    // Pause and reset any currently playing audio
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.src = '';
     }
+    // Reset the playback state
+    setIsPlaying(false);
+  }, [text]);
 
-    if (audioRef.current && audioRef.current.src) {
-        audioRef.current.play();
-        setIsPlaying(true);
+  // This effect manages the lifecycle of the Audio object.
+  // It runs once on mount to create the object and its listeners,
+  // and cleans up on unmount.
+  useEffect(() => {
+    audioRef.current = new Audio();
+    const audio = audioRef.current;
+
+    const onAudioEnd = () => setIsPlaying(false);
+    const onAudioPlay = () => setIsPlaying(true);
+    const onAudioPause = () => setIsPlaying(false);
+
+    audio.addEventListener('ended', onAudioEnd);
+    audio.addEventListener('play', onAudioPlay);
+    audio.addEventListener('pause', onAudioPause);
+
+    // Cleanup function to run when the component unmounts
+    return () => {
+        audio.removeEventListener('ended', onAudioEnd);
+        audio.removeEventListener('play', onAudioPlay);
+        audio.removeEventListener('pause', onAudioPause);
+        audio.pause();
+    };
+  }, []); // Empty dependency array ensures this runs only on mount and unmount.
+
+  // This effect syncs the React state for playback rate with the audio element.
+  useEffect(() => {
+    if (audioRef.current) {
+        audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
+
+
+  const handleListen = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+        audio.pause();
         return;
     }
 
+    // If we already have the audio data, just play it.
+    if (audio.src) {
+        audio.play();
+        return;
+    }
+
+    // If no audio data is available, fetch it.
     setIsLoadingAudio(true);
     try {
         const result = await getTextToSpeech({ text });
         if (result && 'error' in result) {
             throw new Error(result.error);
         }
-        
-        if (result.audioDataUri) {
-            if (!audioRef.current) {
-                audioRef.current = new Audio();
-            }
-            audioRef.current.src = result.audioDataUri;
-            audioRef.current.playbackRate = playbackRate;
-            audioRef.current.play();
-            setIsPlaying(true);
-
-            audioRef.current.onended = () => {
-                setIsPlaying(false);
-            };
+        if (result?.audioDataUri) {
+            audio.src = result.audioDataUri;
+            audio.play();
         }
     } catch (error: any) {
         toast({
@@ -96,10 +134,11 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
             title: 'Text-to-Speech Failed',
             description: error.message || 'Could not generate audio for this text.',
         });
+        setIsPlaying(false); // Ensure we reset state on error
     } finally {
         setIsLoadingAudio(false);
     }
-  }, [text, isPlaying, playbackRate, toast]);
+  }, [isPlaying, text, toast]);
 
 
   const handleCopy = () => {
@@ -111,9 +150,6 @@ const ExplanationCard = ({ cardId, title, text, icon, isOnlyCard = false }: Expl
 
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate);
-    if (audioRef.current) {
-        audioRef.current.playbackRate = rate;
-    }
   };
 
   const renderContent = (content: string) => {
