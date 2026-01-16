@@ -549,5 +549,3 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
-
-    
