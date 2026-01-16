@@ -96,45 +96,45 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 **QUESTION TYPE FORMATS:**
 
 1.  **MCQ (Single Correct)**:
-    -   `type`: "MCQ"
-    -   `question`: The question text.
-    -   `options`: An array of 4 strings.
-    -   `correctAnswer`: The correct option's text.
-    -   `explanation`: A one-line reason why the answer is correct.
+    -   \`type\`: "MCQ"
+    -   \`question\`: The question text.
+    -   \`options\`: An array of 4 strings.
+    -   \`correctAnswer\`: The correct option's text.
+    -   \`explanation\`: A one-line reason why the answer is correct.
 
 2.  **True / False**:
-    -   `type\`: "TrueFalse"
-    -   `question\`: The statement to be evaluated.
-    -   `options\`: Must be \`["True", "False"]\`.
-    -   `correctAnswer\`: Either "True" or "False".
-    -   `explanation\`: A one-line reason why the statement is true or false.
+    -   \`type\`: "TrueFalse"
+    -   \`question\`: The statement to be evaluated.
+    -   \`options\`: Must be \`["True", "False"]\`.
+    -   \`correctAnswer\`: Either "True" or "False".
+    -   \`explanation\`: A one-line reason why the statement is true or false.
 
 3.  **Assertion – Reason**:
-    -   `type\`: "AssertionReason"
-    -   `question\`: This field MUST be an empty string: \`""\`.
-    -   `assertion\`: A single, concise assertion statement. **HARD LIMIT: Max 150 characters.**
-    -   `reason\`: A single, concise reason statement. **HARD LIMIT: Max 150 characters and 1-2 lines.** It must NOT be a repeated phrase or a long paragraph.
-    -   `options\`: Must be the standard 4 A/R options:
+    -   \`type\`: "AssertionReason"
+    -   \`question\`: This field MUST be an empty string: \`""\`.
+    -   \`assertion\`: A single, concise assertion statement (max 150 characters).
+    -   \`reason\`: A single, concise reason statement (max 150 characters). It must NOT be a repeated phrase.
+    -   \`options\`: Must be the standard 4 A/R options:
         -   "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)."
         -   "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)."
         -   "Assertion (A) is true but Reason (R) is false."
         -   "Assertion (A) is false but Reason (R) is true."
-    -   `correctAnswer\`: The full text of the correct option.
-    -   `explanation\`: A one-line justification for the correct A/R relationship.
+    -   \`correctAnswer\`: The full text of the correct option.
+    -   \`explanation\`: A one-line justification for the A/R relationship.
 
 4.  **Fill in the Blanks**:
-    -   `type\`: "FillInTheBlanks"
-    -   `question\`: The sentence with a blank, represented by \`___\`. Example: "The powerhouse of the cell is the ___."
-    -   `options\`: This field must be omitted.
-    -   `correctAnswer\`: The word or short phrase that fills the blank. Example: "mitochondria".
-    -   `explanation\`: A one-line reason why that word is correct.
+    -   \`type\`: "FillInTheBlanks"
+    -   \`question\`: The sentence with a blank, represented by \`___\`. Example: "The powerhouse of the cell is the ___."
+    -   \`options\`: This field must be omitted.
+    -   \`correctAnswer\`: The word or short phrase that fills the blank. Example: "mitochondria".
+    -   \`explanation\`: A one-line reason why that word is correct.
 
 5.  **Short Answer**:
-    -   `type\`: "ShortAnswer"
-    -   `question\`: The question that requires a brief written response.
-    -   `options\`: This field must be omitted.
-    -   `correctAnswer\`: A model answer, 2-3 lines long, as would be expected in an exam.
-    -   `explanation\`: A one-line summary of the key points the answer should contain.
+    -   \`type\`: "ShortAnswer"
+    -   \`question\`: The question that requires a brief written response.
+    -   \`options\`: This field must be omitted.
+    -   \`correctAnswer\`: A model answer, 2-3 lines long, as would be expected in an exam.
+    -   \`explanation\`: A one-line summary of the key points the answer should contain.
 
 Generate the JSON output now.
 `,
@@ -165,3 +165,5 @@ const generateInteractiveQuizzesFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
