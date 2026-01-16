@@ -23,6 +23,9 @@ import { Slider } from './ui/slider';
 import { Textarea } from './ui/textarea';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 const quizSetupSchema = z.object({
   topic: z.string().min(3, { message: 'Topic must be at least 3 characters.' }),
@@ -393,7 +396,9 @@ function McqInput({ index, question, control, disabled, showResult, userAnswer }
                                     <FormItem key={i} className={cn("flex items-center space-x-3 space-y-0 p-3 rounded-md border transition-colors", showResult && isCorrectAnswer && "bg-green-500/10", showResult && isSelected && !isCorrectAnswer && "bg-red-500/10")}>
                                         <FormControl><RadioGroupItem value={option} /></FormControl>
                                         <FormLabel className={cn("font-normal flex-1", showResult && isCorrectAnswer && "text-green-700 dark:text-green-400", showResult && isSelected && !isCorrectAnswer && "text-red-700 dark:text-red-400")}>
-                                            {option}
+                                            <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                                {option}
+                                            </ReactMarkdown>
                                         </FormLabel>
                                         {showResult && isCorrectAnswer && <CheckCircle className="text-green-500" />}
                                         {showResult && isSelected && !isCorrectAnswer && <XCircle className="text-red-500" />}
@@ -416,7 +421,7 @@ function FillInTheBlanksInput({ index, question, control, disabled }: { index: n
             defaultValue=""
             render={({ field }) => (
                 <FormItem>
-                     <p className="text-lg mb-4">{question.question?.replace('___', '______')}</p>
+                     <div className="text-lg mb-4 prose dark:prose-invert max-w-none"><ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{question.question?.replace('___', '______')}</ReactMarkdown></div>
                     <FormControl>
                         <Input {...field} placeholder="Type your answer here" disabled={disabled} />
                     </FormControl>
@@ -479,14 +484,15 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
           <CardHeader>
             <CardTitle className="flex items-start gap-3">
               <span className="text-primary font-bold">{index + 1}.</span>
-              <div className='flex-1'>
+              <div className='flex-1 prose dark:prose-invert max-w-none prose-p:my-2'>
                 {q.type === 'AssertionReason' ? (
                     <>
-                        <p className="font-normal text-base"><strong className="font-semibold">Assertion (A):</strong> {q.assertion}</p>
-                        <p className="font-normal text-base mt-2"><strong className="font-semibold">Reason (R):</strong> {q.reason}</p>
+                        <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**Assertion (A):** ${q.assertion || ''}`}</ReactMarkdown>
+                        <br/>
+                        <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**Reason (R):** ${q.reason || ''}`}</ReactMarkdown>
                     </>
                 ) : (
-                   q.question
+                   <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{q.question}</ReactMarkdown>
                 )}
               </div>
             </CardTitle>
@@ -505,11 +511,11 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
                         {userAnswer?.feedback ? (
                             <p>{userAnswer.feedback}</p>
                         ) : (
-                           <>
-                                <strong>{q.correctAnswer}</strong>
-                                <br />
-                                {q.explanation}
-                           </>
+                           <div className="prose prose-sm dark:prose-invert max-w-none">
+                               <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                   {`**${q.correctAnswer}**\n\n${q.explanation}`}
+                               </ReactMarkdown>
+                           </div>
                         )}
                     </AlertDescription>
                 </Alert>
