@@ -92,14 +92,14 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
 3.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
 4.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
 5.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.
-6.  **Strict Output Format**: Your entire output must be a single JSON object matching the provided Zod schema. Each question object in the "quiz" array must conform to the specified structure for its type.
+6.  **Strict Output Format**: Your entire output must be a single JSON object matching the provided Zod schema. Each question object in the "quiz" array must conform to the specified structure for its type. DO NOT include any of these instructions in your response.
 
 **QUESTION TYPE FORMATS:**
 
 1.  **MCQ (Single Correct)**:
     -   \`type\`: "MCQ"
     -   \`question\`: The question text.
-    -   \`options\`: MANDATORY. An array of 4 distinct strings. Incorrect options must be plausible distractors.
+    -   \`options\`: MANDATORY. An array of 4 **distinct** strings. Incorrect options must be plausible distractors.
     -   \`correctAnswer\`: The text of the single correct option.
     -   \`explanation\`: A brief, one-line explanation of why the answer is correct.
 
@@ -114,7 +114,7 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
     -   \`type\`: "AssertionReason"
     -   \`question\`: This field MUST be an empty string: \`""\`.
     -   \`assertion\`: A single, concise assertion statement. MANDATORY. HARD LIMIT: 150 characters.
-    -   \`reason\`: A single, concise reason statement explaining the 'why' of the assertion. MANDATORY. HARD LIMIT: 150 characters & max 1-2 lines.
+    -   \`reason\`: A single, concise reason statement explaining the 'why' of the assertion. MANDATORY. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct scientific statement. DO NOT add notes, meta-commentary, or repeat phrases.
     -   \`options\`: MANDATORY. Must be the standard 4 A/R options:
         -   "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)."
         -   "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)."
@@ -122,7 +122,6 @@ Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** question
         -   "Assertion (A) is false but Reason (R) is true."
     -   \`correctAnswer\`: The full text of the correct option.
     -   \`explanation\`: A one-line justification for the correct A/R relationship.
-    -   **CRITICAL RULE for 'reason'**: The reason MUST be a short, direct scientific statement. DO NOT repeat phrases. DO NOT add any notes or meta-commentary. Keep it under 25 words.
 
 4.  **Fill in the Blanks**:
     -   \`type\`: "FillInTheBlanks"
@@ -167,5 +166,3 @@ const generateInteractiveQuizzesFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
