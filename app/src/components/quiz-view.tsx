@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -141,8 +140,24 @@ export function QuizView() {
        if(result.error !== 'DAILY_LIMIT_REACHED') {
           setError(friendlyError);
        }
-    } else if (result) {
-      setQuiz(result);
+    } else if (result && result.quiz) {
+      // Validate the quiz data from the AI
+      const invalidQuestion = result.quiz.find(q => {
+        if ((q.type === 'MCQ' || q.type === 'TrueFalse' || q.type === 'AssertionReason') && (!q.options || q.options.length < 2)) {
+          return true;
+        }
+        if (q.type === 'AssertionReason' && (!q.assertion || !q.reason)) {
+          return true;
+        }
+        return false;
+      });
+
+      if (invalidQuestion) {
+        setError(`The AI generated a malformed question (type: ${invalidQuestion.type}). Please try generating the quiz again.`);
+        setQuiz(null);
+      } else {
+        setQuiz(result);
+      }
     } else {
       setError("An unexpected error occurred and the AI did not return a response.");
     }
@@ -467,8 +482,14 @@ const getQuestionTypeIcon = (type: QuizQuestion['type']) => {
 
 const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: QuizQuestion, index: number, userAnswer: UserAnswers[number] | undefined, showResult: boolean, control: any, disabled: boolean }) => {
     const isCorrect = userAnswer?.isCorrect;
+    const TRUNCATE_LENGTH = 300;
 
     const renderQuestionInput = () => {
+        // Fallback for malformed MCQs from the AI by treating them as Short Answer questions.
+        if (q.type === 'MCQ' && (!q.options || q.options.length === 0)) {
+            return <ShortAnswerInput question={q} control={control} disabled={disabled} index={index} />;
+        }
+        
         switch (q.type) {
             case 'MCQ':
             case 'TrueFalse':
@@ -479,10 +500,14 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
             case 'ShortAnswer':
                 return <ShortAnswerInput question={q} control={control} disabled={disabled} index={index} />;
             default:
-                return <p>Unsupported question type</p>;
+                // Fallback for any other unknown type
+                return <p>Unsupported question type: {q.type}</p>;
         }
     }
     
+    const truncatedAssertion = (q.assertion || '').length > TRUNCATE_LENGTH ? (q.assertion || '').substring(0, TRUNCATE_LENGTH) + '...' : (q.assertion || '');
+    const truncatedReason = (q.reason || '').length > TRUNCATE_LENGTH ? (q.reason || '').substring(0, TRUNCATE_LENGTH) + '...' : (q.reason || '');
+
     return (
         <Card className={cn(showResult && (isCorrect ? 'border-green-500' : 'border-red-500'))}>
           <CardHeader>
@@ -491,9 +516,9 @@ const QuizCard = ({ q, index, userAnswer, showResult, control, disabled }: { q: 
               <div className='flex-1 prose dark:prose-invert max-w-none prose-p:my-2'>
                 {q.type === 'AssertionReason' ? (
                     <>
-                        <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**Assertion (A):** ${q.assertion || ''}`}</ReactMarkdown>
+                        <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**Assertion (A):** ${truncatedAssertion}`}</ReactMarkdown>
                         <br/>
-                        <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**Reason (R):** ${q.reason || ''}`}</ReactMarkdown>
+                        <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`**Reason (R):** ${truncatedReason}`}</ReactMarkdown>
                     </>
                 ) : (
                    <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{q.question}</ReactMarkdown>
