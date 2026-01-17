@@ -406,16 +406,15 @@ export async function generateFlashcards(
   text: string
 ): Promise<GenerateFlashcardsOutput | { error: string }> {
   try {
-    // Generate a good number of flashcards, 8 is a good default.
-    const result = await generateFlashcardsFlow({ text, count: 8 });
+    const result = await generateFlashcardsFlow({ text });
     if (!result || !result.flashcards || result.flashcards.length === 0) {
-      throw new Error('AI did not return any flashcards.');
+      throw new Error('AI did not return any revision cards.');
     }
     return result;
   } catch (e: any) {
-    console.error('Error generating flashcards:', e);
+    console.error('Error generating revision cards:', e);
     return {
-      error: 'Failed to generate flashcards from this text. Please try with a different explanation.',
+      error: 'Failed to generate revision cards from this text. Please try with a different explanation.',
     };
   }
 }

@@ -1,7 +1,6 @@
-
 'use server';
 /**
- * @fileOverview Generates revision flashcards from a given text.
+ * @fileOverview Generates simple revision cards from a given text.
  */
 
 import { ai } from '@/ai/genkit';
@@ -10,19 +9,17 @@ import { z } from 'zod';
 /* ------------------ SCHEMAS ------------------ */
 
 const FlashcardSchema = z.object({
-  front: z.string().min(3),
-  back: z.string().min(3),
+  content: z.string().min(10).describe('A concise summary or key point about the text, formatted in Markdown.'),
 });
 
 const GenerateFlashcardsInputSchema = z.object({
   text: z.string().min(20),
-  count: z.number().min(3).max(10).default(5),
 });
 
 export type GenerateFlashcardsInput = z.infer<typeof GenerateFlashcardsInputSchema>;
 
 const GenerateFlashcardsOutputSchema = z.object({
-  flashcards: z.array(FlashcardSchema),
+  flashcards: z.array(FlashcardSchema).length(5),
 });
 
 export type GenerateFlashcardsOutput = z.infer<typeof GenerateFlashcardsOutputSchema>;
@@ -35,41 +32,35 @@ export async function generateFlashcards(
   return generateFlashcardsFlow(input);
 }
 
-/* ------------------ PROMPT (HARDENED) ------------------ */
+/* ------------------ PROMPT ------------------ */
 
 const flashcardPrompt = ai.definePrompt({
   name: 'flashcardPrompt',
   input: { schema: GenerateFlashcardsInputSchema },
   output: { schema: GenerateFlashcardsOutputSchema },
   prompt: `
-You are a flashcard generator for Indian students.
+You are a revision card generator for students.
 
 Your task:
-Convert the given text into EXACTLY {{count}} flashcards.
-
-Each flashcard MUST follow this format:
-
-{
-  "front": "Short question or key term",
-  "back": "Very short answer (1–2 lines)"
-}
+Analyze the provided text and extract EXACTLY 5 key points or concise summaries.
+Each point should be a self-contained piece of information, ideal for quick revision.
 
 STRICT RULES:
-1. Output ONLY JSON
-2. No extra text, no markdown
-3. Keep answers short and simple
-4. Do NOT skip any flashcard
-5. Avoid long paragraphs
-6. Avoid complex language
+1. Output ONLY a valid JSON object.
+2. The JSON object must contain a "flashcards" array.
+3. The "flashcards" array must contain EXACTLY 5 items.
+4. Each item in the array must be an object with a single "content" key.
+5. The "content" should be a string containing the key point, formatted in simple Markdown.
+6. Do not include any extra text, comments, or markdown formatting outside of the JSON.
 
-Text:
+Text to analyze:
 {{{text}}}
 
-Output JSON now.
+Generate the JSON output now.
 `,
 });
 
-/* ------------------ FLOW (RETRY + VALIDATION) ------------------ */
+/* ------------------ FLOW ------------------ */
 
 const generateFlashcardsFlow = ai.defineFlow(
   {
@@ -78,20 +69,12 @@ const generateFlashcardsFlow = ai.defineFlow(
     outputSchema: GenerateFlashcardsOutputSchema,
   },
   async (input) => {
-    let attempt = 0;
-    let output: GenerateFlashcardsOutput | undefined;
+    const { output } = await flashcardPrompt(input);
 
-    while (attempt < 2) {
-      const result = await flashcardPrompt(input);
-      output = result.output;
-
-      if (output?.flashcards?.length === input.count) {
-        return output;
-      }
-
-      attempt++;
+    if (!output?.flashcards || output.flashcards.length === 0) {
+      throw new Error("The AI failed to generate any revision cards.");
     }
 
-    throw new Error("Flashcard generation failed after retries.");
+    return output;
   }
 );

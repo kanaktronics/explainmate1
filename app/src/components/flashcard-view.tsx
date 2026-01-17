@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,45 +6,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 
-function Flashcard({ front, back }: { front: string; back: string }) {
-  const [isFlipped, setIsFlipped] = React.useState(false);
-
+function RevisionCard({ content }: { content: string }) {
   return (
-    <div className="perspective-1000 w-full h-full">
-      <div
-        className={cn(
-          "relative w-full h-full text-center transition-transform duration-700 transform-style-3d",
-          isFlipped ? 'rotate-y-180' : ''
-        )}
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
-        {/* Front of the card */}
-        <div className="absolute w-full h-full backface-hidden">
-          <Card className="flex flex-col items-center justify-center w-full h-full min-h-[300px] cursor-pointer">
-            <CardContent className="p-6">
-              <div className="text-xl font-semibold">
-                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{front}</ReactMarkdown>
-              </div>
-            </CardContent>
-          </Card>
+    <Card className="flex flex-col items-center justify-center w-full h-full min-h-[300px]">
+      <CardContent className="p-6">
+        <div className="prose dark:prose-invert">
+          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {content}
+          </ReactMarkdown>
         </div>
-        {/* Back of the card */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180">
-          <Card className="flex flex-col items-center justify-center w-full h-full min-h-[300px] cursor-pointer bg-muted">
-            <CardContent className="p-6">
-              <div className="prose dark:prose-invert">
-                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{back}</ReactMarkdown>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -59,9 +34,9 @@ export function FlashcardView() {
     <Dialog open={isOpen} onOpenChange={(open) => !open && clearFlashcards()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Revision Flashcards</DialogTitle>
+          <DialogTitle>Revision Cards</DialogTitle>
           <DialogDescription>
-            Click a card to flip it. Use the arrows to navigate through your generated flashcards.
+            Key points from the explanation for quick revision.
           </DialogDescription>
         </DialogHeader>
         <div className="p-8">
@@ -71,14 +46,14 @@ export function FlashcardView() {
                         flashcards.map((card, index) => (
                             <CarouselItem key={index}>
                                 <div className="p-1">
-                                    <Flashcard front={card.front} back={card.back} />
+                                    <RevisionCard content={card.content} />
                                 </div>
                             </CarouselItem>
                         ))
                     ) : (
                         <CarouselItem>
                             <div className="flex items-center justify-center p-6 text-muted-foreground">
-                                No flashcards were generated.
+                                No revision cards were generated.
                             </div>
                         </CarouselItem>
                     )}

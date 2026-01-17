@@ -34,41 +34,7 @@ export async function generateFlashcards(
   return generateFlashcardsFlow(input);
 }
 
-/* ------------------ PROMPT (HARDENED) ------------------ */
-
-const flashcardPrompt = ai.definePrompt({
-  name: 'flashcardPrompt',
-  input: { schema: GenerateFlashcardsInputSchema },
-  output: { schema: GenerateFlashcardsOutputSchema },
-  prompt: `
-You are a flashcard generator for Indian students.
-
-Your task:
-Convert the given text into EXACTLY {{count}} flashcards.
-
-Each flashcard MUST follow this format:
-
-{
-  "front": "Short question or key term",
-  "back": "Very short answer (1–2 lines)"
-}
-
-STRICT RULES:
-1. Output ONLY JSON
-2. No extra text, no markdown
-3. Keep answers short and simple
-4. Do NOT skip any flashcard
-5. Avoid long paragraphs
-6. Avoid complex language
-
-Text:
-{{{text}}}
-
-Output JSON now.
-`,
-});
-
-/* ------------------ FLOW (RETRY + VALIDATION) ------------------ */
+/* ------------------ FLOW (WITH ACTUAL AI CALL) ------------------ */
 
 const generateFlashcardsFlow = ai.defineFlow(
   {
@@ -78,19 +44,63 @@ const generateFlashcardsFlow = ai.defineFlow(
   },
   async (input) => {
     let attempt = 0;
-    let output: GenerateFlashcardsOutput | undefined;
+    const maxAttempts = 3;
 
-    while (attempt < 2) {
-      const result = await flashcardPrompt(input);
-      output = result.output;
+    while (attempt < maxAttempts) {
+      try {
+        // Actually call the AI model with proper prompt
+        const result = await ai.generate({
+          model: 'googleai/gemini-2.0-flash-exp', // Gemini 2.0 Flash
+          prompt: `You are a flashcard generator for Indian students.
 
-      if (output?.flashcards?.length === input.count) {
-        return output;
+Your task:
+Convert the given text into EXACTLY ${input.count} flashcards.
+
+Each flashcard MUST follow this format:
+
+{
+  "flashcards": [
+    {
+      "front": "Short question or key term",
+      "back": "Very short answer (1–2 lines)"
+    }
+  ]
+}
+
+STRICT RULES:
+1. Output ONLY valid JSON
+2. No extra text, no markdown, no code blocks
+3. Keep answers short and simple
+4. Create EXACTLY ${input.count} flashcards
+5. Avoid long paragraphs
+6. Use simple language
+
+Text to convert:
+${input.text}
+
+Output the JSON now:`,
+          output: {
+            schema: GenerateFlashcardsOutputSchema,
+          },
+        });
+
+        const output = result.output as GenerateFlashcardsOutput;
+
+        // Validate we got the right number of flashcards
+        if (output?.flashcards?.length === input.count) {
+          return output;
+        }
+
+        console.warn(`Attempt ${attempt + 1}: Got ${output?.flashcards?.length} flashcards, expected ${input.count}`);
+        
+      } catch (error) {
+        console.error(`Attempt ${attempt + 1} failed:`, error);
       }
 
       attempt++;
     }
 
-    throw new Error("Flashcard generation failed after retries.");
+    // Fallback: return whatever we got or throw error
+    throw new Error(`Failed to generate exactly ${input.count} flashcards after ${maxAttempts} attempts.`);
   }
 );
