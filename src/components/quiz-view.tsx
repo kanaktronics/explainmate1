@@ -164,7 +164,7 @@ export function QuizView() {
             let isCorrect: boolean;
             let feedback: string | undefined;
 
-            if (q.type === 'ShortAnswer') {
+            if (q.type === 'ShortAnswer' || (q.type === 'MCQ' && (!q.options || q.options.length === 0))) {
                 const promise = gradeShortAnswer({
                     question: q.question || '',
                     userAnswer: selected,
@@ -549,3 +549,5 @@ const LoadingSkeleton = () => (
     ))}
   </div>
 );
+
+    

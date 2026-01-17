@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Interactive quiz generation flow for students.
@@ -36,15 +37,11 @@ export type GenerateInteractiveQuizzesInput = z.infer<
   typeof GenerateInteractiveQuizzesInputSchema
 >;
 
-const InternalPromptInputSchema = GenerateInteractiveQuizzesInputSchema.extend({
-    questionTypeInstruction: z.string(),
-});
-
 const QuestionSchema = z.object({
     type: z.enum(['MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']).describe('The type of question.'),
     question: z.string().optional().describe('The main question text or instruction. For FillInTheBlanks, this should include a `___` marker.'),
     assertion: z.string().optional().describe('The assertion text for Assertion-Reason questions. MANDATORY for this type. HARD LIMIT: 150 characters.'),
-    reason: z.string().optional().describe("The reason text for Assertion-Reason questions. MANDATORY for this type. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct scientific statement. DO NOT add notes, meta-commentary, or repeat phrases."),
+    reason: z.string().optional().describe("The reason text for Assertion-Reason questions. MANDATORY for this type. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct factual statement. DO NOT add notes, meta-commentary, or repeat phrases."),
     options: z.array(z.string()).optional().describe('An array of options for MCQ, True/False, and Assertion-Reason questions. MANDATORY for these types.'),
     correctAnswer: z.string().describe('The correct answer. For True/False, it is "True" or "False". For FillInTheBlanks, it is the word/phrase to fill in. For ShortAnswer, it is a model answer.'),
     explanation: z.string().describe('A brief, one-line explanation of why the answer is correct.'),
@@ -55,7 +52,6 @@ const GenerateInteractiveQuizzesOutputSchema = z.object({
     .array(QuestionSchema)
     .describe('An array of quiz questions in various formats.'),
 });
-
 export type GenerateInteractiveQuizzesOutput = z.infer<
   typeof GenerateInteractiveQuizzesOutputSchema
 >;
@@ -66,78 +62,73 @@ export async function generateInteractiveQuizzes(
   return generateInteractiveQuizzesFlow(input);
 }
 
-const quizPrompt = ai.definePrompt({
-  name: 'quizPrompt',
-  input: {schema: InternalPromptInputSchema},
-  output: {schema: GenerateInteractiveQuizzesOutputSchema},
-  prompt: `You are an expert quiz generator for Indian middle and high school students. Your task is to create a quiz with a variety of question types that are relevant to the student's curriculum and simulate real exam practice.
 
-Generate a quiz on the topic of **{{topic}}** with **{{numQuestions}}** questions.
+const singleQuestionPrompt = ai.definePrompt({
+    name: 'generateSingleQuestionPrompt',
+    input: { schema: z.object({
+        topic: z.string(),
+        studentProfile: StudentProfileSchema.optional(),
+        difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional(),
+        questionType: z.enum(['MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', 'ShortAnswer']),
+    })},
+    output: { schema: QuestionSchema },
+    prompt: `You are an expert quiz generator. Your task is to create ONE SINGLE question based on the exact format requested.
 
-**Student Context:**
-{{#if studentProfile}}
-- Class: {{studentProfile.classLevel}}
-- Board: {{studentProfile.board}}
-- Weak Subjects: {{studentProfile.weakSubjects}}
-{{/if}}
-{{#if difficulty}}
-- Difficulty: {{difficulty}}
-{{/if}}
+    Generate ONE question on the topic of **{{topic}}** of type **{{questionType}}**.
 
-**CRITICAL RULES:**
-1.  **Number of Questions**: You MUST generate exactly **{{numQuestions}}** questions.
-2.  **Question Type**:
-    {{{questionTypeInstruction}}}
-3.  **Curriculum Alignment**: All questions must be strictly aligned with the student's class and board curriculum.
-4.  **No Hallucination**: If you are unsure about a fact or concept for a given curriculum, do not invent it. Skip that question and create a different one.
-5.  **Test Understanding**: Questions must test conceptual understanding, not just rote memorization.
-6.  **Strict Output Format**: Your entire output must be a single JSON object matching the provided Zod schema. Each question object in the "quiz" array must conform to the specified structure for its type. DO NOT include any of these instructions in your response.
+    **Student Context:**
+    {{#if studentProfile}}
+    - Class: {{studentProfile.classLevel}}
+    - Board: {{studentProfile.board}}
+    {{/if}}
+    {{#if difficulty}}
+    - Difficulty: {{difficulty}}
+    {{/if}}
 
-**QUESTION TYPE FORMATS:**
+    **CRITICAL RULES:**
+    1.  **Question Type**: You MUST generate exactly ONE question of the type **{{questionType}}**.
+    2.  **Curriculum Alignment**: The question must be strictly aligned with the student's class and board curriculum.
+    3.  **Strict Output Format**: Your entire output must be a single JSON object matching the provided Zod schema for the question.
 
-1.  **MCQ (Single Correct)**:
-    -   \`type\`: "MCQ"
-    -   \`question\`: The question text.
-    -   \`options\`: MANDATORY. An array of 4 **distinct** strings. Incorrect options must be plausible distractors.
-    -   \`correctAnswer\`: The text of the single correct option.
-    -   \`explanation\`: A brief, one-line explanation of why the answer is correct.
+    **QUESTION TYPE FORMATS:**
+    
+    1.  **MCQ (Single Correct)**:
+        -   \`type\`: "MCQ"
+        -   \`question\`: The question text.
+        -   \`options\`: MANDATORY. An array of 4 **distinct** strings. Incorrect options must be plausible distractors.
+        -   \`correctAnswer\`: The text of the single correct option.
+        -   \`explanation\`: A brief, one-line explanation of why the answer is correct.
 
-2.  **True / False**:
-    -   \`type\`: "TrueFalse"
-    -   \`question\`: The statement to be evaluated.
-    -   \`options\`: MANDATORY. Must be \`["True", "False"]\`.
-    -   \`correctAnswer\`: Either "True" or "False".
-    -   \`explanation\`: A brief, one-line reason why the statement is true or false.
+    2.  **True / False**:
+        -   \`type\`: "TrueFalse"
+        -   \`question\`: The statement to be evaluated.
+        -   \`options\`: MANDATORY. Must be \`["True", "False"]\`.
+        -   \`correctAnswer\`: Either "True" or "False".
+        -   \`explanation\`: A brief, one-line reason why the statement is true or false.
 
-3.  **Assertion – Reason**:
-    -   \`type\`: "AssertionReason"
-    -   \`question\`: This field MUST be an empty string: \`""\`.
-    -   \`assertion\`: A single, concise assertion statement. MANDATORY. HARD LIMIT: 150 characters.
-    -   \`reason\`: A single, concise reason statement explaining the 'why' of the assertion. MANDATORY. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct scientific statement. DO NOT add notes, meta-commentary, or repeat phrases.
-    -   \`options\`: MANDATORY. Must be the standard 4 A/R options:
-        -   "Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A)."
-        -   "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A)."
-        -   "Assertion (A) is true but Reason (R) is false."
-        -   "Assertion (A) is false but Reason (R) is true."
-    -   \`correctAnswer\`: The full text of the correct option.
-    -   \`explanation\`: A one-line justification for the correct A/R relationship.
+    3.  **Assertion – Reason**:
+        -   \`type\`: "AssertionReason"
+        -   \`question\`: This field MUST be an empty string: \`""\`.
+        -   \`assertion\`: A single, concise assertion statement. MANDATORY. HARD LIMIT: 150 characters.
+        -   \`reason\`: A single, concise reason statement. MANDATORY. HARD LIMIT: 150 characters & max 1-2 lines. It must be a direct factual statement, not a long explanation.
+        -   \`options\`: MANDATORY. Must be the standard 4 A/R options: ["Both Assertion (A) and Reason (R) are true and Reason (R) is the correct explanation of Assertion (A).", "Both Assertion (A) and Reason (R) are true but Reason (R) is not the correct explanation of Assertion (A).", "Assertion (A) is true but Reason (R) is false.", "Assertion (A) is false but Reason (R) is true."]
+        -   \`correctAnswer\`: The full text of the correct option.
+        -   \`explanation\`: A one-line justification for the correct A/R relationship.
 
-4.  **Fill in the Blanks**:
-    -   \`type\`: "FillInTheBlanks"
-    -   \`question\`: The sentence with a blank, represented by \`___\`. Example: "The powerhouse of the cell is the ___."
-    -   \`options\`: This field must be omitted.
-    -   \`correctAnswer\`: The word or short phrase that fills the blank. Example: "mitochondria".
-    -   \`explanation\`: A one-line reason why that word is correct.
+    4.  **Fill in the Blanks**:
+        -   \`type\`: "FillInTheBlanks"
+        -   \`question\`: The sentence with a blank, represented by \`___\`.
+        -   \`correctAnswer\`: The word or short phrase that fills the blank.
+        -   \`explanation\`: A one-line reason why that word is correct.
 
-5.  **Short Answer**:
-    -   \`type\`: "ShortAnswer"
-    -   \`question\`: The question that requires a brief written response.
-    -   \`options\`: This field must be omitted.
-    -   \`correctAnswer\`: A model answer, 2-3 lines long, as would be expected in an exam.
-    -   \`explanation\`: A one-line summary of the key points the answer should contain.
+    5.  **Short Answer**:
+        -   \`type\`: "ShortAnswer"
+        -   \`question\`: The question that requires a brief written response.
+        -   \`correctAnswer\`: A model answer, 2-3 lines long.
+        -   \`explanation\`: A one-line summary of the key points.
 
-Generate the JSON output now.
-`,
+    Generate the JSON output for ONE question of type {{questionType}} now.
+    `,
 });
 
 
@@ -148,20 +139,67 @@ const generateInteractiveQuizzesFlow = ai.defineFlow(
     outputSchema: GenerateInteractiveQuizzesOutputSchema,
   },
   async input => {
-    let questionTypeInstruction = '';
+    const quiz: z.infer<typeof QuestionSchema>[] = [];
+    const allQuestionTypes: ('MCQ' | 'TrueFalse' | 'AssertionReason' | 'FillInTheBlanks' | 'ShortAnswer')[] = ['MCQ', 'TrueFalse', 'FillInTheBlanks', 'ShortAnswer', 'AssertionReason'];
 
-    if (input.questionType && input.questionType !== 'Mixed') {
-        questionTypeInstruction = `You MUST generate ONLY questions of the type **'${input.questionType}'**.`;
-    } else {
-        questionTypeInstruction = `If generating multiple questions, you MUST include a mix of the following types based on what is most suitable for the topic: 'MCQ', 'TrueFalse', 'AssertionReason', 'FillInTheBlanks', and 'ShortAnswer'. Do not just generate MCQs.`;
+    for (let i = 0; i < input.numQuestions; i++) {
+        let questionType: ('MCQ' | 'TrueFalse' | 'AssertionReason' | 'FillInTheBlanks' | 'ShortAnswer');
+        
+        if (input.questionType && input.questionType !== 'Mixed') {
+            questionType = input.questionType;
+        } else {
+            // Cycle through types for a mixed quiz
+            questionType = allQuestionTypes[i % allQuestionTypes.length];
+        }
+
+        let attempts = 0;
+        let success = false;
+        while(attempts < 2 && !success) {
+            try {
+                const { output } = await singleQuestionPrompt({
+                    topic: input.topic,
+                    studentProfile: input.studentProfile,
+                    difficulty: input.difficulty,
+                    questionType: questionType
+                });
+
+                if (output) {
+                    // Perform validation based on the question type
+                    let isValid = true;
+                    if(output.type === 'MCQ' && (!output.options || output.options.length < 4)) {
+                        isValid = false;
+                    } else if (output.type === 'AssertionReason' && (!output.assertion || !output.reason || output.assertion.length === 0 || output.reason.length === 0)) {
+                        isValid = false;
+                    } else if (output.type === 'TrueFalse' && (!output.options || output.options.length < 2)) {
+                        isValid = false;
+                    }
+
+                    if (isValid) {
+                        quiz.push(output);
+                        success = true;
+                    } else {
+                         // This will trigger a retry
+                        throw new Error(`Generated ${questionType} question failed basic validation.`);
+                    }
+                }
+            } catch (e) {
+                console.error(`Attempt ${attempts + 1} failed for question type ${questionType}:`, e);
+            }
+            attempts++;
+        }
+
+        if (!success) {
+            // If after all retries, we still couldn't generate a valid question, throw an error.
+            throw new Error(`The AI failed to generate a valid '${questionType}' question for the topic "${input.topic}". Please try again or with a different topic.`);
+        }
     }
 
-    const promptInput = {
-      ...input,
-      questionTypeInstruction,
-    };
+    if (quiz.length < input.numQuestions) {
+        throw new Error("The AI could not generate the requested number of questions after multiple retries. Please try again.");
+    }
 
-    const {output} = await quizPrompt(promptInput);
-    return output!;
+    return { quiz };
   }
 );
+
+    
