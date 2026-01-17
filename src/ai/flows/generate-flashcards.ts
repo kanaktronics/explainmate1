@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Generates revision flashcards from a given text.
+ * @fileOverview Generates simple revision cards from a given text.
  */
 
 import { ai } from '@/ai/genkit';
@@ -9,19 +9,17 @@ import { z } from 'zod';
 /* ------------------ SCHEMAS ------------------ */
 
 const FlashcardSchema = z.object({
-  front: z.string().min(3),
-  back: z.string().min(3),
+  content: z.string().min(10).describe('A concise summary or key point about the text, formatted in Markdown.'),
 });
 
 const GenerateFlashcardsInputSchema = z.object({
   text: z.string().min(20),
-  count: z.number().min(3).max(10).default(5),
 });
 
 export type GenerateFlashcardsInput = z.infer<typeof GenerateFlashcardsInputSchema>;
 
 const GenerateFlashcardsOutputSchema = z.object({
-  flashcards: z.array(FlashcardSchema),
+  flashcards: z.array(FlashcardSchema).min(1).describe("An array of 3 to 5 flashcards."),
 });
 
 export type GenerateFlashcardsOutput = z.infer<typeof GenerateFlashcardsOutputSchema>;
@@ -34,7 +32,35 @@ export async function generateFlashcards(
   return generateFlashcardsFlow(input);
 }
 
-/* ------------------ FLOW (WITH ACTUAL AI CALL) ------------------ */
+/* ------------------ PROMPT ------------------ */
+
+const flashcardPrompt = ai.definePrompt({
+  name: 'flashcardPrompt',
+  input: { schema: GenerateFlashcardsInputSchema },
+  output: { schema: GenerateFlashcardsOutputSchema },
+  prompt: `
+You are a revision card generator for students.
+
+Your task:
+Analyze the provided text and extract 3 to 5 key points or concise summaries.
+Each point should be a self-contained piece of information, ideal for quick revision.
+
+STRICT RULES:
+1. Output ONLY a valid JSON object.
+2. The JSON object must contain a "flashcards" array.
+3. The "flashcards" array must contain between 3 and 5 items.
+4. Each item in the array must be an object with a single "content" key.
+5. The "content" should be a string containing the key point, formatted in simple Markdown.
+6. Do not include any extra text, comments, or markdown formatting outside of the JSON.
+
+Text to analyze:
+{{{text}}}
+
+Generate the JSON output now.
+`,
+});
+
+/* ------------------ FLOW ------------------ */
 
 const generateFlashcardsFlow = ai.defineFlow(
   {
@@ -43,64 +69,12 @@ const generateFlashcardsFlow = ai.defineFlow(
     outputSchema: GenerateFlashcardsOutputSchema,
   },
   async (input) => {
-    let attempt = 0;
-    const maxAttempts = 3;
+    const { output } = await flashcardPrompt(input);
 
-    while (attempt < maxAttempts) {
-      try {
-        // Actually call the AI model with proper prompt
-        const result = await ai.generate({
-          model: 'googleai/gemini-2.0-flash-exp', // Gemini 2.0 Flash
-          prompt: `You are a flashcard generator for Indian students.
-
-Your task:
-Convert the given text into EXACTLY ${input.count} flashcards.
-
-Each flashcard MUST follow this format:
-
-{
-  "flashcards": [
-    {
-      "front": "Short question or key term",
-      "back": "Very short answer (1–2 lines)"
-    }
-  ]
-}
-
-STRICT RULES:
-1. Output ONLY valid JSON
-2. No extra text, no markdown, no code blocks
-3. Keep answers short and simple
-4. Create EXACTLY ${input.count} flashcards
-5. Avoid long paragraphs
-6. Use simple language
-
-Text to convert:
-${input.text}
-
-Output the JSON now:`,
-          output: {
-            schema: GenerateFlashcardsOutputSchema,
-          },
-        });
-
-        const output = result.output as GenerateFlashcardsOutput;
-
-        // Validate we got the right number of flashcards
-        if (output?.flashcards?.length === input.count) {
-          return output;
-        }
-
-        console.warn(`Attempt ${attempt + 1}: Got ${output?.flashcards?.length} flashcards, expected ${input.count}`);
-        
-      } catch (error) {
-        console.error(`Attempt ${attempt + 1} failed:`, error);
-      }
-
-      attempt++;
+    if (!output?.flashcards || output.flashcards.length === 0) {
+      throw new Error("The AI failed to generate any revision cards.");
     }
 
-    // Fallback: return whatever we got or throw error
-    throw new Error(`Failed to generate exactly ${input.count} flashcards after ${maxAttempts} attempts.`);
+    return output;
   }
 );
