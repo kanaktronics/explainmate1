@@ -18,6 +18,9 @@ import { gradeShortAnswer as gradeShortAnswerFlow } from '@/ai/flows/grade-short
 import type { GradeShortAnswerInput, GradeShortAnswerOutput } from '@/ai/flows/grade-short-answer';
 import { textToSpeech } from '@/ai/flows/text-to-speech-flow';
 import type { TextToSpeechInput, TextToSpeechOutput } from '@/ai/flows/text-to-speech-flow';
+import { generateFlashcards as generateFlashcardsFlow } from '@/ai/flows/generate-flashcards';
+import type { GenerateFlashcardsOutput } from '@/ai/flows/generate-flashcards';
+
 
 import { ChatMessage, StudentProfile, SubjectTopics } from './types';
 
@@ -369,7 +372,7 @@ export async function generateExamPlanAction(input: GenerateExamPlanInput): Prom
         }
         return result;
     } catch (e: any) {
-        console.error("Error generating exam plan:", e);
+      console.error("Error generating exam plan:", e);
         return { error: "Failed to generate the exam plan. Please check the inputs and try again." };
     }
 }
@@ -398,6 +401,24 @@ export async function getTextToSpeech(input: TextToSpeechInput): Promise<TextToS
         console.error("Error generating speech:", e);
         return { error: "Failed to generate audio for this text. Please try again." };
     }
+}
+
+export async function generateFlashcards(
+  text: string
+): Promise<GenerateFlashcardsOutput | { error: string }> {
+  try {
+    // Generate a good number of flashcards, 8 is a good default.
+    const result = await generateFlashcardsFlow({ text, count: 8 });
+    if (!result || !result.flashcards || result.flashcards.length === 0) {
+      throw new Error('AI did not return any flashcards.');
+    }
+    return result;
+  } catch (e: any) {
+    console.error('Error generating flashcards:', e);
+    return {
+      error: 'Failed to generate flashcards from this text. Please try with a different explanation.',
+    };
+  }
 }
 
 

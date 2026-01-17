@@ -80,4 +80,8 @@ export type SubjectTopics = GenerateSubjectTopicsOutput;
 
 export type AppView = 'welcome' | 'explanation' | 'quiz' | 'auth' | 'forgot-password' | 'teacher-companion' | 'progress' | 'exam-prep';
 
+export interface Flashcard {
+  front: string;
+  back: string;
+}
     

@@ -3,13 +3,16 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData, ExamPlan } from '@/lib/types';
+import type { StudentProfile, ChatMessage, Quiz, HistoryItem, Interaction, ProgressData, ExamPlan, Flashcard } from '@/lib/types';
 import { isToday, isPast, differenceInDays } from 'date-fns';
 import { useFirebase, useDoc, useCollection, setDocument, addDocument, deleteDocument, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit, setDoc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
-import { runProgressEngineAction } from './actions';
+import { runProgressEngineAction, generateFlashcards as generateFlashcardsAction } from './actions';
+import { useToast } from '@/hooks/use-toast';
+import { FlashcardView } from '@/components/flashcard-view';
+
 
 interface AdContent {
     title: string;
@@ -65,6 +68,10 @@ interface AppContextType {
   isProgressLoading: boolean;
   setIsProgressLoading: (loading: boolean) => void;
   weeklyTimeSpent: number;
+  flashcards: Flashcard[] | null;
+  clearFlashcards: () => void;
+  generateFlashcards: (text: string) => void;
+  isGeneratingFlashcards: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -106,6 +113,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [progressError, setProgressError] = useState<string | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState<boolean>(false);
   const [weeklyTimeSpent, setWeeklyTimeSpent] = useState(0);
+  const [flashcards, setFlashcards] = useState<Flashcard[] | null>(null);
+  const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
+  const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const isSavingRef = useRef(false);
@@ -364,7 +374,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
 
-  const incrementUsage = async (type: 'explanation' | 'quiz' | 'teacher-companion' = 'explanation') => {
+  const incrementUsage = useCallback(async (type: 'explanation' | 'quiz' | 'teacher-companion' = 'explanation') => {
     if (!userProfileRef) return;
     
     const now = new Date().toISOString();
@@ -395,7 +405,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             await setDocument(userProfileRef, { dailyQuizUsage: newQuizUsage, lastUsageDate: now }, { merge: true });
         }
     }
-  }
+  }, [studentProfile, userProfileRef]);
 
   const generateHistoryTitle = (question: string): string => {
     const cleanQuestion = question
@@ -583,6 +593,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, studentProfile.isPro, isAdOpen, hasShownFirstAdToday, showAd, pathname]);
 
+  const clearFlashcards = useCallback(() => {
+    setFlashcards(null);
+  }, []);
+
+  const generateFlashcards = useCallback(async (text: string) => {
+    if (studentProfile.isPro || (studentProfile.dailyUsage || 0) < 5) {
+        setIsGeneratingFlashcards(true);
+        const result = await generateFlashcardsAction(text);
+        if ('error' in result) {
+            toast({
+                variant: 'destructive',
+                title: 'Flashcard Generation Failed',
+                description: result.error,
+            });
+        } else {
+            setFlashcards(result.flashcards);
+            if (!studentProfile.isPro) {
+                incrementUsage('explanation');
+            }
+        }
+        setIsGeneratingFlashcards(false);
+    } else {
+        showAd({
+            title: "Daily Limit Reached",
+            description: "You've used your free explanations for today. Upgrade to Pro for unlimited access to all features, including flashcards."
+        });
+    }
+  }, [studentProfile, toast, showAd, incrementUsage]);
+
 
   const value: AppContextType = { 
     studentProfile, setStudentProfile, saveProfileToFirestore, incrementUsage, view, setView, chat, setChat, addToChat, 
@@ -593,6 +632,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     postLoginAction, setPostLoginAction, clearPostLoginAction,
     interactions, addInteraction, progressData, setProgressData, progressError, setProgressError, isProgressLoading, setIsProgressLoading,
     weeklyTimeSpent,
+    flashcards, clearFlashcards, generateFlashcards, isGeneratingFlashcards,
   };
 
   // This is a bit of a hack to pre-fill the topic when a user clicks 'start' or 'practice'
@@ -604,8 +644,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
   }, [view, quizTopic]);
 
+
   return (
     <AppContext.Provider value={value}>
+      <FlashcardView />
       {children}
     </AppContext.Provider>
   );

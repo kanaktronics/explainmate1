@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, BookText, BrainCircuit, Check, ChevronDown, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play, GitMerge } from 'lucide-react';
+import { AlertCircle, BookText, BrainCircuit, Check, ChevronDown, Clipboard, Codesandbox, Globe, Image as ImageIcon, Mic, MoreVertical, PenSquare, Send, User, Volume2, X, Pause, Loader2, Play, GitMerge, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, Explanation } from '@/lib/types';
 import { WelcomeScreen } from './welcome-screen';
@@ -228,6 +228,12 @@ const explanationTabs = [
 const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('explanation');
+  const { generateFlashcards, isGeneratingFlashcards } = useAppContext();
+
+  const handleFlashcardClick = () => {
+    const fullContent = `Explanation: ${explanation.explanation}\n\nRough Work: ${explanation.roughWork}\n\nExamples: ${explanation.realWorldExamples}\n\nFair Work: ${explanation.fairWork}`;
+    generateFlashcards(fullContent);
+  }
 
   const getTabContent = (tabId: string) => {
     switch (tabId) {
@@ -241,6 +247,22 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
   };
 
   const hasMultipleTabs = explanation.roughWork !== 'N/A' || explanation.realWorldExamples !== 'N/A' || explanation.fairWork !== 'N/A' || explanation.mindMap !== 'N/A';
+  const hasEducationalContent = explanation.explanation !== 'N/A' || explanation.fairWork !== 'N/A';
+
+  const FlashcardButton = () => (
+    hasEducationalContent ? (
+        <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleFlashcardClick}
+            disabled={isGeneratingFlashcards}
+            className="ml-auto"
+        >
+            {isGeneratingFlashcards ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
+            <span>Flashcards</span>
+        </Button>
+    ) : null
+  );
   
   if (!hasMultipleTabs) {
       return (
@@ -248,7 +270,12 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
               <Avatar className="bg-primary flex-shrink-0">
                 <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
               </Avatar>
-              <ExplanationCard cardId="explanation" title="Explanation" icon={<BookText/>} text={explanation.explanation} isOnlyCard={true}/>
+               <div className="w-full">
+                <ExplanationCard cardId="explanation" title="Explanation" icon={<BookText/>} text={explanation.explanation} isOnlyCard={true}/>
+                <div className="mt-2 flex justify-end">
+                    <FlashcardButton />
+                </div>
+              </div>
           </div>
       )
   }
@@ -288,6 +315,9 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
                       text={getTabContent(activeTab)} 
                       isOnlyCard={true}
                   />
+                  <div className="mt-2 flex justify-end">
+                    <FlashcardButton />
+                 </div>
               </div>
            </div>
       )
@@ -299,13 +329,16 @@ const AssistantMessage = ({ explanation }: { explanation: Explanation }) => {
           <AvatarFallback><BrainCircuit className="text-primary-foreground h-6 w-6" /></AvatarFallback>
         </Avatar>
         <Tabs defaultValue="explanation" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-                {explanationTabs.map(tab => {
-                    const content = getTabContent(tab.id);
-                    if (content === 'N/A') return null;
-                    return <TabsTrigger key={tab.id} value={tab.id}>{React.cloneElement(tab.icon, {className: "mr-2"})} {tab.title}</TabsTrigger>
-                })}
-            </TabsList>
+             <div className="flex justify-between items-center mb-2">
+                <TabsList className="grid w-full max-w-lg grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+                    {explanationTabs.map(tab => {
+                        const content = getTabContent(tab.id);
+                        if (content === 'N/A') return null;
+                        return <TabsTrigger key={tab.id} value={tab.id}>{React.cloneElement(tab.icon, {className: "mr-2"})} {tab.title}</TabsTrigger>
+                    })}
+                </TabsList>
+                <FlashcardButton />
+            </div>
             {explanationTabs.map(tab => {
                  const content = getTabContent(tab.id);
                  if (content === 'N/A') return null;
