@@ -67,13 +67,21 @@ export function FlashcardView() {
         <div className="p-8">
             <Carousel opts={{ loop: true }} className="w-full">
                 <CarouselContent>
-                    {flashcards?.map((card, index) => (
-                        <CarouselItem key={index}>
-                            <div className="p-1">
-                                <Flashcard front={card.front} back={card.back} />
+                    {flashcards && flashcards.length > 0 ? (
+                        flashcards.map((card, index) => (
+                            <CarouselItem key={index}>
+                                <div className="p-1">
+                                    <Flashcard front={card.front} back={card.back} />
+                                </div>
+                            </CarouselItem>
+                        ))
+                    ) : (
+                        <CarouselItem>
+                            <div className="flex items-center justify-center p-6 text-muted-foreground">
+                                No flashcards were generated.
                             </div>
                         </CarouselItem>
-                    ))}
+                    )}
                 </CarouselContent>
                 <CarouselPrevious className="hidden sm:flex" />
                 <CarouselNext className="hidden sm:flex" />
