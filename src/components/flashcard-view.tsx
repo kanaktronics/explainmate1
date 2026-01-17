@@ -27,9 +27,9 @@ function Flashcard({ front, back }: { front: string; back: string }) {
         <div className="absolute w-full h-full backface-hidden">
           <Card className="flex flex-col items-center justify-center w-full h-full min-h-[300px] cursor-pointer">
             <CardContent className="p-6">
-              <p className="text-xl font-semibold">
-                <ReactMarkdown components={{p: React.Fragment}} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{front}</ReactMarkdown>
-              </p>
+              <div className="text-xl font-semibold">
+                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{front}</ReactMarkdown>
+              </div>
             </CardContent>
           </Card>
         </div>
